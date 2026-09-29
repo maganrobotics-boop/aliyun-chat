@@ -286,6 +286,7 @@ const elements = {
   profileView: document.querySelector(".profile-view"),
   taskGrid: document.querySelector(".task-grid"),
   userChip: document.querySelector(".user-chip"),
+  accountProfileTrigger: document.querySelector(".account-profile-trigger"),
   logout: document.querySelector(".logout-trigger"),
   loginDialog: document.querySelector(".login-dialog"),
   loginForm: document.querySelector(".login-form"),
@@ -674,6 +675,8 @@ function renderAgreement() {
   document.querySelectorAll(".login-trigger").forEach((button) => { button.hidden = true; });
   document.querySelectorAll(".nav-button").forEach((button) => { button.disabled = true; });
   elements.userChip.textContent = `${data.user.roleLabel} · ${data.user.email}`;
+  elements.accountProfileTrigger.textContent = data.profile?.displayName || data.user.email.split("@", 1)[0];
+  elements.accountProfileTrigger.setAttribute("aria-label", `${elements.accountProfileTrigger.textContent}，查看个人信息`);
   document.querySelector(".agreement-version").textContent = `版本 ${agreement.version}`;
   document.querySelector(".agreement-effective").textContent = `生效日期 ${agreement.effectiveDate}`;
   document.querySelector(".agreement-email").textContent = `签署账号 ${data.user.email}`;
@@ -745,6 +748,8 @@ function renderDashboard() {
     : "已登录。个人主页保存和进度同步需先完成协议归档；正式提交还需满足前置任务要求。";
   document.querySelectorAll(".nav-button").forEach((button) => { button.disabled = false; });
   elements.userChip.textContent = `${data.user.roleLabel} · ${data.user.email}`;
+  elements.accountProfileTrigger.textContent = state.localGuest ? "游客" : data.profile.displayName || data.user.email.split("@", 1)[0];
+  elements.accountProfileTrigger.setAttribute("aria-label", state.localGuest ? "游客，登录账号" : `${elements.accountProfileTrigger.textContent}，查看个人信息`);
 
   document.querySelector(".progress-number").textContent = String(data.progress.completed);
   document.querySelector(".progress-total").textContent = String(data.progress.total);
@@ -772,6 +777,8 @@ function renderLoggedOut() {
   elements.agreementGate.hidden = true;
   elements.dashboard.hidden = true;
   elements.userChip.hidden = true;
+  elements.accountProfileTrigger.textContent = "游客";
+  elements.accountProfileTrigger.setAttribute("aria-label", "游客，登录账号");
   elements.logout.hidden = true;
   document.querySelectorAll(".login-trigger").forEach((button) => { button.hidden = false; });
   document.querySelectorAll(".nav-button").forEach((button) => { button.disabled = true; });
@@ -1120,6 +1127,7 @@ async function syncProgress() {
 }
 
 document.querySelectorAll(".login-trigger").forEach((button) => button.addEventListener("click", openLogin));
+elements.accountProfileTrigger.addEventListener("click", () => state.localGuest || !state.dashboard ? openLogin() : switchView("profile", false, true));
 document.querySelector(".login-close").addEventListener("click", () => elements.loginDialog.close());
 elements.codeButton.addEventListener("click", () => void requestCode());
 elements.loginForm.addEventListener("submit", (event) => void verifyCode(event));
