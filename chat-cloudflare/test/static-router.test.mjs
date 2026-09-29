@@ -133,6 +133,18 @@ test("newbie village page is served as a standalone non-cacheable document", asy
   assert.deepEqual(calls.map((call) => call.pathname), ["/newbie-village.html"]);
 });
 
+test("Pathway shares the existing learning page and student session", async () => {
+  const { env, calls } = mockEnvironment();
+  const response = await routeStaticRequest(
+    new Request("https://chat.omindos.cn/pathway#profile"),
+    env,
+  );
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "asset:/newbie-village.html");
+  assertHardened(response);
+  assert.deepEqual(calls.map((call) => call.pathname), ["/newbie-village.html"]);
+});
+
 test("newbie agreement review page is a standalone non-cacheable admin document", async () => {
   const { env, calls } = mockEnvironment();
   const response = await routeStaticRequest(
@@ -352,4 +364,3 @@ test("the helper fails closed when the ASSETS binding is absent", async () => {
     /ASSETS binding is required/,
   );
 });
-
