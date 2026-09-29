@@ -3,10 +3,6 @@ on:
   pull_request:
     paths:
       - .github/workflows/inspect-learning.yml
-  push:
-    branches: [codex/arts-robotics-pathway]
-    paths:
-      - .github/workflows/inspect-learning.yml
 jobs:
   inspect:
     runs-on: ubuntu-latest
@@ -21,7 +17,7 @@ jobs:
           printf '%s' "$SSH_KEY_B64" | base64 --decode > ~/.ssh/omindos
           chmod 600 ~/.ssh/omindos
           ssh-keyscan -H 39.108.50.65 >> ~/.ssh/known_hosts
-      - name: Locate active learning app
+      - name: Identify active release
         run: |
           ssh -i ~/.ssh/omindos -o IdentitiesOnly=yes admin@39.108.50.65 \
-            "sudo find /var/www /opt -path '*/learning/app.js' -type f -print 2>/dev/null | head -30"
+            "sudo find /opt/omindos-deploy -maxdepth 3 -type l -print -exec readlink -f {} \\; ; sudo sha256sum /opt/omindos-deploy/releases/chat-learning-*/chat-cloudflare/public/learning/app.js"
