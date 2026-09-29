@@ -10,9 +10,9 @@ import {
 import { WORKERS_AI_MODEL } from "../src/constants.mjs";
 import { MockD1, mockAssets } from "./contract-mock-d1.mjs";
 
-const ORIGIN = "https://chat.omindos.ai";
-const OA_URL = "https://oa.omindos.ai/api/public/lab-ai/retrieve";
-const OA_STATUS_URL = "https://oa.omindos.ai/api/public/lab-ai/status";
+const ORIGIN = "https://chat.omindos.cn";
+const OA_URL = "https://oa.omindos.cn/api/public/lab-ai/retrieve";
+const OA_STATUS_URL = "https://oa.omindos.cn/api/public/lab-ai/status";
 const SERVICE_TOKEN = "A".repeat(43);
 const RELEASE_ID = `${"a".repeat(40)}-1`;
 const ENCRYPTION_KEY = "encryption-key-for-tests-only-0123456789abcdef";
@@ -1129,7 +1129,7 @@ test("static topic links, PWA files, root, manager and generated hashed assets u
     assert.equal(response.status, 200, path);
   }
   assert.deepEqual(assets.calls, [
-    "/index.html",
+    "/newbie-village.html",
     "/index.html",
     "/index.html",
     "/index.html",

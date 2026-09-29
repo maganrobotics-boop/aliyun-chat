@@ -95,7 +95,7 @@ test("OA preflight sends the normalized token and records only safe success evid
   assert.deepEqual(result, {
     format: "originmind-chat-oa-public-preflight-v1",
     checkedAt: new Date(1_025).toISOString(),
-    origin: "https://oa.omindos.ai",
+    origin: "https://oa.omindos.cn",
     classification: "connected_with_public_knowledge",
     httpStatus: 200,
     chunkCount: 1,
@@ -267,7 +267,7 @@ test("OA suggestions preflight authenticates, validates, and retrieves every sug
   assert.deepEqual(result, {
     format: "originmind-chat-oa-public-suggestions-preflight-v1",
     checkedAt: new Date(4_075).toISOString(),
-    origin: "https://oa.omindos.ai",
+    origin: "https://oa.omindos.cn",
     classification: "connected_with_answerable_suggestions",
     suggestionsHttpStatus: 200,
     retrievalHttpStatus: 200,

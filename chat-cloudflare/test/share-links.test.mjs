@@ -3,7 +3,7 @@ import test from 'node:test';
 import { handleRequest } from '../src/app.mjs';
 import { D1DatabaseAdapter } from './d1-adapter.mjs';
 
-const origin = 'https://chat.omindos.ai';
+const origin = 'https://chat.omindos.cn';
 const env = db => ({ DB: db, APP_ORIGIN: origin, ADMIN_EMAIL: 'owner@example.test', APP_ENCRYPTION_KEY: 'e'.repeat(48), RATE_LIMIT_HMAC_KEY: 'r'.repeat(48) });
 const request = (path, method = 'GET', body) => new Request(`${origin}${path}`, { method, headers: { origin, 'content-type': 'application/json', 'cf-connecting-ip': '203.0.113.45' }, body: body === undefined ? undefined : JSON.stringify(body) });
 

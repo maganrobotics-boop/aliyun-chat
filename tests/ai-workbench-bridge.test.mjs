@@ -46,7 +46,7 @@ beforeEach(async () => {
 });
 async function send(payload = { operation: 'task', task: input }, overrides = {}, options = {}) {
   const body = JSON.stringify(payload), headers = { ...await signOaChatRequest(body, secret, options), ...overrides };
-  return handleOaChatBridge({ request: new Request(`https://chat.omindos.ai${OA_CHAT_PATH}`, { method: 'POST', headers, body }),
+  return handleOaChatBridge({ request: new Request(`https://chat.omindos.cn${OA_CHAT_PATH}`, { method: 'POST', headers, body }),
     env: { PUBLIC_LAB_AI_SERVICE_TOKEN: secret, APP_ENCRYPTION_KEY: encryption, AI: { run() {} } }, runtime }, engine);
 }
 test('signed private task executes Bailian tool calls and budgets each model turn', async () => {
@@ -61,7 +61,7 @@ test('signed private task executes Bailian tool calls and budgets each model tur
 });
 test('task route rejects client-supplied tools, browser origins, cookies and bad signatures before generation', async () => {
   assert.equal((await send({ operation: 'task', task: { ...input, tools: ['send'] } })).status, 400);
-  for (const headers of [{ authorization: 'bad' }, { origin: 'https://oa.omindos.ai' }, { cookie: 'session=synthetic' }]) assert.equal((await send(undefined, headers)).status, 401);
+  for (const headers of [{ authorization: 'bad' }, { origin: 'https://oa.omindos.cn' }, { cookie: 'session=synthetic' }]) assert.equal((await send(undefined, headers)).status, 401);
   assert.equal(calls, 0); assert.equal(budget, 0);
 });
 test('neither an unconfigured provider nor a Bailian failure silently switches providers', async () => {

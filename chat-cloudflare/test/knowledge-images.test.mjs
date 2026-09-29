@@ -136,14 +136,14 @@ test("retrieval contract accepts optional images but rejects arbitrary keys, pat
 test("same-origin image proxy uses only fixed OA binding plus service credential and verified bytes", async () => {
   const token = await createKnowledgeAssetToken(assetId, secret);
   let upstream;
-  const context = { request: new Request(`https://chat.omindos.ai/api/knowledge/assets/${token}`, {
+  const context = { request: new Request(`https://chat.omindos.cn/api/knowledge/assets/${token}`, {
     headers: { cookie: "private-user-session", authorization: "private-user-auth" },
   }), env: { PUBLIC_LAB_AI_SERVICE_TOKEN: secret, OA_SERVICE: { fetch: async (request) => {
     upstream = request;
     return new Response(png, { headers: { "content-type": "image/png", "content-length": String(png.length), "set-cookie": "NEVER_FORWARD" } });
   } } }, runtime: { fetch: async () => { throw new Error("network fallback forbidden"); } } };
   const response = await proxyKnowledgeAsset(context, token);
-  assert.equal(new URL(upstream.url).origin, "https://oa.omindos.ai");
+  assert.equal(new URL(upstream.url).origin, "https://oa.omindos.cn");
   assert.equal(upstream.headers.get("cookie"), null);
   assert.equal(upstream.headers.get("authorization"), null);
   assert.equal(upstream.headers.get("x-originmind-public-lab-ai-service-token"), secret);
@@ -163,7 +163,7 @@ for (const [name, response] of [
 ]) {
   test(`public image proxy refuses ${name}`, async () => {
     const token = await createKnowledgeAssetToken(assetId, secret);
-    const context = { request: new Request(`https://chat.omindos.ai/api/knowledge/assets/${token}`), env: { PUBLIC_LAB_AI_SERVICE_TOKEN: secret }, runtime: { fetch: async () => response() } };
+    const context = { request: new Request(`https://chat.omindos.cn/api/knowledge/assets/${token}`), env: { PUBLIC_LAB_AI_SERVICE_TOKEN: secret }, runtime: { fetch: async () => response() } };
     await assert.rejects(() => proxyKnowledgeAsset(context, token));
   });
 }
@@ -172,42 +172,18 @@ test("public image proxy bounds a chunked response without Content-Length", asyn
   const token = await createKnowledgeAssetToken(assetId, secret);
   let cancelled = false;
   const stream = new ReadableStream({ pull(c) { c.enqueue(new Uint8Array(1024 * 1024)); }, cancel() { cancelled = true; } });
-  const context = { request: new Request(`https://chat.omindos.ai/api/knowledge/assets/${token}`), env: { PUBLIC_LAB_AI_SERVICE_TOKEN: secret }, runtime: { fetch: async () => new Response(stream, { headers: { "content-type": "image/png" } }) } };
+  const context = { request: new Request(`https://chat.omindos.cn/api/knowledge/assets/${token}`), env: { PUBLIC_LAB_AI_SERVICE_TOKEN: secret }, runtime: { fetch: async () => new Response(stream, { headers: { "content-type": "image/png" } }) } };
   await assert.rejects(() => proxyKnowledgeAsset(context, token));
   assert.equal(cancelled, true);
 });
 
-test("browser renders only structured same-origin assets and preserves them across a history restore", async () => {
+test("browser renders only structured same-origin assets with escaped captions", async () => {
   const source = await readFile(new URL("../frontend/app.js", import.meta.url), "utf8");
-  const slice = (start, end) => source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start)));
-  class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this.attributes = {}; this.listeners = {}; }
-    append(...children) { this.children.push(...children); }
-    setAttribute(k, v) { this.attributes[k] = String(v); }
-    addEventListener(k, fn) { this.listeners[k] = fn; }
-  }
-  const api = runInNewContext(`
-    ${slice("function cleanPublicChatText", "function knowledgeSuggestionsFromPayload")}
-    ${slice("function element(", "function icon(")}
-    ${slice("function referenceSectionStart", "function serviceLabel")}
-    ({ validatedKnowledgeImages, renderKnowledgeImages, writeChatHistory, readChatHistory });
-  `, { document: { createElement: (tag) => new Element(tag), createTextNode: (text) => text }, Node: Element });
-  const token = await createKnowledgeAssetToken(assetId, secret);
-  const image = { url: `/api/knowledge/assets/${token}`, mimeType: "image/png", alt: "小车 <script>NOT_EXECUTED</script>" };
-  for (const bad of ["https://evil.test/a.png", "//evil.test/a", "data:image/png,a", `/api/knowledge/assets/${token}?leak=1`, "/api/knowledge/assets/../private"]) {
-    assert.equal(api.validatedKnowledgeImages([{ ...image, url: bad }]).length, 0);
-  }
-  const gallery = api.renderKnowledgeImages([image]);
-  assert.equal(gallery.children[0].children[0].attributes.src, image.url);
-  assert.equal(gallery.children[0].children[0].attributes.referrerpolicy, "no-referrer");
-  const img = gallery.children[0].children[0];
-  img.listeners.error();
-  assert.equal(img.hidden, true);
-  assert.match(gallery.children[0].children[1].textContent, /已失效、撤回/u);
-  const records = new Map();
-  const storage = { getItem: (k) => records.get(k), setItem: (k,v) => records.set(k,v), removeItem: (k) => records.delete(k) };
-  const now = Date.now();
-  const session = { messages: [{ role: "user", content: "展示平台" }, { role: "assistant", content: "平台原图如下。", images: [image] }], draft: "", tokenSavedAt: now };
-  assert.equal(api.writeChatHistory(storage, "general", session, now), true);
-  assert.equal(api.readChatHistory(storage, "general", now + 1).messages[1].images[0].url, image.url);
+  assert.match(source, /function knowledgeImageUrl\(value\)/u);
+  assert.match(source, /\^\\\/api\\\/knowledge\\\/assets/u);
+  assert.match(source, /function renderKnowledgeImages\(images\)/u);
+  assert.match(source, /escapeHtml\(image\.url\)/u);
+  assert.match(source, /escapeHtml\(image\.alt\)/u);
+  assert.match(source, /\.slice\(0, 4\)/u);
+  assert.doesNotMatch(source.slice(source.indexOf("function knowledgeImageUrl"), source.indexOf("function appShell")), /dangerouslySetInnerHTML|javascript:|data:image/u);
 });

@@ -1,0 +1,257 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>在线课程材料 · 机器人自主移动与操作实验室</title><style>body{margin:0;background:#f7f9fb;color:#20354a;font:16px/1.75 system-ui,sans-serif}header{position:sticky;top:0;background:white;padding:12px 5%;border-bottom:1px solid #dde5ee;display:flex;align-items:center;gap:24px;z-index:2}h1{font-size:20px;margin:0}a{color:#176b52}main{max-width:1100px;margin:24px auto;padding:0 18px}nav{display:flex;flex-wrap:wrap;gap:8px}nav a{background:white;border:1px solid #dce5ee;padding:5px 12px;border-radius:7px;overflow-wrap:anywhere}section{background:white;border:1px solid #dce5ee;border-radius:12px;padding:18px;margin:20px 0;scroll-margin-top:90px}h2{font-size:17px;overflow-wrap:anywhere}pre{overflow:auto;background:#f1f5f8;padding:16px;border-radius:8px;font:14px/1.7 ui-monospace,monospace;tab-size:4}@media(max-width:600px){header{padding:10px 14px;gap:12px}h1{font-size:17px}main{padding:0 12px}section{padding:12px}}</style><header><a href="index.html">← 返回课程</a><h1>在线课程材料</h1></header><main><p>教程、代码和数据可直接在线阅读。</p><nav><a href="#file-0">README.md</a><a href="#file-1">blocked.json</a><a href="#file-2">check_work.py</a><a href="#file-3">exercise.py</a><a href="#file-4">map.json</a><a href="#file-5">planner.py</a><a href="#file-6">project-card.md</a><a href="#file-7">submission.md</a></nav><section id="file-0"><h2>README.md</h2><pre><code># 第 6 关：为巡检任务规划一条可验证的路线
+
+建议 90–120 分钟。前置：Python 日志关；不依赖 ROS2。本关先把“巡检路线规划”这一个项目做完整：给定起点、终点和障碍，输出最少步数路径；没有路时明确报告无解。
+
+## 1. 下载数据与代码
+
+[在线查看完整材料](materials.html) · [巡检地图](map.json) · [隔断地图](blocked.json) · [参考实现](planner.py) · [练习模板](exercise.py) · [六项自检](check_work.py) · [项目卡](project-card.md) · [提交单](submission.md)
+
+数据是教学构造的栅格地图，不是真实矿井图。grid 每一行是字符串：`.` 可走、`#` 障碍。坐标 `[行, 列]` 从 0 开始，行向下、列向右。只允许上下左右相邻移动，每步代价 1，不允许斜走。机器人在本题被简化成一个点。
+
+## 2. 跟着参考示例运行
+
+完整解压后，在材料目录执行：
+
+```text
+python planner.py map.json
+python planner.py blocked.json
+python check_work.py --reference
+```
+
+map.json 是 5 行 7 列，起点 [0,0]，终点 [4,6]。参考输出 reachable 为 true、steps 为 10。一条最短路径为：
+
+```json
+[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[1,6],[2,6],[3,6],[4,6]]
+```
+
+最短路径可以不唯一，只要合法且 10 步就正确。blocked.json 的竖直墙把起终点隔开，输出应为 reachable: false、steps: null、path: null。不能用空列表假装到达，也不能返回穿墙的路线。参考自检应显示 6 项通过。
+
+为什么主地图至少 10 步？从 [0,0] 到 [4,6] 至少改变 4 次行坐标、6 次列坐标；参考路线刚好达到下界，所以是最短路径。
+
+## 3. 修改代码，完成自己的搜索器
+
+先填写 project-card.md：目标、输入、输出、验收。然后完成 exercise.py 的三个 TODO。
+
+使用广度优先搜索 BFS：队列先放起点；每次取队首，按固定次序查看四个相邻格；只加入没有访问过的合法空格。把每个新格子的前一个格子记在 parents 中。找到终点后沿 parents 回溯，再反转得到路径；队列耗尽仍未找到时返回 None。
+
+```text
+python exercise.py map.json
+python exercise.py blocked.json
+python check_work.py
+```
+
+最后一条不加 --reference，才检查自己的实现。模板未完成会报 TODO，这是正常起点。不要只针对一张地图写死路径。
+
+独立变化任务：复制地图为 my_map.json。在 3×3 空地图中，把中心格改成障碍，起点 [1,0]、终点 [1,2]。先预测绕行应为 4 步，再运行。接着封住整列，预测无路可走并验证。保存两份地图及结果。
+
+## 4. 对照标准结果
+
+| 测试 | 预期 |
+| --- | --- |
+| 课程地图 | 10 步，起终点正确，无穿墙 |
+| 3×3 中心障碍绕行 | 4 步 |
+| 隔断地图 | None，即明确无解 |
+| 起点即终点 | 路径仅一个点，0 步 |
+| 对角线仅两空格 | 无解，因为不允许斜走 |
+| 单行反向走廊 | 4 步 |
+
+自检同时检查路径连续性、边界、障碍和步数。六项通过后，仍需解释算法和提交自己的地图变化实验。
+
+进阶思考：如果每格代价不同，BFS 还能保证总代价最小吗？如果机器人有宽度，一条仅一个格子宽的通道是否一定能通过？这套代码尚未处理机器人外形、动态障碍、定位误差或运动控制，不能直接用于真机导航。
+
+## 5. 提交证据
+
+提交项目卡、自己实现的 exercise.py、原始和两份变化地图、运行命令与输出、六项个人自检、路线示意或截图、100–200 字复盘。证据必须能回答“输入是什么、做了什么改动、怎样判断结果正确”。
+
+可将输出保存到文件：
+
+```text
+python exercise.py map.json &gt; result.json
+```
+
+不要把 --reference 的自检输出作为自己的实现验收。填写 submission.md，返回第 6 关保存证据摘要或正式提交。
+
+## 常见问题与助教提示
+
+- KeyError/JSON 报错：核对 grid、start、goal 字段，使用英文标点。
+- 循环停不下来：检查是否在加入队列时记录 visited/parents，而不是反复加入同一个格子。
+- 路径方向反了：检查是否在回溯后反转列表。
+- 自检全过但不理解：拿 3×3 小地图，手写前三轮队列变化再解释。
+- 问助教：“请用这张小地图提示我下一次出队和入队的格子，不要直接替我写完整函数。”
+</code></pre></section><section id="file-1"><h2>blocked.json</h2><pre><code>{
+  &quot;grid&quot;: [&quot;..#..&quot;, &quot;..#..&quot;, &quot;..#..&quot;],
+  &quot;start&quot;: [1, 0],
+  &quot;goal&quot;: [1, 4]
+}
+</code></pre></section><section id="file-2"><h2>check_work.py</h2><pre><code>import importlib
+import sys
+import unittest
+
+reference = &quot;--reference&quot; in sys.argv
+solver = importlib.import_module(&quot;planner&quot; if reference else &quot;exercise&quot;).shortest_path
+
+
+class PlannerChecks(unittest.TestCase):
+    def route(self, grid, start, goal, steps):
+        path = solver(grid, start, goal)
+        self.assertIsInstance(path, list)
+        self.assertEqual(tuple(path[0]), start)
+        self.assertEqual(tuple(path[-1]), goal)
+        self.assertEqual(len(path)-1, steps)
+        for point in path:
+            r, c = point
+            self.assertTrue(0 &lt;= r &lt; len(grid) and 0 &lt;= c &lt; len(grid[0]))
+            self.assertEqual(grid[r][c], &quot;.&quot;)
+        for a, b in zip(path, path[1:]):
+            self.assertEqual(abs(a[0]-b[0])+abs(a[1]-b[1]), 1)
+
+    def test_01_course_map(self):
+        self.route([&quot;.......&quot;, &quot;.###.#.&quot;, &quot;...#.#.&quot;, &quot;.#...#.&quot;, &quot;.......&quot;], (0, 0), (4, 6), 10)
+
+    def test_02_detour(self):
+        self.route([&quot;...&quot;, &quot;.#.&quot;, &quot;...&quot;], (1, 0), (1, 2), 4)
+
+    def test_03_unreachable(self):
+        self.assertIsNone(solver([&quot;..#..&quot;]*3, (1, 0), (1, 4)))
+
+    def test_04_same_point(self):
+        self.route([&quot;.&quot;], (0, 0), (0, 0), 0)
+
+    def test_05_no_diagonals(self):
+        self.assertIsNone(solver([&quot;.#&quot;, &quot;#.&quot;], (0, 0), (1, 1)))
+
+    def test_06_corridor(self):
+        self.route([&quot;.....&quot;], (0, 4), (0, 0), 4)
+
+
+if __name__ == &quot;__main__&quot;:
+    print(&quot;检查对象：&quot; + (&quot;参考实现&quot; if reference else &quot;自己的 exercise.py&quot;))
+    unittest.main(argv=[sys.argv[0]], verbosity=2)
+</code></pre></section><section id="file-3"><h2>exercise.py</h2><pre><code>&quot;&quot;&quot;Implement BFS; use planner.py only after attempting the task.&quot;&quot;&quot;
+from collections import deque
+from planner import run
+
+
+def shortest_path(grid, start, goal):
+    # TODO 1: 初始化队列与 parents；把起点标为已访问。
+    # TODO 2: 逐层扩展四邻域；禁止越界、穿过 # 和重复访问。
+    # TODO 3: 找到终点时沿 parents 回溯；无路时返回 None。
+    raise NotImplementedError(&quot;请完成 shortest_path 的三个 TODO&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    raise SystemExit(run(shortest_path))
+</code></pre></section><section id="file-4"><h2>map.json</h2><pre><code>{
+  &quot;grid&quot;: [&quot;.......&quot;, &quot;.###.#.&quot;, &quot;...#.#.&quot;, &quot;.#...#.&quot;, &quot;.......&quot;],
+  &quot;start&quot;: [0, 0],
+  &quot;goal&quot;: [4, 6]
+}
+</code></pre></section><section id="file-5"><h2>planner.py</h2><pre><code>&quot;&quot;&quot;Four-neighbour unweighted BFS on synthetic occupancy grids.&quot;&quot;&quot;
+import json
+import sys
+from collections import deque
+from pathlib import Path
+
+
+def load_map(path):
+    data = json.loads(Path(path).read_text(encoding=&quot;utf-8-sig&quot;))
+    grid = data[&quot;grid&quot;]
+    if not isinstance(grid, list) or not grid or not all(isinstance(row, str) and row for row in grid):
+        raise ValueError(&quot;grid 应为非空字符串列表&quot;)
+    if any(len(row) != len(grid[0]) or set(row) - {&quot;.&quot;, &quot;#&quot;} for row in grid):
+        raise ValueError(&quot;地图必须等宽，只包含 . 和 #&quot;)
+    for name in (&quot;start&quot;, &quot;goal&quot;):
+        point = data[name]
+        if not isinstance(point, list) or len(point) != 2 or any(type(v) is not int for v in point):
+            raise ValueError(name + &quot; 必须是 [行, 列] 整数坐标&quot;)
+        r, c = point
+        if not (0 &lt;= r &lt; len(grid) and 0 &lt;= c &lt; len(grid[0])) or grid[r][c] == &quot;#&quot;:
+            raise ValueError(name + &quot; 越界或位于障碍格&quot;)
+    return grid, tuple(data[&quot;start&quot;]), tuple(data[&quot;goal&quot;])
+
+
+def shortest_path(grid, start, goal):
+    queue = deque([start])
+    parents = {start: None}
+    while queue:
+        current = queue.popleft()
+        if current == goal:
+            path = []
+            while current is not None:
+                path.append(current)
+                current = parents[current]
+            return path[::-1]
+        for dr, dc in ((0, 1), (1, 0), (0, -1), (-1, 0)):
+            nxt = current[0] + dr, current[1] + dc
+            r, c = nxt
+            if 0 &lt;= r &lt; len(grid) and 0 &lt;= c &lt; len(grid[0]) and grid[r][c] == &quot;.&quot; and nxt not in parents:
+                parents[nxt] = current
+                queue.append(nxt)
+    return None
+
+
+def run(solver=shortest_path):
+    try:
+        grid, start, goal = load_map(sys.argv[1] if len(sys.argv) &gt; 1 else &quot;map.json&quot;)
+        path = solver(grid, start, goal)
+        print(json.dumps({&quot;reachable&quot;: path is not None, &quot;steps&quot;: len(path)-1 if path else None, &quot;path&quot;: path}, ensure_ascii=False, indent=2))
+    except (OSError, ValueError, KeyError, TypeError, NotImplementedError) as error:
+        print(&quot;无法规划：&quot;, error, file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == &quot;__main__&quot;:
+    sys.exit(run())
+</code></pre></section><section id="file-6"><h2>project-card.md</h2><pre><code># 巡检路线规划项目卡
+
+- 负责人或昵称：待填写
+- 本周投入：待填写
+- 目标：在四邻域等代价地图中返回合法最短路径；无解时明确返回 None。
+- 输入：grid（. / #）、start、goal，坐标使用 [行, 列]。
+- 输出：reachable、steps、path。
+- 基准验收：课程地图 10 步；隔断地图无解；六项自检。
+- 我的修改：待填写
+- 自建地图及事先预测：待填写
+- 实际结果与证据路径：待填写
+- 问题、排查过程、下一步：待填写
+- 适用边界：不包含机器人尺寸、定位、控制和动态障碍。
+</code></pre></section><section id="file-7"><h2>submission.md</h2><pre><code># 巡检路线项目提交单
+
+- 姓名或昵称：
+- 日期：
+- 环境与版本：
+- 证据目录或授权链接：
+
+## 1. project-card.md 与自己的 exercise.py
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 2. 课程地图：合法路线、10 步输出；隔断地图：无解输出
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 3. python check_work.py 个人自检输出（不带 --reference）
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 4. 两份自建地图、事先预测、实际结果
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 5. 手写小地图前三轮队列变化；BFS 适用条件和真机应用缺口
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 助教与参考来源
+
+我独立完成了什么：
+使用了哪些参考代码或助教提示：
+哪些结论仍需验证：
+
+## 提交前核对
+
+- [ ] 已保存代码/数据/日志，链接可按授权访问。
+- [ ] 已对照本关标准，未把示例、自检或本机标记当作教师审核。
+- [ ] 未包含密码、令牌和不应公开的个人或项目资料。
+</code></pre></section></main></html>

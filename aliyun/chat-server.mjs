@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { NodeD1Database } from "./chat-d1-adapter.mjs";
 import worker from "../chat-cloudflare/src/index.mjs";
+import { createIntegration, isAiMemberPath, incomingAiRequest, sendAiResponse, requestCancellation } from "./ai-members/integration.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const publicRoot = path.join(root, "chat-cloudflare", "public");
@@ -77,6 +78,7 @@ const oaService = {
       body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
       duplex: ['GET', 'HEAD'].includes(request.method) ? undefined : "half",
       redirect: "manual",
+      signal: request.signal,
     }));
   },
 };
@@ -90,6 +92,16 @@ const env = new Proxy({
 }, {
   get(target, property) { return target[property]; },
 });
+
+// Separate AI store and sessions; no changes to currentVisitor or the human DB.
+let aiMembers = null;
+try {
+  const snapshot = JSON.parse(await readFile(new URL('./ai-members/courses.json', import.meta.url), 'utf8'));
+  aiMembers = createIntegration({
+    audience: 'chat', databasePath: '/var/lib/originmind-ai-members/ai-members.sqlite', origin: appOrigin,
+    courses: snapshot.courses, courseVersion: snapshot.courseVersion, worker, env,
+  });
+} catch { console.error('AI member integration unavailable; existing Chat routes remain available'); }
 
 async function requestBody(incoming) {
   if (['GET', 'HEAD'].includes(incoming.method || 'GET')) return undefined;
@@ -107,7 +119,7 @@ async function requestBody(incoming) {
   return Buffer.concat(pieces, total);
 }
 
-async function webRequest(incoming) {
+async function webRequest(incoming, signal) {
   const headers = new Headers();
   for (const [name, value] of Object.entries(incoming.headers)) {
     if (Array.isArray(value)) value.forEach((item) => headers.append(name, item));
@@ -122,33 +134,29 @@ async function webRequest(incoming) {
     method: incoming.method,
     headers,
     body,
+    signal,
   });
 }
 
-async function sendResponse(outgoing, response) {
-  const headers = {};
-  response.headers.forEach((value, name) => { headers[name] = value; });
-  const setCookies = response.headers.getSetCookie?.() || [];
-  if (setCookies.length) headers["set-cookie"] = setCookies;
-  outgoing.writeHead(response.status, headers);
-  if (!response.body) return outgoing.end();
-  const reader = response.body.getReader();
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!outgoing.write(Buffer.from(value))) await new Promise((resolve) => outgoing.once("drain", resolve));
-    }
-    outgoing.end();
-  } catch (error) {
-    outgoing.destroy(error);
-  }
-}
+// Preserve streaming and backpressure for both public Chat and isolated AI routes.
+const sendResponse = sendAiResponse;
 
 const server = http.createServer(async (incoming, outgoing) => {
   const background = [];
+  const lifecycle = requestCancellation(incoming, outgoing);
   try {
-    const request = await webRequest(incoming);
+    if (isAiMemberPath(incoming.url)) {
+      if (!aiMembers) {
+        await sendAiResponse(outgoing, Response.json({ error: 'AI 成员服务尚未就绪' },
+          { status: 503, headers: { 'Cache-Control': 'no-store' } }));
+        return;
+      }
+      const aiRequest = await incomingAiRequest(incoming, appOrigin, { signal: lifecycle.signal });
+      const aiResponse = await aiMembers.handle(aiRequest, { peer: incoming.socket.remoteAddress || 'unknown-peer' });
+      await sendAiResponse(outgoing, aiResponse || Response.json({ error: 'AI 接口不存在' }, { status: 404 }));
+      return;
+    }
+    const request = await webRequest(incoming, lifecycle.signal);
     const response = await worker.fetch(request, env, {
       waitUntil(promise) { background.push(Promise.resolve(promise)); },
       passThroughOnException() {},
@@ -164,7 +172,7 @@ const server = http.createServer(async (incoming, outgoing) => {
     } else {
       outgoing.destroy();
     }
-  }
+  } finally { lifecycle.cleanup(); }
 });
 
 server.listen(listenPort, listenHost, () => {
@@ -173,6 +181,7 @@ server.listen(listenPort, listenHost, () => {
 
 function shutdown() {
   server.close(() => {
+    try { aiMembers?.store.close(); } catch { console.error("AI store close failed"); }
     database.close();
     process.exit(0);
   });

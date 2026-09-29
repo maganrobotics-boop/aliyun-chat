@@ -1,0 +1,376 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>在线课程材料 · 机器人自主移动与操作实验室</title><style>body{margin:0;background:#f7f9fb;color:#20354a;font:16px/1.75 system-ui,sans-serif}header{position:sticky;top:0;background:white;padding:12px 5%;border-bottom:1px solid #dde5ee;display:flex;align-items:center;gap:24px;z-index:2}h1{font-size:20px;margin:0}a{color:#176b52}main{max-width:1100px;margin:24px auto;padding:0 18px}nav{display:flex;flex-wrap:wrap;gap:8px}nav a{background:white;border:1px solid #dce5ee;padding:5px 12px;border-radius:7px;overflow-wrap:anywhere}section{background:white;border:1px solid #dce5ee;border-radius:12px;padding:18px;margin:20px 0;scroll-margin-top:90px}h2{font-size:17px;overflow-wrap:anywhere}pre{overflow:auto;background:#f1f5f8;padding:16px;border-radius:8px;font:14px/1.7 ui-monospace,monospace;tab-size:4}@media(max-width:600px){header{padding:10px 14px;gap:12px}h1{font-size:17px}main{padding:0 12px}section{padding:12px}}</style><header><a href="index.html">← 返回课程</a><h1>在线课程材料</h1></header><main><p>教程、代码和数据可直接在线阅读。</p><nav><a href="#file-0">README.md</a><a href="#file-1">audit_evidence.py</a><a href="#file-2">manifest.template.json</a><a href="#file-3">sample/git-basics.md</a><a href="#file-4">sample/manifest.json</a><a href="#file-5">sample/mini-project.md</a><a href="#file-6">sample/python-basics.md</a><a href="#file-7">sample/registration.md</a><a href="#file-8">sample/ros2-simulation.md</a><a href="#file-9">sample/toolkit.md</a><a href="#file-10">submission.md</a></nav><section id="file-0"><h2>README.md</h2><pre><code># 第 7 关：把学习过程交付给另一个人复现
+
+建议 45–60 分钟。前置：前六关的真实成果与记录。本关不是再上传一堆截图，而是把“目标、改动、结果、解释、文件”对应起来。
+
+## 1. 下载证据整理材料
+
+[在线查看完整材料](materials.html) · [虚构样例清单](sample/manifest.json) · [个人清单模板](manifest.template.json) · [检查与打包程序](audit_evidence.py) · [提交单](submission.md)
+
+sample 目录仅含教学用虚构说明，字段 is_demo 为 true，不是实际学生完成课程的证据。你自己的成果放在单独的 my-evidence 文件夹中。
+
+## 2. 跟着样例整理一次
+
+在材料目录运行：
+
+```text
+python audit_evidence.py sample/manifest.json
+python audit_evidence.py sample/manifest.json --pack demo-evidence.zip
+```
+
+应看到 `DEMO_ONLY 示例结构通过，不可作为个人作业`，并统计 6 个关卡、6 个样例文件。压缩包包含清单、文件与 SHA256SUMS.txt。哈希用于核对文件是否被改变，不能证明作者身份、真实运行或内容正确。
+
+逐项观察 manifest：id 对应关卡，command 是实际运行命令或登记操作，expected 是事先预测，actual 是实际结果，change 是你做的改动，explanation 是你对结果的解释，files 是能支撑结论的本地文件路径。
+
+## 3. 修改成自己的证据清单
+
+新建 my-evidence，把 manifest.template.json 复制进去并重命名为 manifest.json，按关卡建立文件夹，把自己实际完成的代码、日志、结果与说明复制进去。
+
+把 is_demo 设置为 false；逐项填写前六关的真实状态与证据。files 使用相对路径，例如 `python/exercise.py` 和 `python/result.txt`。每关至少一个非空证据文件，实际验收仍以该关的提交要求为准。
+
+模板中的 status 默认为 in_progress。只有真正达到该关验收标准时才改为 completed。ROS2 只有离线预检时，应保留进行中并写出阻塞原因；程序会拒绝生成“已齐全”的提交包。不要用改状态来掩盖未完成工作。
+
+填写反思 reflection、下一步 next_goal、助教/AI 帮助 ai_help；未使用可写“未使用”。保留个人思考和真实排错记录，使用参考代码也应说明。
+
+```text
+python audit_evidence.py my-evidence/manifest.json
+python audit_evidence.py my-evidence/manifest.json --pack my-evidence-v1.zip
+```
+
+打包不会覆盖同名文件；修改后用新版本名，例如 v2。超 25 MB 的单个视频可保存到获准的共享位置，再把链接、访问权限和说明写进证据文本。不要把令牌、密码、私人信息或未经授权的项目资料装入包。
+
+变化任务：暂时把一个证据文件改名，运行检查，确认它准确报告缺失；恢复文件名后再检查。保存这次失败与修复的记录，证明你理解清单与文件的对应关系。
+
+## 4. 对照验收标准
+
+| 维度 | 通过标准 |
+| --- | --- |
+| 完整性 | 前六关各有状态、命令/操作、预期、实际、改动、解释和证据 |
+| 可复现性 | 他人能用 README 中的环境和命令找到并复现关键结果 |
+| 正确性 | 结果符合各关标准，真实仿真与理论样例明确区分 |
+| 可解释性 | 能解释至少一次失败、定位依据和修复后的变化 |
+| 可追溯性 | 证据路径可打开，代码版本和助教帮助有记录 |
+
+结构检查只做字段、路径和文件存在性检查；它不会自动批改报告，不会确认文件内容是本人完成，也不会自动授予真机或项目权限。
+
+## 5. 提交证据与下一阶段计划
+
+填写 submission.md，附证据包、检查结果、一页反思和下一阶段计划。做一次 3 分钟演示：30 秒介绍目标，90 秒展示一项修改前后结果，60 秒解释一次失败和下一步。
+
+返回第 7 关，把证据包的授权访问链接与内容摘要填入证据栏。免登录模式仅记录在当前浏览器；正式提交需登录。下载打包程序不会自动上传文件，保存本机进度也不等于教师验收通过。
+
+## 常见问题与助教提示
+
+- 文件缺失：manifest 中的路径相对于 manifest 所在目录，不是电脑桌面或程序所在目录。
+- 结构通过但导师打不开链接：检查共享权限与有效期，请导师使用其获授权的账号实际打开链接核对，不为方便验收把非公开资料改成公开访问。
+- 还有一关没完成：先记录阻塞和下一步，不要把示例充当成果；可继续整理其他关证据。
+- 问助教：“请依据这个清单指出缺失证据，不要把未完成关卡改为通过，也不要替我编造实验结果。”
+</code></pre></section><section id="file-1"><h2>audit_evidence.py</h2><pre><code>&quot;&quot;&quot;Check a local manifest and package only its explicitly listed relative files.&quot;&quot;&quot;
+import argparse
+import hashlib
+import json
+import sys
+import zipfile
+from pathlib import Path
+
+STAGES = {&quot;registration&quot;, &quot;toolkit&quot;, &quot;git-basics&quot;, &quot;python-basics&quot;, &quot;ros2-simulation&quot;, &quot;mini-project&quot;}
+
+
+def audit(manifest_path):
+    root = manifest_path.resolve().parent
+    data = json.loads(manifest_path.read_text(encoding=&quot;utf-8-sig&quot;))
+    errors, files = [], {}
+    def filled(text):
+        return isinstance(text, str) and bool(text.strip()) and &quot;待填写&quot; not in text
+    if not isinstance(data, dict):
+        return {}, [&quot;manifest 必须是对象&quot;], {}
+    for key in (&quot;learner&quot;, &quot;reflection&quot;, &quot;next_goal&quot;, &quot;ai_help&quot;):
+        if not filled(data.get(key)):
+            errors.append(key + &quot; 未填写&quot;)
+    if type(data.get(&quot;is_demo&quot;)) is not bool:
+        errors.append(&quot;is_demo 必须是 true 或 false&quot;)
+    stages = data.get(&quot;stages&quot;, [])
+    if not isinstance(stages, list) or not all(isinstance(s, dict) for s in stages):
+        return data, errors + [&quot;stages 应为对象列表&quot;], files
+    ids = [s.get(&quot;id&quot;) for s in stages]
+    if len(ids) != 6 or set(ids) != STAGES:
+        errors.append(&quot;必须逐项列出前六关且不重复&quot;)
+    for stage in stages:
+        name = str(stage.get(&quot;id&quot;))
+        if stage.get(&quot;status&quot;) != &quot;completed&quot;:
+            errors.append(name + &quot; 尚未完成；不能用模板或离线预检代替真实实验&quot;)
+        for key in (&quot;command&quot;, &quot;expected&quot;, &quot;actual&quot;, &quot;change&quot;, &quot;explanation&quot;):
+            if not filled(stage.get(key)):
+                errors.append(name + &quot;: &quot; + key + &quot; 未填写&quot;)
+        paths = stage.get(&quot;files&quot;)
+        if not isinstance(paths, list) or not paths:
+            errors.append(name + &quot; 缺少证据文件&quot;)
+            continue
+        for value in paths:
+            if not isinstance(value, str) or not value:
+                errors.append(name + &quot; 文件路径无效&quot;)
+                continue
+            path = root / value
+            if Path(value).is_absolute() or &quot;..&quot; in Path(value).parts or &quot;\\&quot; in value or not path.resolve().is_relative_to(root):
+                errors.append(name + &quot; 只接受证据目录内的相对路径&quot;)
+            elif not path.is_file() or path.stat().st_size == 0:
+                errors.append(name + &quot; 文件缺失或为空：&quot; + value)
+            elif path.stat().st_size &gt; 25*1024*1024:
+                errors.append(name + &quot; 单文件超过 25 MB，请用已授权的演示链接写入说明文件&quot;)
+            else:
+                files[value] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return data, errors, files
+
+
+if __name__ == &quot;__main__&quot;:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(&quot;manifest&quot;)
+    parser.add_argument(&quot;--pack&quot;, metavar=&quot;OUTPUT_ZIP&quot;)
+    args = parser.parse_args()
+    try:
+        manifest = Path(args.manifest)
+        data, errors, files = audit(manifest)
+        if errors:
+            print(&quot;\n&quot;.join(errors))
+            raise SystemExit(1)
+        label = &quot;DEMO_ONLY 示例结构通过，不可作为个人作业&quot; if data[&quot;is_demo&quot;] else &quot;证据结构检查通过，等待内容验收&quot;
+        print(label)
+        print(&quot;关卡：6；证据文件：&quot;, len(files))
+        if args.pack:
+            output = Path(args.pack).resolve()
+            if output == manifest.resolve() or any(output == (manifest.resolve().parent / p).resolve() for p in files):
+                raise ValueError(&quot;输出文件不能覆盖输入证据&quot;)
+            with zipfile.ZipFile(output, &quot;x&quot;, compression=zipfile.ZIP_DEFLATED) as bundle:
+                packed = json.loads(json.dumps(data))
+                for stage in packed[&quot;stages&quot;]:
+                    stage[&quot;files&quot;] = [&quot;evidence/&quot;+p for p in stage[&quot;files&quot;]]
+                bundle.writestr(&quot;manifest.json&quot;, json.dumps(packed, ensure_ascii=False, indent=2))
+                bundle.writestr(&quot;SHA256SUMS.txt&quot;, &quot;\n&quot;.join(h+&quot;  evidence/&quot;+p for p, h in files.items()))
+                for path in files:
+                    bundle.write(manifest.resolve().parent/path, &quot;evidence/&quot;+path)
+            print(&quot;已生成：&quot;, output.name)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        print(&quot;无法整理：&quot;, error)
+        sys.exit(2)
+</code></pre></section><section id="file-2"><h2>manifest.template.json</h2><pre><code>{
+  &quot;is_demo&quot;: false,
+  &quot;learner&quot;: &quot;待填写&quot;,
+  &quot;reflection&quot;: &quot;待填写&quot;,
+  &quot;next_goal&quot;: &quot;待填写&quot;,
+  &quot;ai_help&quot;: &quot;待填写&quot;,
+  &quot;stages&quot;: [
+    {
+      &quot;id&quot;: &quot;registration&quot;,
+      &quot;status&quot;: &quot;in_progress&quot;,
+      &quot;command&quot;: &quot;待填写&quot;,
+      &quot;expected&quot;: &quot;待填写&quot;,
+      &quot;actual&quot;: &quot;待填写&quot;,
+      &quot;change&quot;: &quot;待填写&quot;,
+      &quot;explanation&quot;: &quot;待填写&quot;,
+      &quot;files&quot;: [
+        &quot;registration/待填写.txt&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;toolkit&quot;,
+      &quot;status&quot;: &quot;in_progress&quot;,
+      &quot;command&quot;: &quot;待填写&quot;,
+      &quot;expected&quot;: &quot;待填写&quot;,
+      &quot;actual&quot;: &quot;待填写&quot;,
+      &quot;change&quot;: &quot;待填写&quot;,
+      &quot;explanation&quot;: &quot;待填写&quot;,
+      &quot;files&quot;: [
+        &quot;toolkit/待填写.txt&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;git-basics&quot;,
+      &quot;status&quot;: &quot;in_progress&quot;,
+      &quot;command&quot;: &quot;待填写&quot;,
+      &quot;expected&quot;: &quot;待填写&quot;,
+      &quot;actual&quot;: &quot;待填写&quot;,
+      &quot;change&quot;: &quot;待填写&quot;,
+      &quot;explanation&quot;: &quot;待填写&quot;,
+      &quot;files&quot;: [
+        &quot;git-basics/待填写.txt&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;python-basics&quot;,
+      &quot;status&quot;: &quot;in_progress&quot;,
+      &quot;command&quot;: &quot;待填写&quot;,
+      &quot;expected&quot;: &quot;待填写&quot;,
+      &quot;actual&quot;: &quot;待填写&quot;,
+      &quot;change&quot;: &quot;待填写&quot;,
+      &quot;explanation&quot;: &quot;待填写&quot;,
+      &quot;files&quot;: [
+        &quot;python-basics/待填写.txt&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;ros2-simulation&quot;,
+      &quot;status&quot;: &quot;in_progress&quot;,
+      &quot;command&quot;: &quot;待填写&quot;,
+      &quot;expected&quot;: &quot;待填写&quot;,
+      &quot;actual&quot;: &quot;待填写&quot;,
+      &quot;change&quot;: &quot;待填写&quot;,
+      &quot;explanation&quot;: &quot;待填写&quot;,
+      &quot;files&quot;: [
+        &quot;ros2-simulation/待填写.txt&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;mini-project&quot;,
+      &quot;status&quot;: &quot;in_progress&quot;,
+      &quot;command&quot;: &quot;待填写&quot;,
+      &quot;expected&quot;: &quot;待填写&quot;,
+      &quot;actual&quot;: &quot;待填写&quot;,
+      &quot;change&quot;: &quot;待填写&quot;,
+      &quot;explanation&quot;: &quot;待填写&quot;,
+      &quot;files&quot;: [
+        &quot;mini-project/待填写.txt&quot;
+      ]
+    }
+  ]
+}
+</code></pre></section><section id="file-3"><h2>sample/git-basics.md</h2><pre><code># git-basics 虚构示例
+
+这是用于演示清单结构的文字，不包含真实运行证据。不能作为个人作业。
+</code></pre></section><section id="file-4"><h2>sample/manifest.json</h2><pre><code>{
+  &quot;is_demo&quot;: true,
+  &quot;learner&quot;: &quot;虚构示例同学&quot;,
+  &quot;reflection&quot;: &quot;这是说明清单结构的教学样例，不是真实实验或个人成绩。&quot;,
+  &quot;next_goal&quot;: &quot;在真实课程中逐关替换为本人证据。&quot;,
+  &quot;ai_help&quot;: &quot;本样例由课程作者编写。&quot;,
+  &quot;stages&quot;: [
+    {
+      &quot;id&quot;: &quot;registration&quot;,
+      &quot;status&quot;: &quot;completed&quot;,
+      &quot;command&quot;: &quot;示例占位：本关实际命令写在此处&quot;,
+      &quot;expected&quot;: &quot;示例占位：事先预测&quot;,
+      &quot;actual&quot;: &quot;示例占位：实际测量&quot;,
+      &quot;change&quot;: &quot;示例占位：个人修改&quot;,
+      &quot;explanation&quot;: &quot;示例占位：原因说明&quot;,
+      &quot;files&quot;: [
+        &quot;registration.md&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;toolkit&quot;,
+      &quot;status&quot;: &quot;completed&quot;,
+      &quot;command&quot;: &quot;示例占位：本关实际命令写在此处&quot;,
+      &quot;expected&quot;: &quot;示例占位：事先预测&quot;,
+      &quot;actual&quot;: &quot;示例占位：实际测量&quot;,
+      &quot;change&quot;: &quot;示例占位：个人修改&quot;,
+      &quot;explanation&quot;: &quot;示例占位：原因说明&quot;,
+      &quot;files&quot;: [
+        &quot;toolkit.md&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;git-basics&quot;,
+      &quot;status&quot;: &quot;completed&quot;,
+      &quot;command&quot;: &quot;示例占位：本关实际命令写在此处&quot;,
+      &quot;expected&quot;: &quot;示例占位：事先预测&quot;,
+      &quot;actual&quot;: &quot;示例占位：实际测量&quot;,
+      &quot;change&quot;: &quot;示例占位：个人修改&quot;,
+      &quot;explanation&quot;: &quot;示例占位：原因说明&quot;,
+      &quot;files&quot;: [
+        &quot;git-basics.md&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;python-basics&quot;,
+      &quot;status&quot;: &quot;completed&quot;,
+      &quot;command&quot;: &quot;示例占位：本关实际命令写在此处&quot;,
+      &quot;expected&quot;: &quot;示例占位：事先预测&quot;,
+      &quot;actual&quot;: &quot;示例占位：实际测量&quot;,
+      &quot;change&quot;: &quot;示例占位：个人修改&quot;,
+      &quot;explanation&quot;: &quot;示例占位：原因说明&quot;,
+      &quot;files&quot;: [
+        &quot;python-basics.md&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;ros2-simulation&quot;,
+      &quot;status&quot;: &quot;completed&quot;,
+      &quot;command&quot;: &quot;示例占位：本关实际命令写在此处&quot;,
+      &quot;expected&quot;: &quot;示例占位：事先预测&quot;,
+      &quot;actual&quot;: &quot;示例占位：实际测量&quot;,
+      &quot;change&quot;: &quot;示例占位：个人修改&quot;,
+      &quot;explanation&quot;: &quot;示例占位：原因说明&quot;,
+      &quot;files&quot;: [
+        &quot;ros2-simulation.md&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;mini-project&quot;,
+      &quot;status&quot;: &quot;completed&quot;,
+      &quot;command&quot;: &quot;示例占位：本关实际命令写在此处&quot;,
+      &quot;expected&quot;: &quot;示例占位：事先预测&quot;,
+      &quot;actual&quot;: &quot;示例占位：实际测量&quot;,
+      &quot;change&quot;: &quot;示例占位：个人修改&quot;,
+      &quot;explanation&quot;: &quot;示例占位：原因说明&quot;,
+      &quot;files&quot;: [
+        &quot;mini-project.md&quot;
+      ]
+    }
+  ]
+}
+</code></pre></section><section id="file-5"><h2>sample/mini-project.md</h2><pre><code># mini-project 虚构示例
+
+这是用于演示清单结构的文字，不包含真实运行证据。不能作为个人作业。
+</code></pre></section><section id="file-6"><h2>sample/python-basics.md</h2><pre><code># python-basics 虚构示例
+
+这是用于演示清单结构的文字，不包含真实运行证据。不能作为个人作业。
+</code></pre></section><section id="file-7"><h2>sample/registration.md</h2><pre><code># registration 虚构示例
+
+这是用于演示清单结构的文字，不包含真实运行证据。不能作为个人作业。
+</code></pre></section><section id="file-8"><h2>sample/ros2-simulation.md</h2><pre><code># ros2-simulation 虚构示例
+
+这是用于演示清单结构的文字，不包含真实运行证据。不能作为个人作业。
+</code></pre></section><section id="file-9"><h2>sample/toolkit.md</h2><pre><code># toolkit 虚构示例
+
+这是用于演示清单结构的文字，不包含真实运行证据。不能作为个人作业。
+</code></pre></section><section id="file-10"><h2>submission.md</h2><pre><code># 出村证据提交单
+
+- 姓名或昵称：
+- 日期：
+- 环境与版本：
+- 证据目录或授权链接：
+
+## 1. 证据包文件名、日期、授权访问链接和版本
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 2. 六关完整性清单与 audit_evidence.py 输出
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 3. 故意缺失一项证据时的报错与恢复后的结果
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 4. 一页反思：最有价值的技能、一次失败、定位依据、解决结果
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 5. 下一阶段计划：方向、具体任务、输入输出、验收、时间
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 6. 3 分钟演示提纲；仍未完成或需要导师判断的部分
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 助教与参考来源
+
+我独立完成了什么：
+使用了哪些参考代码或助教提示：
+哪些结论仍需验证：
+
+## 提交前核对
+
+- [ ] 已保存代码/数据/日志，链接可按授权访问。
+- [ ] 已对照本关标准，未把示例、自检或本机标记当作教师审核。
+- [ ] 未包含密码、令牌和不应公开的个人或项目资料。
+</code></pre></section></main></html>

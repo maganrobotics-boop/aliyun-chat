@@ -55,7 +55,7 @@ const vite = await createServer({
 const route = await vite.ssrLoadModule("/app/api/public/lab-ai/status/route.ts");
 const rateLimit = await vite.ssrLoadModule("/app/api/public/lab-ai/_lib/rate-limit.ts");
 
-function request(headers = {}, url = "https://oa.omindos.ai/api/public/lab-ai/status") {
+function request(headers = {}, url = "https://oa.omindos.cn/api/public/lab-ai/status") {
   return new Request(url, {
     method: "GET",
     headers: {
@@ -103,7 +103,7 @@ test("status is unavailable during migration freeze and rejects query parameters
   assert.equal(frozen.status, 503);
   assert.equal(frozen.headers.get("retry-after"), "300");
   globalThis[stateKey].env.OA_MIGRATION_WRITE_FROZEN = "false";
-  assert.equal((await route.GET(request({}, "https://oa.omindos.ai/api/public/lab-ai/status?debug=1"))).status, 400);
+  assert.equal((await route.GET(request({}, "https://oa.omindos.cn/api/public/lab-ai/status?debug=1"))).status, 400);
   assert.equal(globalThis[stateKey].storeCalls, 0);
   assert.equal(globalThis[stateKey].rateLimitCalls, 0);
 });

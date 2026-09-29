@@ -67,7 +67,7 @@ const rateLimit = await vite.ssrLoadModule("/app/api/public/lab-ai/_lib/rate-lim
 const responseContract = await vite.ssrLoadModule("/app/api/public/lab-ai/_lib/response-contract.ts");
 const policy = await vite.ssrLoadModule("/lib/knowledge-policy.ts");
 
-function request(headers = {}, url = "https://oa.omindos.ai/api/public/lab-ai/suggestions") {
+function request(headers = {}, url = "https://oa.omindos.cn/api/public/lab-ai/suggestions") {
   return new Request(url, {
     method: "GET",
     headers: {
@@ -165,7 +165,7 @@ test("suggestions reject invalid credentials, configuration, freeze, and query p
   assert.equal(frozen.status, 503);
   assert.equal(frozen.headers.get("retry-after"), "300");
   globalThis[stateKey].env.OA_MIGRATION_WRITE_FROZEN = "false";
-  assert.equal((await route.GET(request({}, "https://oa.omindos.ai/api/public/lab-ai/suggestions?debug=1"))).status, 400);
+  assert.equal((await route.GET(request({}, "https://oa.omindos.cn/api/public/lab-ai/suggestions?debug=1"))).status, 400);
   assert.equal(globalThis[stateKey].d1Calls, 0);
   assert.equal(globalThis[stateKey].storeCalls, 0);
 });

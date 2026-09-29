@@ -1,7 +1,8 @@
+import { shouldUseStaticTaGuide } from "./ta-guide-intent.mjs";
 import { buildGeneralChatMessages, buildGroundedChatMessages, boundedUserMessages } from './grounded-prompt.mjs';
 import { handleOaChatBridge } from './oa-chat-bridge.mjs';
 import { handleOaAdminBridge } from './oa-admin-bridge.mjs';
-import { questionAllowsGeneralKnowledge, questionPrefersGeneralKnowledge, questionRequestsKnowledgeImages } from './question-scope.mjs';
+import { questionAllowsGeneralKnowledge, questionPrefersGeneralKnowledge, questionRequestsKnowledgeImages, questionIsSimpleConversation } from './question-scope.mjs';
 import { chatKnowledgeImages, proxyKnowledgeAsset } from "./knowledge-assets.mjs";
 import { protectAnswerTechnicalText } from "./answer-math.mjs";
 import { cleanAnswerPresentation } from "./answer-presentation.mjs";
@@ -523,6 +524,7 @@ async function sendCampusLoginCode(context, email, code) {
     if (context.env.EMAIL_CODE_DEV_MODE === "1") return { sent: false, devCode: code };
     throw new PublicError("验证码邮件服务尚未配置，请联系管理员。", 503);
   }
+  assertCampusEmailDeliveryConfigured(context);
   const response = await context.runtime.fetch(endpoint, {
     method: "POST",
     headers: {
@@ -728,13 +730,18 @@ async function newbieApi(context) {
     const reusableAcceptance = existing && existing.reviewStatus !== "rejected" ? existing : null;
     const acceptedAt = reusableAcceptance?.acceptedAt || Date.now();
     const archivedSignerName = reusableAcceptance?.signerName || signerName;
-    const approvalId = await syncNewbieAgreementToOa(context, {
-      visitor,
-      signerName: archivedSignerName,
-      agreement: NEWBIE_AGREEMENT,
-      contentSha256,
-      acceptedAt,
-    });
+    let approvalId = "";
+    try {
+      approvalId = await syncNewbieAgreementToOa(context, {
+        visitor,
+        signerName: archivedSignerName,
+        agreement: NEWBIE_AGREEMENT,
+        contentSha256,
+        acceptedAt,
+      });
+    } catch {
+      approvalId = "";
+    }
     await database(context)
       .prepare(
         "INSERT INTO newbie_agreement_acceptances(" +
@@ -753,12 +760,12 @@ async function newbieApi(context) {
         archivedSignerName,
         contentSha256,
         acceptedAt,
-        `system:auto:oa:${approvalId}`,
+        approvalId ? `system:auto:oa:${approvalId}` : "system:auto:chat",
         acceptedAt,
-        "已自动审核通过并同步至 OA。",
+        approvalId ? "已自动审核通过并同步至 OA。" : "已自动审核通过；OA 归档待后续同步。",
       )
       .run();
-    return json({ signed: true, archived: true, autoApproved: true, oaApprovalId: approvalId, ...(await newbieDashboard(context, visitor)) });
+    return json({ signed: true, archived: true, autoApproved: true, ...(approvalId ? { oaApprovalId: approvalId } : {}), ...(await newbieDashboard(context, visitor)) });
   }
 
   if (pathname === "/api/newbie/profile" && request.method === "PATCH") {
@@ -824,11 +831,31 @@ async function newbieApi(context) {
   return json({ error: "没有找到此接口" }, 404);
 }
 
+function assertCampusEmailDeliveryConfigured(context) {
+  const endpoint = typeof context.env.EMAIL_CODE_WEBHOOK_URL === "string" ? context.env.EMAIL_CODE_WEBHOOK_URL.trim() : "";
+  const token = typeof context.env.EMAIL_CODE_WEBHOOK_TOKEN === "string" ? context.env.EMAIL_CODE_WEBHOOK_TOKEN.trim() : "";
+  // Preserve the pre-existing no-endpoint development branch without enabling it.
+  if (!endpoint && context.env.EMAIL_CODE_DEV_MODE === "1") return;
+  let validEndpoint = false;
+  try { validEndpoint = new URL(endpoint).protocol === "https:"; } catch {}
+  if (!token || !validEndpoint) {
+    throw new PublicError("验证码邮件服务尚未配置完整，暂时无法发送新验证码。已收到的有效验证码仍可验证。", 503);
+  }
+}
+
+function campusEmailLoginConfigured(context) {
+  const endpoint = typeof context.env.EMAIL_CODE_WEBHOOK_URL === "string" ? context.env.EMAIL_CODE_WEBHOOK_URL.trim() : "";
+  const token = typeof context.env.EMAIL_CODE_WEBHOOK_TOKEN === "string" ? context.env.EMAIL_CODE_WEBHOOK_TOKEN.trim() : "";
+  if (!token || context.env.EMAIL_CODE_DEV_MODE === "1") return false;
+  try { return new URL(endpoint).protocol === "https:"; } catch { return false; }
+}
+
 async function visitorAuth(context) {
   const { request } = context;
   const path = new URL(request.url).pathname;
   if (path === "/api/visitor/status" && request.method === "GET") {
-    return json({ signedIn: Boolean(await currentVisitor(context)), user: await currentVisitor(context) });
+    const user = await currentVisitor(context);
+    return json({ signedIn: Boolean(user), user, emailLoginConfigured: campusEmailLoginConfigured(context) }, 200, { "Cache-Control": "no-store" });
   }
   if (request.method !== "POST") return json({ error: "没有找到此接口" }, 404);
   sameOrigin(context);
@@ -844,6 +871,7 @@ async function visitorAuth(context) {
     const payload = await readJson(request, 2_000);
     const email = normalizeCampusEmail(payload?.email);
     if (!email) throw new PublicError("学生请使用学号@stumail.sztu.edu.cn，教师请使用 @sztu.edu.cn 邮箱。", 400);
+    assertCampusEmailDeliveryConfigured(context);
     await consumeCounter(
       context,
       `visitor-code-email:${email}:${Math.floor(now / 900_000)}`,
@@ -896,6 +924,10 @@ function database(context) {
 }
 
 async function recordAnalyticsBestEffort(context, events) {
+  // AI-run traffic is audited separately. This marker affects statistics only, never authorization.
+  const aiActorForAnalytics = context.executionContext?.originmindActorType === "ai_member" ||
+    /^OriginMind-AI-Member\//u.test(context.request.headers.get("user-agent") || "");
+  if (aiActorForAnalytics) return;
   const task = recordAnalyticsEvents(database(context), events).catch(() => {
     console.error("Analytics write failed", { eventCount: events.length });
   });
@@ -2014,7 +2046,7 @@ async function api(context) {
       const suggestionReference = suggestionKnowledgeReference(sourceQuestion || last.content);
       const courseDocument = sourceQuestion ? null : newbieCourseDocument(payload.messages);
       const localSiteDocuments = sourceQuestion ? [] : courseDocument ? [courseDocument] : siteKnowledgeDocuments(last.content);
-      const retrievedDocuments = [
+      const retrievedDocuments = courseDocument ? [courseDocument] : [
         ...oa.documents.filter((document) => !courseDocument || document.id !== "static:ta"),
         ...localSiteDocuments.filter((siteDocument) => (
           !oa.documents.some((document) => document.id === siteDocument.id)
@@ -2048,7 +2080,7 @@ async function api(context) {
           releaseId: releaseId(context),
         });
       }
-      if (documents.some((document) => document.id === "static:ta")) {
+      if (shouldUseStaticTaGuide(last.content) && documents.some((document) => document.id === "static:ta")) {
         return chatResult({
           answer: "**机器人新手村**是新同学进入实验室工作方式的入门路径：先知道自己在哪里，再知道下一步做什么。[1]\n\n你现在可以先做四件事：\n\n1. **完善个人信息和学习目标**：写清楚专业、年级、已有基础、兴趣方向和每周可投入时间。[1]\n2. **阅读并签署新手村保密协议**：理解哪些资料、代码、数据和项目内容不能外传。[1]\n3. **选择一个初步项目方向**：可以先在感知、导航、控制、机械或 AI 中选一个，不确定也可以让助教根据你的基础帮你判断。[1]\n4. **进入课程与任务**：从一个小任务开始，提交代码链接、截图、运行记录或复盘作为证据包。[1]\n\n如果你不知道从哪里开始，就先告诉助教你的专业、会不会 Python/ROS、每周能投入多久、对机械/算法/AI 哪个更感兴趣，助教会把任务拆成今天能做的一步。[1]",
           sources,
@@ -2074,9 +2106,9 @@ async function api(context) {
       const active = modelProvider(context, config);
       const questionScope = [...retrievalHistory.map(message => message.content), last.content].join(' ');
       const hasSiteKnowledge = documents.some((document) => document.origin === "site_public");
-      const generalKnowledge = !sourceQuestion && (documents.length
+      const generalKnowledge = !sourceQuestion && (questionIsSimpleConversation(last.content) || (documents.length
         ? !hasSiteKnowledge && questionPrefersGeneralKnowledge(last.content)
-        : questionAllowsGeneralKnowledge(questionScope));
+        : questionAllowsGeneralKnowledge(questionScope)));
       if ((!documents.length && !generalKnowledge) || !active.provider) {
         return chatResult({
           answer: fallbackAnswer(documents),

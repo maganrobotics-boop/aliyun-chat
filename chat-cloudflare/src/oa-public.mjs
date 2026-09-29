@@ -1,3 +1,4 @@
+import { shouldUseStaticTaGuide } from "./ta-guide-intent.mjs";
 import { parseKnowledgeAssets } from "./knowledge-asset-token.mjs";
 import { cleanPublicChatText } from "./public-text.mjs";
 import {
@@ -254,7 +255,7 @@ export async function retrieveOaSuggestions(context) {
 }
 
 function staticTaDocuments(question) {
-  if (!/(?:助教|\bTA\b|实验室大模型|问助教)/iu.test(question)) return [];
+  if (!shouldUseStaticTaGuide(question)) return [];
   return [{
     id: "static:ta",
     title: "实验室 AI 助教与机器人新手村",

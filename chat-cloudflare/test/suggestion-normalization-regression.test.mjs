@@ -8,7 +8,7 @@ import { OVERVIEW_QUESTIONS } from "../src/suggestion-excerpts.mjs";
 import { suggestionKnowledgeReference } from "../src/oa-public.mjs";
 import { D1DatabaseAdapter } from "./d1-adapter.mjs";
 
-const ORIGIN = "https://chat.omindos.ai";
+const ORIGIN = "https://chat.omindos.cn";
 const KEY = "encryption-key-".padEnd(48, "e");
 const BODY = "实验平台采用模块化设计，将动力单元、通信接口和采集设备分别安装在可拆卸支架上。维护人员可以独立更换损坏的部件，并在完成装配之后依次检查供电稳定性、接口连通性和数据记录情况，确认每个模块的状态符合要求。";
 const TACTILE = "触觉反馈帮助机器人调整抓取物体时的力度。";

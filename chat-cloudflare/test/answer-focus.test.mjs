@@ -4,7 +4,7 @@ import { handleRequest } from "../src/app.mjs";
 import { fallbackAnswer } from "../src/knowledge.mjs";
 import { D1DatabaseAdapter } from "./d1-adapter.mjs";
 
-const ORIGIN = "https://chat.omindos.ai";
+const ORIGIN = "https://chat.omindos.cn";
 // Synthetic public text only: no uploaded screenshot, personal metadata or production data.
 const excerpt = "7. 实验室培养特点\n\n示例实验室注重真实机器人任务，强调软硬协同与成果归档。\n\n一、实验室定位\n\n研究自主移动与智能操作。";
 const chunks = [{

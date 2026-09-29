@@ -1,6 +1,5 @@
 "use client";
 
-import { consumeOaAnswerStream } from '@/lib/oa-native-stream.mjs';
 import { FormEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { ArrowUp, Bot, Copy, Forward, ImagePlus, Pencil, RotateCcw, Square, Trash2 } from 'lucide-react';
 import { renderAnswerBody, userFacingAnswer } from '@/lib/oa-chat-renderer.mjs';
@@ -25,7 +24,7 @@ import { OaMeetingMode, type OaMeetingModeHandle } from './oa-meeting-mode';
 import { toast } from 'sonner';
 
 type Image = { url: string; alt: string; mimeType: string };
-type Turn = { id: string; order: number; question: string; answer: string; citations: KnowledgeCitation[]; images: Image[]; failed?: boolean; streaming?: boolean };
+type Turn = { id: string; order: number; question: string; answer: string; citations: KnowledgeCitation[]; images: Image[]; failed?: boolean };
 type Reply = { answer?: string; citations?: KnowledgeCitation[]; images?: Image[]; error?: string; mode?: string; fallbackReason?: string };
 
 type EditableImage = { path: string; alt: string; file?: File; sourceUrl?: string };
@@ -43,7 +42,7 @@ const quickActions = [
 // OaDocumentUpload OaChatDocumentEvent documents.shouldHandle OaDocumentDialogs
 // <h2>实验室大模型能做什么</h2>
 // <p>知识问答、资料整理、会议纪要、项目总结等</p>
-
+const revealDelay = () => new Promise(resolve => window.setTimeout(resolve, 16));
 
 function safeAssetName(value: string, index: number) {
   const base = value.split(/[?#]/u, 1)[0].split('/').pop()?.replace(/[^A-Za-z0-9._-]/gu, '-') || `image-${index + 1}.png`;
@@ -201,7 +200,6 @@ function OaAiChatPanel({ isAdmin = false }: { isAdmin?: boolean }) {
   const [question, setQuestion] = useState('');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [asking, setAsking] = useState(false);
-  const [streamPhase, setStreamPhase] = useState('正在检索资料…');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
   const [editingTurn, setEditingTurn] = useState<Turn | null>(null);
@@ -311,37 +309,28 @@ function OaAiChatPanel({ isAdmin = false }: { isAdmin?: boolean }) {
     let httpStatus: number | null = null;
     setAsking(true); setError(''); setQuestion(''); stickToEnd.current = true;
     setRequestStatus(pendingChatIndicators()); setLastAnswer(null);
-    setStreamPhase('正在检索资料…');
-    setTurns([...preceding, { id, order: retry?.order || nextOrder(), question: normalized, answer: '', citations: [], images: [], streaming: true }]);
+    setTurns([...preceding, { id, order: retry?.order || nextOrder(), question: normalized, answer: '', citations: [], images: [] }]);
     try {
-      const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(95000)]);
-      const response = await fetch('/api/lab-ai/ask', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'content-type': 'application/json', accept: 'text/event-stream' }, body: JSON.stringify({ question: modelQuestion, history }), signal });
+      const response = await fetch('/api/lab-ai/ask', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify({ question: modelQuestion, history }), signal: AbortSignal.any([controller.signal, AbortSignal.timeout(80000)]) });
       httpStatus = response.status;
-      let data: Reply;
-      if (response.headers.get('content-type')?.split(';', 1)[0] === 'text/event-stream') {
-        data = await consumeOaAnswerStream(response, { signal, onEvent(event) {
-          if (sequence !== requestSequence.current || signal.aborted) throw new DOMException('已停止', 'AbortError');
-          if (event.type === 'status') setStreamPhase(({ generating: '正在生成回答…', validating: '正在核验回答…', retrying: '正在重新生成…', continuing: '正在继续生成…' })[event.phase]);
-          else if (event.type === 'reset') setTurns(current => current.map(turn => turn.id === id ? { ...turn, answer: '', citations: [], images: [] } : turn));
-          else if (event.type === 'delta') setTurns(current => current.map(turn => turn.id === id ? { ...turn, answer: turn.answer + event.delta, citations: [], images: [] } : turn));
-        } }) as Reply;
-      } else {
-        // Compatibility with an older server: show its completed JSON directly,
-        // never manufacture a stream by replaying a full answer character by character.
-        data = await response.json() as Reply;
-      }
+      const data = await response.json() as Reply;
       if (sequence !== requestSequence.current) return;
       if (!response.ok || typeof data?.answer !== 'string' || !data.answer.trim()) throw new Error(data?.error || '暂未收到完整回答，请重试。');
       const images = (Array.isArray(data.images) ? data.images : []).filter(validOaChatImage).slice(0, 4);
       const fallback = data.mode === 'retrieval' && data.fallbackReason !== 'no_documents';
       setRequestStatus(replyChatIndicators(data));
       const fullAnswer = data.answer!;
-      setTurns(current => current.map(turn => turn.id === id ? { ...turn, answer: fullAnswer, citations: data.citations || [], images, failed: fallback, streaming: false } : turn));
+      for (const length of Array.from({ length: Math.floor((fullAnswer.length - 1) / 8) }, (_, index) => (index + 1) * 8)) {
+        if (sequence !== requestSequence.current || controller.signal.aborted) return;
+        setTurns(current => current.map(turn => turn.id === id ? { ...turn, answer: fullAnswer.slice(0, length), citations: [], images: [] } : turn));
+        await revealDelay();
+      }
+      setTurns(current => current.map(turn => turn.id === id ? { ...turn, answer: fullAnswer, citations: data.citations || [], images, failed: fallback } : turn));
       setLastAnswer(fallback ? null : { body: userFacingAnswer(data.answer), omittedImages: images.length });
     } catch (cause) {
       if (sequence !== requestSequence.current) return;
       setRequestStatus(failedChatIndicators(httpStatus, controller.signal.aborted));
-      setTurns(current => current.map(turn => turn.id === id ? { ...turn, answer: '', citations: [], images: [], failed: true, streaming: false } : turn));
+      setTurns(current => current.map(turn => turn.id === id ? { ...turn, failed: true } : turn));
       setError(controller.signal.aborted ? '已停止等待。问题已保留，可以重试。' : cause instanceof Error ? cause.message : '发送失败，请重试。');
       setQuestion(normalized);
     } finally {
@@ -375,14 +364,14 @@ function OaAiChatPanel({ isAdmin = false }: { isAdmin?: boolean }) {
           const turn = entry.turn;
           return <div className="oa-chat-turn" key={turn.id}>
           <article className="message user" title="右键复制问题" onContextMenu={event => { event.preventDefault(); void copyQuestion(turn); }}><div className="message-content"><p>{turn.question}</p></div></article>
-          {turn.answer && <article className="message assistant"><div className="message-content">{turn.streaming ? <><div className="oa-stream-draft" style={{ whiteSpace: 'pre-wrap' }}>{turn.answer}</div><small role="status">正在生成，终稿尚未完成核验</small></> : <RichAnswer answer={turn.answer} />}
+          {turn.answer && <article className="message assistant"><div className="message-content"><RichAnswer answer={turn.answer} />
             {!!turn.images.length && <div className="oa-answer-images">{turn.images.map(image => <OaAnswerImage key={image.url} image={image} />)}</div>}
-            {!turn.streaming && !turn.failed && <div className="oa-answer-actions"><button type="button" className="copy-answer" onClick={() => void copy(turn)} aria-label="复制回答"><Copy size={15} />{copied === turn.id ? '已复制' : '复制'}</button><button type="button" aria-label="转发回答给成员" onClick={() => forward({ body: userFacingAnswer(turn.answer), omittedImages: turn.images.length })}><Forward size={15} />转发</button>{isAdmin && !turn.failed && <button type="button" className="oa-admin-edit-answer" onClick={() => setEditingTurn(turn)} aria-label="管理员修改回答"><Pencil size={15} />修改回答</button>}{!!turn.citations.length && <details><summary>参考已审核资料</summary>{turn.citations.map(citation => <p key={`${citation.id}-${citation.itemId}`}>{citation.title}{citation.sectionTitle ? ` · ${citation.sectionTitle}` : ''}</p>)}</details>}</div>}
+            <div className="oa-answer-actions"><button type="button" className="copy-answer" onClick={() => void copy(turn)} aria-label="复制回答"><Copy size={15} />{copied === turn.id ? '已复制' : '复制'}</button><button type="button" aria-label="转发回答给成员" onClick={() => forward({ body: userFacingAnswer(turn.answer), omittedImages: turn.images.length })}><Forward size={15} />转发</button>{isAdmin && !turn.failed && <button type="button" className="oa-admin-edit-answer" onClick={() => setEditingTurn(turn)} aria-label="管理员修改回答"><Pencil size={15} />修改回答</button>}{!!turn.citations.length && <details><summary>参考已审核资料</summary>{turn.citations.map(citation => <p key={`${citation.id}-${citation.itemId}`}>{citation.title}{citation.sectionTitle ? ` · ${citation.sectionTitle}` : ''}</p>)}</details>}</div>
           </div></article>}
           {turn.failed && <button type="button" className="oa-chat-retry" disabled={working} onClick={() => void ask(turn)}><RotateCcw size={16} />重新回答</button>}
         </div>;
         })}
-        {asking && <div className="knowledge-answer-loading" role="status">{streamPhase}</div>}
+        {asking && <div className="knowledge-answer-loading" role="status">正在检索并生成回答…</div>}
       </div>
       <div className="composer-area oa-chat-composer-area">
         <div className="oa-chat-examples" role="group" aria-label="AI 助手五项功能"><p id={`${composerId}-capabilities`}>{adminModeActive ? '管理员模式已验证 · ' : ''}常用功能</p>{quickActions.map(action => action.label === '会议模式' ? <button type="button" key={action.label} title="@会议模式919700881" disabled={working} onClick={() => { setQuestion(meetingModePrompt); input.current?.focus(); }}><strong>{action.label}</strong><span>{action.helper}</span></button> : <button type="button" key={action.label} title={action.prompt} disabled={working} onClick={() => { if (action.label === '知识问答') documents.useSource(null); setQuestion(action.prompt); input.current?.focus(); }}><strong>{action.label}</strong><span>{action.helper}</span></button>)}</div>
@@ -403,4 +392,3 @@ function OaAiChatPanel({ isAdmin = false }: { isAdmin?: boolean }) {
     {editingTurn && <AdminAnswerEditor key={editingTurn.id} turn={editingTurn} onOpenChange={open => { if (!open) setEditingTurn(null); }} onSaved={answer => setTurns(current => current.map(turn => turn.id === editingTurn.id ? { ...turn, answer } : turn))} />}
   </section>;
 }
-

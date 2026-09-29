@@ -3,7 +3,7 @@ import test from "node:test";
 import { handleRequest } from "../src/app.mjs";
 import { D1DatabaseAdapter } from "./d1-adapter.mjs";
 
-const origin = "https://chat.omindos.ai";
+const origin = "https://chat.omindos.cn";
 function environment() {
   return { DB: new D1DatabaseAdapter(), APP_ORIGIN: origin, ADMIN_EMAIL: "owner@example.test",
     APP_ENCRYPTION_KEY: "e".repeat(48), RATE_LIMIT_HMAC_KEY: "r".repeat(48),

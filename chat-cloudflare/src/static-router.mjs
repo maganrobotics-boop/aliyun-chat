@@ -1,9 +1,9 @@
-export const CANONICAL_ORIGIN = "https://chat.omindos.ai";
+export const CANONICAL_ORIGIN = "https://chat.omindos.cn";
 
 export const SECURITY_HEADERS = Object.freeze({
   "Content-Security-Policy":
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data:; connect-src 'self' https://oa.omindos.ai; font-src 'self'; " +
+    "img-src 'self' data:; connect-src 'self' https://oa.omindos.cn; font-src 'self'; " +
     "object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
@@ -19,6 +19,7 @@ export const RouteKind = Object.freeze({
   SHELL: "shell",
   REDIRECT_HOME: "redirect-home",
   REDIRECT_MANAGE: "redirect-manage",
+  REDIRECT_ADMIN: "redirect-admin",
   REDIRECT_TOPIC: "redirect-topic",
   DYNAMIC: "dynamic",
   ASSET: "asset",
@@ -48,6 +49,7 @@ const DIRECT_ASSET_PATHS = new Set([
 const SAFE_METHODS = new Set(["GET", "HEAD"]);
 
 export function classifyPath(pathname) {
+  if (pathname === "/admin" || pathname === "/admin/" || pathname === "/admin.html") return RouteKind.REDIRECT_ADMIN;
   if (SHELL_PATHS.has(pathname)) return RouteKind.SHELL;
   if (pathname === "/index.html") return RouteKind.REDIRECT_HOME;
   if (pathname === "/manage/") return RouteKind.REDIRECT_MANAGE;
@@ -129,11 +131,17 @@ async function fetchAsset(request, env, pathname, cacheControl) {
 export async function routeStaticRequest(request, env) {
   const url = new URL(request.url);
   const kind = classifyPath(url.pathname);
+  const workspaceHome = url.pathname === "/" && [...url.searchParams.keys()].every(key => ["release", "v", "verify", "probe"].includes(key));
+  if (workspaceHome) {
+    if (!SAFE_METHODS.has(request.method)) return methodNotAllowed();
+    return fetchAsset(request, env, "/newbie-village.html", "no-store");
+  }
 
   if (kind === RouteKind.DYNAMIC) return null;
 
   if (kind === RouteKind.REDIRECT_HOME) return redirect(request, "/");
   if (kind === RouteKind.REDIRECT_MANAGE) return redirect(request, "/manage");
+  if (kind === RouteKind.REDIRECT_ADMIN) return redirect(request, "/newbie-village/admin");
   if (kind === RouteKind.REDIRECT_TOPIC) {
     return redirect(request, TOPIC_TRAILING_REDIRECTS.get(url.pathname));
   }

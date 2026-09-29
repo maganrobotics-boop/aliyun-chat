@@ -96,7 +96,7 @@ test('notification installation starts after existing history', async () => {
   assert.equal(sent.length,0); assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM notification_outbox').get().n,0);
 });
 test('notification administration requires admitted admin and test delivery is restricted to self', async () => {
-  const request = (origin = 'https://oa.omindos.ai') => new Request('https://oa.omindos.ai/api/admin/notifications', { method: 'POST', headers: { Origin: origin }, body: JSON.stringify({ memberId: 'r2' }) });
+  const request = (origin = 'https://oa.omindos.cn') => new Request('https://oa.omindos.cn/api/admin/notifications', { method: 'POST', headers: { Origin: origin }, body: JSON.stringify({ memberId: 'r2' }) });
   for (const actor of [null, { isAdmin: false, ndaCompleted: true }, { isAdmin: true, ndaCompleted: false }]) {
     globalThis.__notificationApiTest.actor = actor;
     assert.equal((await adminApi.GET()).status, 403); assert.equal((await adminApi.POST(request())).status, 403);

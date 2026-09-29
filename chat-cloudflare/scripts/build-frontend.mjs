@@ -1,3 +1,4 @@
+import { NEWBIE_COURSES } from "../src/newbie-course-data.mjs";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -53,7 +54,8 @@ async function expectedBuild() {
     "export function knowledgeImageReferences", "function knowledgeImageReferences");
   const zipImportBundle = Buffer.from(`"use strict";\n(() => {\n${imageReferencesScript}\n${zipImportAddon}\n})();\n`, "utf8");
   const mathName = `katex-${digest(math)}.mjs`;
-  const app = Buffer.from(`${messageActions}\n${replaceExactlyOnce(appSource.toString("utf8"), "__KATEX_ASSET__", `/assets/${mathName}`)}\nvoid openIncomingSharedAnswer();\n`, "utf8");
+  const courseAppSource = replaceExactlyOnce(appSource.toString("utf8"), "__NEWBIE_COURSES__", JSON.stringify(NEWBIE_COURSES));
+  const app = Buffer.from(`${messageActions}\n${replaceExactlyOnce(courseAppSource, "__KATEX_ASSET__", `/assets/${mathName}`)}\nvoid openIncomingSharedAnswer();\n`, "utf8");
   const style = Buffer.concat([baseStyle, Buffer.from("\n"), actionStyle]);
   const appName = `app-${digest(app)}.js`;
   const styleName = `styles-${digest(style)}.css`;
@@ -66,6 +68,12 @@ async function expectedBuild() {
     html: Buffer.from(html, "utf8"),
     rootFiles: new Map([["zip-import-addon.js", zipImportBundle]]),
     assets: new Map([
+      ["workspace-r2.js", await readFile(join(FRONTEND_DIRECTORY, "workspace-r2.js"))],
+      ["workspace-r3.js", await readFile(join(FRONTEND_DIRECTORY, "workspace-r3.js"))],
+      ["workspace-r2.css", await readFile(join(FRONTEND_DIRECTORY, "workspace-r2.css"))],
+      ["workspace-r3.css", await readFile(join(FRONTEND_DIRECTORY, "workspace-r3.css"))],
+      ["workspace-r4.css", await readFile(join(FRONTEND_DIRECTORY, "workspace-r4.css"))],
+      ["workspace-r4.js", await readFile(join(FRONTEND_DIRECTORY, "workspace-r4.js"))],
       [appName, app],
       [mathName, math],
       [styleName, style],

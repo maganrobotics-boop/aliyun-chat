@@ -25,8 +25,8 @@ function adapter(sql, params = []) {
 }
 const state = id => sqlite.prepare('SELECT * FROM ai_workbench_tasks WHERE id=?').get(id);
 const fileCount = id => sqlite.prepare('SELECT count(*) n FROM ai_workbench_artifacts WHERE task_id=?').get(id).n;
-const req = (body, origin = 'https://oa.omindos.ai') => new Request('https://oa.omindos.ai/api/lab-ai/tasks', { method: 'POST', headers: { 'content-type': 'application/json', origin }, body: JSON.stringify(body) });
-const get = (id, format) => api.GET(new Request(`https://oa.omindos.ai/api/lab-ai/tasks${id ? `?id=${id}${format ? `&format=${format}` : ''}` : ''}`));
+const req = (body, origin = 'https://oa.omindos.cn') => new Request('https://oa.omindos.cn/api/lab-ai/tasks', { method: 'POST', headers: { 'content-type': 'application/json', origin }, body: JSON.stringify(body) });
+const get = (id, format) => api.GET(new Request(`https://oa.omindos.cn/api/lab-ai/tasks${id ? `?id=${id}${format ? `&format=${format}` : ''}` : ''}`));
 const create = () => store.createTask(db, actor, input, `oa:${crypto.randomUUID()}`);
 beforeEach(() => {
   sqlite?.close(); sqlite = new DatabaseSync(':memory:');

@@ -1,7 +1,7 @@
 import { PublicError } from './errors.mjs';
 
 export const OA_ADMIN_PATH = '/api/internal/oa-admin';
-export const OA_ADMIN_ORIGIN = 'https://chat.omindos.ai';
+export const OA_ADMIN_ORIGIN = 'https://chat.omindos.cn';
 const MAX_BYTES = 8 * 1024;
 const encoder = new TextEncoder();
 const exactKeys = (value, required, optional = []) => value && typeof value === 'object' && !Array.isArray(value)

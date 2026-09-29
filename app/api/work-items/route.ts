@@ -1,8 +1,7 @@
 import { getD1Database } from '../../../db';
-import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
-import { authorizedMemberGuard, getAuthorizedUser } from '../_lib/auth';
+import { getAuthorizedUser } from '../_lib/auth';
 import { readBoundedJsonObject } from '../../../lib/bounded-json-request';
-import { OA_PROJECT, extractMeetingActions, serializeWorkItem, mergeMilestoneInput, milestoneCompletionError, readMilestoneDetail, writeMilestoneDetail, parseMilestoneDueAt, appendMilestoneRevision, type WorkItemRow, type WorkItemStatus } from '../../../lib/project-work-items';
+import { OA_PROJECT, extractMeetingActions, serializeWorkItem, type WorkItemRow } from '../../../lib/project-work-items';
 
 const headers = { 'cache-control': 'private, no-store, max-age=0', 'x-content-type-options': 'nosniff' };
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers });
@@ -77,19 +76,9 @@ export async function POST(request: Request) {
   const kind = ['task', 'risk', 'milestone'].includes(String(input.kind)) ? String(input.kind) : 'task';
   const priority = ['low', 'normal', 'high'].includes(String(input.priority)) ? String(input.priority) : 'normal';
   if (!title) return json({ error: '请填写工作项标题。' }, 400);
-  let storedDetail = detail;
-  let dueAt = date(input.dueAt);
-  if (kind === 'milestone') {
-    const parsedMilestone = mergeMilestoneInput(input.milestone);
-    if (!parsedMilestone.ok) return json({ error: parsedMilestone.error }, 400);
-    const parsedDate = parseMilestoneDueAt(input.dueAt, null);
-    if (!parsedDate.ok) return json({ error: parsedDate.error }, 400);
-    dueAt = parsedDate.dueAt;
-    storedDetail = writeMilestoneDetail(detail, parsedMilestone.milestone);
-  }
   const row = await db.prepare(`INSERT INTO project_work_items(id,project,title,detail,kind,status,priority,assignee_name,assignee_email,due_at,source_type,source_id,source_key,created_by_name,created_by_email,created_at,updated_at)
     VALUES(?,?,?,?,?,'open',?,?,?,?, 'manual','',NULL,?,?,?,?) RETURNING *`)
-    .bind(crypto.randomUUID(), OA_PROJECT, title, storedDetail, kind, priority, assigneeName, assigneeEmail, dueAt, user.user.displayName, user.user.email.toLowerCase(), now, now).first<WorkItemRow>();
+    .bind(crypto.randomUUID(), OA_PROJECT, title, detail, kind, priority, assigneeName, assigneeEmail, date(input.dueAt), user.user.displayName, user.user.email.toLowerCase(), now, now).first<WorkItemRow>();
   return json({ item: row ? serializeWorkItem(row) : null }, 201);
 }
 
@@ -98,7 +87,7 @@ export async function PATCH(request: Request) {
   if (!user) return json({ error: '请先完成 OA 准入和保密协议。' }, 403);
   if (!sameOrigin(request)) return json({ error: '仅支持在 OA 内更新工作项。' }, 403);
   if (request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') return json({ error: '工作项必须使用 JSON 提交。' }, 415);
-  const parsed = await readBoundedJsonObject(request, 60_000);
+  const parsed = await readBoundedJsonObject(request, 20_000);
   if (!parsed.ok) return json({ error: '工作项操作格式错误。' }, 400);
   const input = parsed.value, id = uuid(input.id);
   const status = ['open', 'in_progress', 'done', 'cancelled'].includes(String(input.status)) ? String(input.status) : '';
@@ -110,43 +99,6 @@ export async function PATCH(request: Request) {
   const canManage = user.isAdmin || user.role === 'project_owner' || current.created_by_email === currentEmail || current.assignee_email === currentEmail;
   if (!canManage) return json({ error: '只有负责人、创建人或项目管理员可以更新该工作项。' }, 403);
   const now = new Date().toISOString();
-  if (current.kind === 'milestone') {
-    // Acceptance and reversal of completed milestones require the existing OA reviewer role.
-    if ((status === 'done' || current.status === 'done') && !user.isAdmin && user.role !== 'project_owner') {
-      return json({ error: '里程碑验收与撤回验收须由项目负责人或系统管理员处理。' }, 403);
-    }
-    if (typeof input.expectedUpdatedAt !== 'string' || input.expectedUpdatedAt !== current.updated_at) {
-      return json({ error: '里程碑已被其他操作更新，请刷新后重试。' }, 409);
-    }
-    const parsedDate = parseMilestoneDueAt(input.dueAt, current.due_at);
-    if (!parsedDate.ok) return json({ error: parsedDate.error }, 400);
-    const stored = readMilestoneDetail(current.detail);
-    const parsedMilestone = mergeMilestoneInput(input.milestone, stored.milestone);
-    if (!parsedMilestone.ok) return json({ error: parsedMilestone.error }, 400);
-    const milestone = parsedMilestone.milestone;
-    // Keep the optimistic concurrency token increasing even for same-millisecond updates.
-    const milestoneUpdatedAt = new Date(Math.max(Date.now(), (Date.parse(current.updated_at) || 0) + 1)).toISOString();
-    if (status === 'done') {
-      const error = milestoneCompletionError(milestone);
-      if (error) return json({ error }, 400);
-      milestone.acceptedByName = user.user.displayName;
-      milestone.acceptedByEmail = currentEmail;
-      milestone.acceptedAt = milestoneUpdatedAt;
-    } else {
-      milestone.acceptedByName = '';
-      milestone.acceptedByEmail = '';
-      milestone.acceptedAt = null;
-    }
-    const withHistory = appendMilestoneRevision(milestone, current, status as WorkItemStatus, { name: user.user.displayName, email: currentEmail }, milestoneUpdatedAt);
-    // Reuse OA's final-write policy: a permission, status, account, or NDA change
-    // after actor() invalidates this mutation atomically. Configured admins keep
-    // the same bootstrap exception as other OA business writes.
-    const actorGuard = new SQLiteSyncDialect().sqlToQuery(authorizedMemberGuard(user));
-    const row = await db.prepare(`UPDATE project_work_items SET status=?,detail=?,due_at=?,completed_at=?,updated_at=? WHERE id=? AND project=? AND updated_at=? AND detail=? AND status=? AND due_at IS ? AND (${actorGuard.sql}) RETURNING *`)
-      .bind(status, writeMilestoneDetail(stored.detail, withHistory), parsedDate.dueAt, status === 'done' ? current.completed_at || milestoneUpdatedAt : null, milestoneUpdatedAt, id, OA_PROJECT, current.updated_at, current.detail, current.status, current.due_at, ...actorGuard.params).first<WorkItemRow>();
-    if (!row) return json({ error: '里程碑或账号权限已更新，请刷新页面后重试。' }, 409);
-    return json({ item: serializeWorkItem(row) });
-  }
   const row = await db.prepare(`UPDATE project_work_items SET status=?,completed_at=?,updated_at=? WHERE id=? RETURNING *`)
     .bind(status, status === 'done' ? now : null, now, id).first<WorkItemRow>();
   return json({ item: row ? serializeWorkItem(row) : null });

@@ -100,7 +100,7 @@ test("path classifier is exact and does not turn unknown paths into the SPA", ()
 test("orientation page is served as a standalone non-cacheable document", async () => {
   const { env, calls } = mockEnvironment();
   const response = await routeStaticRequest(
-    new Request("https://chat.omindos.ai/orientation"),
+    new Request("https://chat.omindos.cn/orientation"),
     env,
   );
   assert.equal(response.status, 200);
@@ -112,7 +112,7 @@ test("orientation page is served as a standalone non-cacheable document", async 
 test("robotics course page is served as a standalone non-cacheable document", async () => {
   const { env, calls } = mockEnvironment();
   const response = await routeStaticRequest(
-    new Request("https://chat.omindos.ai/robotics-course"),
+    new Request("https://chat.omindos.cn/robotics-course"),
     env,
   );
   assert.equal(response.status, 200);
@@ -124,7 +124,7 @@ test("robotics course page is served as a standalone non-cacheable document", as
 test("newbie village page is served as a standalone non-cacheable document", async () => {
   const { env, calls } = mockEnvironment();
   const response = await routeStaticRequest(
-    new Request("https://chat.omindos.ai/newbie-village"),
+    new Request("https://chat.omindos.cn/newbie-village"),
     env,
   );
   assert.equal(response.status, 200);
@@ -136,7 +136,7 @@ test("newbie village page is served as a standalone non-cacheable document", asy
 test("newbie agreement review page is a standalone non-cacheable admin document", async () => {
   const { env, calls } = mockEnvironment();
   const response = await routeStaticRequest(
-    new Request("https://chat.omindos.ai/newbie-village/admin"),
+    new Request("https://chat.omindos.cn/newbie-village/admin"),
     env,
   );
   assert.equal(response.status, 200);
@@ -147,10 +147,10 @@ test("newbie agreement review page is a standalone non-cacheable admin document"
 
 test("public topic links and exact /manage serve the same non-cacheable shell", async () => {
   const { env, calls } = mockEnvironment();
-  const shellPaths = ["/", ...TOPIC_PATHS, "/research?from=mobile", "/manage", "/manage?tab=model"];
+  const shellPaths = ["/?ta=1", ...TOPIC_PATHS, "/research?from=mobile", "/manage", "/manage?tab=model"];
   for (const path of shellPaths) {
     const response = await routeStaticRequest(
-      new Request(`https://chat.omindos.ai${path}`),
+      new Request(`https://chat.omindos.cn${path}`),
       env,
     );
     assert.equal(response.status, 200);
@@ -167,7 +167,7 @@ test("public topic links and exact /manage serve the same non-cacheable shell", 
 test("HEAD is preserved when retrieving the shell", async () => {
   const { env, calls } = mockEnvironment();
   const response = await routeStaticRequest(
-    new Request("https://chat.omindos.ai/originmind", { method: "HEAD" }),
+    new Request("https://chat.omindos.cn/originmind", { method: "HEAD" }),
     env,
   );
   assert.equal(response.status, 200);
@@ -215,7 +215,7 @@ test("dynamic endpoints are delegated and never receive the HTML shell", async (
     "/api/admin/config",
   ]) {
     assert.equal(
-      await routeStaticRequest(new Request(`https://chat.omindos.ai${path}`), env),
+      await routeStaticRequest(new Request(`https://chat.omindos.cn${path}`), env),
       null,
     );
   }
@@ -234,7 +234,7 @@ test("unknown paths return hardened 404 responses", async () => {
     "/%6Danage",
   ]) {
     const response = await routeStaticRequest(
-      new Request(`https://chat.omindos.ai${path}`),
+      new Request(`https://chat.omindos.cn${path}`),
       env,
     );
     assert.equal(response.status, 404);
@@ -266,7 +266,7 @@ test("unsafe methods cannot retrieve the shell or static assets", async () => {
     "/zip-import-addon.js",
   ]) {
     const response = await routeStaticRequest(
-      new Request(`https://chat.omindos.ai${path}`, { method: "POST" }),
+      new Request(`https://chat.omindos.cn${path}`, { method: "POST" }),
       env,
     );
     assert.equal(response.status, 405);
@@ -279,7 +279,7 @@ test("unsafe methods cannot retrieve the shell or static assets", async () => {
 test("hashed assets are immutable while auxiliary assets use a short TTL", async () => {
   const { env, calls } = mockEnvironment();
   const script = await routeStaticRequest(
-    new Request("https://chat.omindos.ai/assets/app-0123456789abcdef.js", {
+    new Request("https://chat.omindos.cn/assets/app-0123456789abcdef.js", {
       headers: { "If-None-Match": '"asset-etag"' },
     }),
     env,
@@ -290,7 +290,7 @@ test("hashed assets are immutable while auxiliary assets use a short TTL", async
   assert.equal(calls[0].ifNoneMatch, '"asset-etag"');
 
   const icon = await routeStaticRequest(
-    new Request("https://chat.omindos.ai/assets/pwa/icon-192-v1.png"),
+    new Request("https://chat.omindos.cn/assets/pwa/icon-192-v1.png"),
     env,
   );
   assert.equal(icon.status, 200);
@@ -305,7 +305,7 @@ test("hashed assets are immutable while auxiliary assets use a short TTL", async
     "/zip-import-addon.js",
   ]) {
     const response = await routeStaticRequest(
-      new Request(`https://chat.omindos.ai${path}`),
+      new Request(`https://chat.omindos.cn${path}`),
       env,
     );
     assert.equal(response.status, 200);
@@ -313,7 +313,7 @@ test("hashed assets are immutable while auxiliary assets use a short TTL", async
   }
 
   const serviceWorker = await routeStaticRequest(
-    new Request("https://chat.omindos.ai/service-worker.js"),
+    new Request("https://chat.omindos.cn/service-worker.js"),
     env,
   );
   assert.equal(serviceWorker.status, 200);
@@ -323,7 +323,7 @@ test("hashed assets are immutable while auxiliary assets use a short TTL", async
 test("missing files under /assets are not cached as immutable", async () => {
   const { env } = mockEnvironment();
   const response = await routeStaticRequest(
-    new Request("https://chat.omindos.ai/assets/missing.js"),
+    new Request("https://chat.omindos.cn/assets/missing.js"),
     env,
   );
   assert.equal(response.status, 404);
@@ -348,7 +348,7 @@ test("hardenResponse preserves a session cookie while preventing caching", () =>
 
 test("the helper fails closed when the ASSETS binding is absent", async () => {
   await assert.rejects(
-    routeStaticRequest(new Request("https://chat.omindos.ai/"), {}),
+    routeStaticRequest(new Request("https://chat.omindos.cn/"), {}),
     /ASSETS binding is required/,
   );
 });

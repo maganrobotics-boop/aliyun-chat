@@ -1,4 +1,3 @@
-import { privateAnswerStream, checkStreamAbort } from '../../../../lib/oa-native-stream.mjs';
 import { getDb } from "../../../../db";
 import { readBoundedJsonObject } from "../../../../lib/bounded-json-request";
 import { answerOaChatQuestion, questionRequestsKnowledgeImages, type OaChatHistory } from "../../../../lib/oa-chat-client";
@@ -62,7 +61,7 @@ export async function POST(request: Request) {
   const finish = (response: Response) => withServerTiming(response, timings, totalStartedAt);
   const authorized = await getAuthorizedUser();
   if (!authorized) return finish(privateJson({ error: "请先完成成员注册。" }, { status: 401 }));
-  if (authorized.isAdmin !== true && !authorized.ndaCompleted) return finish(privateJson({ error: "请先完成保密协议签署与归档。" }, { status: 403 }));
+  if (!authorized.ndaCompleted) return finish(privateJson({ error: "请先完成保密协议签署与归档。" }, { status: 403 }));
   if (!authorized.memberId || !authorized.accountUserId || !authorized.memberMutationRevision) return finish(privateJson({ error: "知识问答仅向已激活、实名绑定的 OA 成员开放。" }, { status: 403 }));
   const origin = request.headers.get("origin");
   if ((origin && origin !== new URL(request.url).origin) || request.headers.get("sec-fetch-site") === "cross-site") return finish(privateJson({ error: "仅支持在 OA 内提问。" }, { status: 403 }));
@@ -96,39 +95,6 @@ export async function POST(request: Request) {
       const seen = new Set(relevant.map(chunk => chunk.id));
       return [...relevant.slice(0, 6), ...recent.filter(chunk => !seen.has(chunk.id)).slice(0, 6).map(chunk => ({ ...chunk, score: 0 }))];
     });
-    if (request.headers.get('accept')?.split(',').some(value => value.trim().split(';', 1)[0] === 'text/event-stream')) {
-      return privateAnswerStream(async (emit, signal) => {
-        checkStreamAbort(signal);
-        emit({ type: 'status', phase: 'generating' });
-        let checkedAt = 0;
-        let hasCheckedDelta = false;
-        const assertAdmission = async () => {
-          checkStreamAbort(signal);
-          const current = await getAuthorizedUser();
-          checkStreamAbort(signal);
-          if (!current || (current.isAdmin !== true && !current.ndaCompleted) || current.memberId !== authorized.memberId ||
-            current.accountUserId !== authorized.accountUserId || current.memberMutationRevision !== authorized.memberMutationRevision) {
-            throw new Error('OA_STREAM_ACCESS_CHANGED');
-          }
-          checkedAt = Date.now();
-        };
-        const answer = await answerOaChatQuestion(question, ranked, history, { signal, async onEvent(event) {
-          checkStreamAbort(signal);
-          // Await the first text gate and refresh before emitting any text whose
-          // permission check is older than one second. Events stay sequential.
-          if (event.type === 'delta' && (!hasCheckedDelta || Date.now() - checkedAt >= 1000)) {
-            await assertAdmission();
-            hasCheckedDelta = true;
-          }
-          checkStreamAbort(signal);
-          emit(event);
-        } });
-        // A final answer is independently authorized even after a recent delta.
-        await assertAdmission();
-        checkStreamAbort(signal);
-        emit({ type: 'final', data: answer });
-      }, request.signal);
-    }
     const answer = await measureWaiting(timings, "answer", () => answerOaChatQuestion(question, ranked, history));
     return finish(privateJson(answer));
   } catch {

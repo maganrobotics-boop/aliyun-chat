@@ -42,7 +42,7 @@ async function fixture(t) {
     env: { PUBLIC_LAB_AI_SERVICE_TOKEN: secret, APP_ENCRYPTION_KEY: encryption, AI: { run() {} } }, runtime }, engine);
   const send = async (payload = { operation: 'task', task }, overrides = {}, options = {}) => {
     const body = JSON.stringify(payload);
-    return handle(`https://chat.omindos.ai${OA_CHAT_PATH}`, { method: 'POST', body,
+    return handle(`https://chat.omindos.cn${OA_CHAT_PATH}`, { method: 'POST', body,
       headers: { ...await signOaChatRequest(body, secret, options), ...overrides } });
   };
   const failure = async (diagnostic, response = null) => {
@@ -131,7 +131,7 @@ test('successful tasks still execute two tools and build a real Word artifact', 
   assert.equal(f.count.budget, 2); assert.equal(f.count.fallback, 0);
   assert.equal(value.diagnostic, undefined); assert.deepEqual(f.logs, []);
 });
-for (const headers of [{ authorization: 'bad' }, { origin: 'https://oa.omindos.ai' }, { cookie: 'private-cookie' }]) {
+for (const headers of [{ authorization: 'bad' }, { origin: 'https://oa.omindos.cn' }, { cookie: 'private-cookie' }]) {
   test('unauthorized or browser requests cannot obtain diagnostics or reach a model', async t => {
     const f = await fixture(t); const response = await f.send(undefined, headers);
     assert.equal(response.status, 401); assert.equal((await response.json()).diagnostic, undefined);

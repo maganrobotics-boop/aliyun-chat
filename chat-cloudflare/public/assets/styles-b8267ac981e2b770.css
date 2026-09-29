@@ -861,6 +861,103 @@
       *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
     }
 
+/* Chat mobile polish: header targets and login dialog only.
+ * Deliberately does not change composer, message-list, chat-surface,
+ * recommendations, body scrolling, or body.chat-active layout. */
+@media (max-width: 640px) {
+  .app-shell > .sidebar > .brand {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-right: 8px;
+  }
+
+  .app-shell > .sidebar > .brand .brand-copy {
+    min-width: 0;
+  }
+
+  .app-shell > .sidebar > .brand .brand-title {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .app-shell > .sidebar > .side-footer {
+    flex: 0 0 auto;
+  }
+
+  .app-shell > .sidebar .bottom-actions {
+    gap: 4px;
+  }
+
+  .app-shell > .sidebar .side-footer .new-chat-bottom,
+  .app-shell > .sidebar .side-footer .settings-trigger,
+  .app-shell > .sidebar .side-footer .recent-chat-trigger {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .auth-backdrop {
+    padding: 16px;
+  }
+
+  .auth-backdrop .auth-dialog {
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding: 32px 22px 24px;
+  }
+
+  .auth-backdrop .auth-close {
+    top: 6px;
+    right: 6px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .auth-backdrop .auth-field input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .auth-backdrop .campus-code-button,
+  .auth-backdrop .campus-login-button,
+  .auth-backdrop .guest-continue {
+    min-height: 44px;
+  }
+}
+
+/* Constrain long course titles to the sidebar grid. */
+.sidebar .history-list { min-width:0; max-width:100%; grid-template-columns:minmax(0,1fr); }
+.sidebar .history-list .history-item { box-sizing:border-box; min-width:0; max-width:100%; overflow:hidden; }
+.sidebar .history-list .history-item > span { flex:1 1 0; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+
+/* Shared AI answer formatting; scoped to rendered answers only. */
+.answer-content { min-width: 0; overflow-wrap: anywhere; }
+.answer-content h1, .answer-content h2, .answer-content h3, .answer-content h4, .answer-content h5, .answer-content h6 { font-weight: 650; line-height: 1.4; margin: 1.05em 0 .5em; }
+.answer-content h1 { font-size: 1.4em; }
+.answer-content h2 { font-size: 1.25em; }
+.answer-content h3 { font-size: 1.12em; }
+.answer-content h4, .answer-content h5, .answer-content h6 { font-size: 1em; }
+.answer-content ul { list-style: disc outside; padding-left: 1.5em; }
+.answer-content ol { list-style: decimal outside; padding-left: 1.5em; }
+.answer-content li { margin: .3em 0; }
+.answer-content li > ul, .answer-content li > ol { margin-top: .25em; margin-bottom: .25em; }
+.answer-content a { color: #126b78; text-decoration: underline; text-underline-offset: 2px; }
+.answer-content blockquote { margin: .8em 0; border-left: 3px solid #b8d5d9; padding-left: 1em; color: #4b626c; }
+.answer-content pre.om-code-block { display: block; overflow-x: auto; max-width: 100%; margin: .8em 0; padding: 14px 16px; border: 1px solid #d8e3e8; border-radius: 10px; background: #f5f8fa; white-space: pre; overflow-wrap: normal; }
+.answer-content pre.om-code-block > code { display: block; padding: 0; border: 0; background: transparent; color: inherit; font-size: .9em; line-height: 1.6; font-family: ui-monospace,SFMono-Regular,Consolas,monospace; white-space: pre; overflow-wrap: normal; }
+.answer-content table { display: block; overflow-x: auto; width: max-content; max-width: 100%; border-collapse: collapse; margin: .8em 0; }
+.answer-content th, .answer-content td { border: 1px solid #d8e3e8; padding: .5em .75em; vertical-align: top; }
+.answer-content th { font-weight: 650; background: #f3f7f8; }
+.answer-content input[type="checkbox"] { margin-right: .5em; }
+
 /* Compact, left-aligned response tools. Keep the existing answer/math layout. */
 .message.assistant .message-actions{display:flex;justify-content:flex-start;align-items:center;gap:4px;flex-wrap:wrap;margin-top:12px;inline-size:100%;padding:0;}
 .message-action-button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 40px;width:40px;height:40px;min-width:40px;min-height:40px;padding:8px;border:0;border-radius:9px;background:transparent;color:#72767e;cursor:pointer;}

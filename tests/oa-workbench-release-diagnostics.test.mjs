@@ -28,7 +28,7 @@ test('successful synthetic probe preserves the fixed HMAC request and honest rec
   let calls = 0;
   const receipt = await probeTaskTools(secret, async (url, init) => {
     calls++;
-    assert.equal(url, 'https://chat.omindos.ai/api/internal/oa-answer');
+    assert.equal(url, 'https://chat.omindos.cn/api/internal/oa-answer');
     assert.equal(init.redirect, 'manual');
     assert.equal(init.method, 'POST');
     assert.equal(init.headers.origin, undefined);

@@ -3,7 +3,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Bot, CheckCircle2, CircleDot, FileText, LogOut, RotateCcw, X } from 'lucide-react';
 import { buildMeetingMinutesMaterial, isMeetingModeSession, meetingModeStorageKey, type MeetingModeSession, type MeetingTranscriptItem } from '@/lib/oa-meeting-mode.mjs';
-import { OaRichAnswer } from './oa-rich-answer';
 import { useOaConversation } from './oa-conversation-context';
 import './oa-meeting-mode.css';
 
@@ -317,7 +316,7 @@ export const OaMeetingMode = forwardRef<OaMeetingModeHandle, Props>(function OaM
       {active && <div className="oa-meeting-live-view">
         <main className="oa-meeting-live-notes" aria-label="会议实时纪要">
           <h3><FileText size={17} />会议实时纪要 <small>{minutesUpdating ? '正在更新…' : `${session.transcript.length} 条字幕`}</small></h3>
-          <section className="oa-meeting-ai-minutes">{liveMinutes ? <OaRichAnswer answer={liveMinutes} /> : <div className="oa-meeting-empty">取得实时字幕后，OA 会自动生成并持续更新会议纪要，无需人工记录。</div>}</section>
+          <section className="oa-meeting-ai-minutes">{liveMinutes ? <div>{liveMinutes}</div> : <div className="oa-meeting-empty">取得实时字幕后，OA 会自动生成并持续更新会议纪要，无需人工记录。</div>}</section>
         </main>
         <div className="oa-meeting-subtitle" role="status" aria-live="polite">{latestSubtitle ? <><strong>{latestSubtitle.speaker}</strong><span>{latestSubtitle.text}</span></> : <span>正在等待实时字幕…</span>}</div>
       </div>}

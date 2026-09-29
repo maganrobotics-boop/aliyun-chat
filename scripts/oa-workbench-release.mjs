@@ -138,7 +138,7 @@ export async function probeTaskTools(secret, fetcher = fetch, compile = compileA
   let response;
   try {
     // Return redirect status for diagnosis, but never follow it with the HMAC.
-    response = await fetcher(`https://chat.omindos.ai${path}`, { method: 'POST', redirect: 'manual',
+    response = await fetcher(`https://chat.omindos.cn${path}`, { method: 'POST', redirect: 'manual',
       headers: { 'content-type': 'application/json', accept: 'application/json', 'x-oa-chat-time': timestamp,
         'x-oa-chat-nonce': nonce, authorization: `OA-HMAC ${signature}` }, body, signal: AbortSignal.timeout(70000) });
   } catch (error) {

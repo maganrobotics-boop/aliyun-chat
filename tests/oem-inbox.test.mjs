@@ -13,16 +13,16 @@ const vite = await createServer({ appType: 'custom', configFile: false, root: fi
 const route = await vite.ssrLoadModule('/app/api/admin/oem-applications/route.ts');
 after(async () => { db.close(); delete globalThis.__oemInboxTest; await vite.close(); });
 test('only an admitted administrator can read OEM contacts', async () => {
-  for (const actor of [null, { isAdmin: false, ndaCompleted: true }, { isAdmin: true, ndaCompleted: false }]) { state.actor = actor; assert.equal((await route.GET(new Request('https://oa.omindos.ai/api/admin/oem-applications'))).status, 403); }
+  for (const actor of [null, { isAdmin: false, ndaCompleted: true }, { isAdmin: true, ndaCompleted: false }]) { state.actor = actor; assert.equal((await route.GET(new Request('https://oa.omindos.cn/api/admin/oem-applications'))).status, 403); }
   assert.equal(state.reads, 0);
 });
 test('OEM inbox uses bounded pagination, including equal timestamps', async () => {
   state.actor = { isAdmin: true, ndaCompleted: true };
-  const response = await route.GET(new Request('https://oa.omindos.ai/api/admin/oem-applications'));
+  const response = await route.GET(new Request('https://oa.omindos.cn/api/admin/oem-applications'));
   assert.equal(response.status, 200);
   const first = await response.json(); assert.equal(first.applications.length, 25);
-  const second = await (await route.GET(new Request(`https://oa.omindos.ai/api/admin/oem-applications?cursor=${encodeURIComponent(first.nextCursor)}`))).json();
+  const second = await (await route.GET(new Request(`https://oa.omindos.cn/api/admin/oem-applications?cursor=${encodeURIComponent(first.nextCursor)}`))).json();
   assert.equal(second.applications.length, 5); assert.equal(second.nextCursor, null);
   assert.equal(new Set([...first.applications, ...second.applications].map((row) => row.id)).size, 30);
-  assert.equal((await route.GET(new Request('https://oa.omindos.ai/api/admin/oem-applications?cursor=invalid'))).status, 400);
+  assert.equal((await route.GET(new Request('https://oa.omindos.cn/api/admin/oem-applications?cursor=invalid'))).status, 400);
 });

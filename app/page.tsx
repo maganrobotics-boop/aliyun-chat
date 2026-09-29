@@ -65,9 +65,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { NotificationStatus } from "@/components/notification-status";
 import { OemInbox } from "@/components/oem-inbox";
 import { ProjectWorkspace } from "@/components/project-workspace";
-import { OaAiMemberDirectory, OaAiMemberProvider, OaAiChatButton, OaAiChatEntrances } from "@/components/ai-member-directory";
-import { OaPrimaryNavigation, OaQuickNavigation, type OaPrimaryView } from "@/components/oa-eight-entry-navigation";
-import { OaLibraryWorkspace } from "@/components/oa-library-workspace";
 import { CollaborationWorkspace, MailWorkspace } from "@/components/collaboration-workspace";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -75,8 +72,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { KnowledgeView, type KnowledgeTab } from "@/components/knowledge/knowledge-view";
 import { OaChatStatus } from "@/components/knowledge/oa-chat-panel";
 import "./oa-workspace.css";
-import "@/components/oa-eight-entry.css";
-import { OaConversationProvider, OaConversationMenu, OaConversationTitle, useOaConversation } from "@/components/knowledge/oa-conversation-context";
+import { OaConversationProvider, OaConversationMenu, OaConversationTitle, OaNewChatButton, useOaConversation } from "@/components/knowledge/oa-conversation-context";
 import {
   NDA_AGREEMENT_VERSION,
   buildNdaAgreementText,
@@ -99,7 +95,7 @@ import "./oa-polish.css";
 
 type ApprovalType = "技术审核" | "采购审核" | "保密协议" | "劳务报酬" | "流转审批";
 type ApprovalStatus = "草稿" | "待审核" | "审批中" | "已通过" | "已退回" | "已撤回" | "已作废" | "已归档";
-type ViewKey = "library" | "home" | "chat" | "mail" | "dashboard" | "todos" | "project" | "requests" | "people" | "knowledge" | "rules" | "members" | "oem" | "notifications" | "profile";
+type ViewKey = "home" | "chat" | "mail" | "dashboard" | "todos" | "project" | "requests" | "people" | "knowledge" | "rules" | "members" | "oem" | "notifications" | "profile";
 
 type Approval = {
   id: string;
@@ -258,11 +254,11 @@ function StatusBadge({ status }: { status: ApprovalStatus }) {
   return <Badge variant="outline" className={`status-badge ${meta.className}`}><span className={`status-dot ${meta.dot}`} />{status}</Badge>;
 }
 
-function Sidebar({ activeView, setActiveView, onNew, onProfile, userName = "马淦", userAvatarDataUrl = "", authProvider = "chatgpt", currentRole, isAdmin = false, canReviewKnowledge = false, selectedKnowledgeTab = "ask", onKnowledgeTab, onMyPending, onOpenChat }: { activeView: ViewKey; setActiveView: (key: ViewKey) => void; onNew: () => void; onProfile: () => void; userName?: string; userAvatarDataUrl?: string; authProvider?: AuthProvider; currentRole?: string | null; isAdmin?: boolean; canReviewKnowledge?: boolean; selectedKnowledgeTab?: KnowledgeTab; onKnowledgeTab: (tab: KnowledgeTab) => void; onMyPending: () => void; onOpenChat?: () => void }) {
+function Sidebar({ activeView, setActiveView, onNew, onProfile, userName = "马淦", userAvatarDataUrl = "", authProvider = "chatgpt", currentRole, isAdmin = false, canReviewKnowledge = false, selectedKnowledgeTab = "ask", onKnowledgeTab, onMyPending }: { activeView: ViewKey; setActiveView: (key: ViewKey) => void; onNew: () => void; onProfile: () => void; userName?: string; userAvatarDataUrl?: string; authProvider?: AuthProvider; currentRole?: string | null; isAdmin?: boolean; canReviewKnowledge?: boolean; selectedKnowledgeTab?: KnowledgeTab; onKnowledgeTab: (tab: KnowledgeTab) => void; onMyPending: () => void }) {
   const conversation = useOaConversation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [officeOpen, setOfficeOpen] = useState(false);
-  const [knowledgeOpen, setKnowledgeOpen] = useState(false);
+  const [officeOpen, setOfficeOpen] = useState(true);
+  const [knowledgeOpen, setKnowledgeOpen] = useState(true);
   const officeId = useId();
   const knowledgeId = useId();
   const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
@@ -351,26 +347,25 @@ function Sidebar({ activeView, setActiveView, onNew, onProfile, userName = "马�
     }
   };
   const workspaceItems: { key: ViewKey; label: string; icon: typeof HomeIcon }[] = [
-    { key: "chat", label: "消息", icon: MessageCircle },
+    { key: "home", label: "主页", icon: HomeIcon },
+    { key: "chat", label: "聊天", icon: MessageCircle },
     { key: "people", label: "通讯录", icon: UsersRound },
-    { key: "project", label: "工作台", icon: BriefcaseBusiness },
-    { key: "profile", label: "我的", icon: UserRound },
+    { key: "project", label: "管理台", icon: BriefcaseBusiness },
+    { key: "mail", label: "邮箱", icon: Mail },
   ];
   const items: { key: ViewKey; label: string; icon: typeof HomeIcon }[] = [
     { key: "dashboard", label: "审批工作台", icon: LayoutDashboard },
     { key: "todos", label: "统一待办", icon: ListTodo },
     { key: "requests", label: "全部申请", icon: FolderKanban },
-    { key: "home", label: "入组导览", icon: HomeIcon },
-    { key: "mail", label: "邮箱", icon: Mail },
     ...(isAdmin ? [{ key: "members" as ViewKey, label: "成员审核", icon: UsersRound }, { key: "notifications" as ViewKey, label: "飞书提醒", icon: MessageCircle }] : []),
   ];
   return <aside className="sidebar-shell">
-    <button type="button" className="brand-lockup" onClick={() => setActiveView("project")} aria-label="返回工作台" title="返回工作台"><span className="oa-brand-symbol" aria-hidden="true"><Building2 className="size-5" /></span><div className="brand-copy"><div className="brand-name">联合研发 OA</div><div className="brand-subtitle">{officialBrand}</div></div></button>
+    <button type="button" className="brand-lockup" onClick={() => setActiveView("home")} aria-label="返回主页" title="返回主页"><span className="oa-brand-symbol" aria-hidden="true"><Building2 className="size-5" /></span><div className="brand-copy"><div className="brand-name">联合研发 OA</div><div className="brand-subtitle">{officialBrand}</div></div></button>
     <div className="oa-sidebar-scroll">
     <span className="sidebar-section-label">工作区</span>
     <nav className="sidebar-nav" aria-label="核心工作区">{workspaceItems.map(({ key, label, icon: Icon }) => <button key={key} className={`sidebar-nav-item ${activeView === key ? "active" : ""}`} onClick={() => setActiveView(key)}><Icon className="size-[17px]" /><span>{label}</span></button>)}</nav>
     <div className="sidebar-divider" />
-    <button type="button" data-sidebar-section="office" className="sidebar-section-label sidebar-group-toggle" aria-expanded={officeOpen} aria-controls={officeId} onClick={() => setOfficeOpen(open => !open)}><span>更多办公工具</span><ChevronRight className="size-3.5" /></button>
+    <button type="button" data-sidebar-section="office" className="sidebar-section-label sidebar-group-toggle" aria-expanded={officeOpen} aria-controls={officeId} onClick={() => setOfficeOpen(open => !open)}><span>审批办公</span><ChevronRight className="size-3.5" /></button>
     <div id={officeId} hidden={!officeOpen}>
     <nav className="sidebar-nav" aria-label="主导航">{items.map(({ key, label, icon: Icon }) => { const itemPendingCount = key === "dashboard" ? pendingApprovalCount : key === "members" ? pendingMemberCount : key === "knowledge" ? pendingKnowledgeCount : 0; const needsAttention = itemPendingCount > 0; const attentionClass = needsAttention ? `attention attention-${key}` : ""; return <button key={key} className={`sidebar-nav-item ${activeView === key ? "active" : ""} ${attentionClass}`} onClick={() => setActiveView(key)}><Icon className="size-[17px]" /><span>{label}</span>{needsAttention && <span className="nav-count nav-count-alert">{itemPendingCount > 99 ? "99+" : itemPendingCount}</span>}</button>; })}</nav>
     <button type="button" className="sidebar-nav-item" onClick={onMyPending}><Clock3 className="size-[17px]" /><span>待我审批</span></button>
@@ -385,7 +380,7 @@ function Sidebar({ activeView, setActiveView, onNew, onProfile, userName = "马�
     </div>
     <div className="oa-sidebar-bottom">
       <div className="oa-sidebar-links"><a href="https://omindos.ai" target="_blank" rel="noreferrer">官网 ↗</a>{isAdmin && <a href="/admin">管理</a>}<a href="/guide">使用指南</a></div>
-      <div className="oa-sidebar-bottom-row"><OaAiChatButton variant="sidebar" onOpen={onOpenChat} /><div className="sidebar-user-control">
+      <div className="oa-sidebar-bottom-row"><OaNewChatButton /><div className="sidebar-user-control">
         <button type="button" className="oa-sidebar-account" onClick={() => setUserMenuOpen(open => !open)} aria-expanded={userMenuOpen} aria-haspopup="menu" aria-label="打开个人账户菜单" title={userName}>{userAvatarDataUrl ? <img src={userAvatarDataUrl} alt="" /> : userName.slice(0, 1)}</button>
         {userMenuOpen && <div className="sidebar-user-popover" role="menu"><div className="oa-sidebar-account-copy"><strong>{userName}</strong><div className="sidebar-user-role">{sessionRoleLabel(currentRole, isAdmin)}</div></div><button type="button" role="menuitem" onClick={openProfile}><Settings2 className="size-3.5" />个人设置</button><button type="button" role="menuitem" className="logout-action" onClick={logout}><LogOut className="size-3.5" />退出登录</button></div>}
       </div></div>
@@ -763,7 +758,6 @@ function PeopleView({ currentUser, canManageDepartments = false }: { currentUser
   const visiblePeople = selectedDepartment === "all" ? people : selectedDepartment === "unassigned" ? people.filter((person) => !person.departmentId) : people.filter((person) => person.departmentId === selectedDepartment);
   return <div className="people-view">
     <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" />团队通讯录</div><h1>协作成员</h1><p>按实验室部门查找成员，查看负责方向并发起一对一沟通。</p></div><div className="people-heading-actions">{canManageDepartments && <Button variant="outline" onClick={() => setManagingDepartments((current) => !current)}><Building2 className="size-4" />部门管理</Button>}<Button variant="outline" onClick={() => self && openProfile(self)} disabled={!self}><Pencil className="size-4" />编辑我的资料</Button></div></div>
-    <OaAiMemberDirectory />
     <div className="people-summary"><div><UsersRound className="size-5" /><strong>{people.length}</strong><span>位协作成员</span></div><div><span className="people-online-indicator" /><strong>{onlineCount}</strong><span>人在线</span></div><small>在线状态每 30 秒刷新一次</small></div>
     <nav className="department-filter" aria-label="按部门筛选"><button type="button" className={selectedDepartment === "all" ? "active" : ""} onClick={() => setSelectedDepartment("all")}>全部 <span>{people.length}</span></button>{departments.map((department) => <button type="button" key={department.id} className={selectedDepartment === department.id ? "active" : ""} onClick={() => setSelectedDepartment(department.id)}>{department.name} <span>{people.filter((person) => person.departmentId === department.id).length}</span></button>)}<button type="button" className={selectedDepartment === "unassigned" ? "active" : ""} onClick={() => setSelectedDepartment("unassigned")}>未公开 / 未分组 <span>{people.filter((person) => !person.departmentId).length}</span></button></nav>
     {canManageDepartments && managingDepartments && <form className="department-admin-panel" onSubmit={createDepartment}><div><Building2 className="size-5" /><div><strong>新建部门</strong><span>部门编码创建后保持稳定，用于迁移和系统关联。</span></div></div><Input value={departmentName} onChange={(event) => setDepartmentName(event.target.value)} maxLength={120} placeholder="部门名称" aria-label="部门名称" /><Input value={departmentCode} onChange={(event) => setDepartmentCode(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/gu, ""))} maxLength={64} placeholder="部门编码，例如 robotics" aria-label="部门编码" /><NativeSelect value={departmentParentId} onChange={(event) => setDepartmentParentId(event.target.value)} aria-label="上级部门"><NativeSelectOption value="">无上级部门</NativeSelectOption>{departments.map((department) => <NativeSelectOption key={department.id} value={department.id}>{department.name}</NativeSelectOption>)}</NativeSelect><Button type="submit" className="primary-button" disabled={departmentSaving || !departmentName.trim() || !departmentCode.trim()}>{departmentSaving ? "创建中…" : "创建部门"}</Button></form>}
@@ -2190,7 +2184,7 @@ function DetailSheet({ approval, events, open, loading, error, currentEmail, isA
         {isAdmin && !isDone && !isDraft && !isReturned && !isWithdrawn && !isVoided && !canAct && <div className="detail-section detail-policy"><div className="detail-section-title"><AlertTriangle className="size-4" />异常流程恢复</div><p>{ndaRequiresApplicantResign ? "当前版成员协议不能沿旧审核节点继续；管理员不会代签，只能强制退回申请人重新手写签署并直接归档。" : "仅在当前处理人已失效或流程无法继续时使用。管理员不会代替任何审核人签字；操作只会把材料退回申请人并完整留痕。"}</p><Textarea value={actionNote} onChange={(event) => setActionNote(event.target.value)} rows={3} placeholder="填写至少 10 个字的异常原因" /><Button type="button" variant="outline" className="return-button" disabled={actionNote.trim().length < 10} onClick={() => onForceReturn(actionNote.trim())}><RotateCcw className="size-4" />管理员强制退回</Button></div>}
       </div>
       <SheetFooter className="detail-footer">
-        {isDraft ? <><Button variant="outline" onClick={() => onOpenChange(false)}>关闭</Button><Button className="primary-button" onClick={onEditDraft}><Pencil className="size-4" />继续编辑草稿</Button></> : (isReturned || isWithdrawn) ? isRequester ? <>{approval.type !== "保密协议" && <Textarea value={actionNote} onChange={(event) => setActionNote(event.target.value)} rows={3} placeholder="填写本次补充或修改说明" />}<div className="detail-footer-actions"><Button variant="outline" onClick={onEditDraft}><Pencil className="size-4" />{approval.type === "保密协议" ? "重新签名并提交" : "修改材料"}</Button>{approval.type !== "保密协议" && <Button className="primary-button" disabled={actionNote.trim().length < 2} onClick={() => onResubmit(actionNote.trim())}><Send className="size-4" />修改后重新提交</Button>}</div></> : <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>关闭详情</Button> : canAct ? <><Textarea value={actionNote} onChange={(event) => setActionNote(event.target.value)} rows={2} placeholder="审核意见（可选，未填写时默认：请补充或修改后重新提交）" /><div className="detail-footer-actions"><Button variant="outline" className="return-button" onClick={() => onReturn(actionNote.trim() || "请补充或修改后重新提交") }><RotateCcw className="size-4" />一键退回</Button><Button className="primary-button" disabled={Boolean((needsNextReviewer && !nextReviewerEmail) || (needsPurchaserAssignment && !selectedPurchaserEmail) || (isLaborRecommendation && (!suggestedAmount.trim() || compensationBasis.trim().length < 10)) || (isFinanceApproval && (!finalAmount.trim() || (finalAmountDiffers && !financeNote.trim()))) || (isPurchaseConfirmation && (purchaseNote.trim().length < 5 || !actualAmount.trim() || actualPurchaseAmount < 0 || purchaseAmountTooHigh)))} onClick={() => isPurchaseConfirmation ? onConfirmPurchase(purchaseNote.trim(), actualAmount.trim()) : sendApprove()}><BadgeCheck className="size-4" />{approval.type === "流转审批" ? approval.step === "流转确认" ? "确认已处理" : "同意审批" : approval.step === "开发人确认" ? "确认本人工作与占比" : needsNextReviewer ? "通过并转交" : isPurchaseConfirmation ? "确认采购并归档" : approval.type === "保密协议" ? ndaAgreementKind === "project_owner" ? "确认并归档" : "审核并归档" : approval.type === "劳务报酬" ? approval.step === "项目负责人" ? "通过并提交建议" : "审核并归档" : approval.type === "采购审核" ? "通过并进入统一采购" : "通过并归档"}</Button></div></> : <><div className="detail-readonly-note">{isVoided ? "该申请已作废，记录仅供查阅，不再继续流转。" : approval.status === "已归档" ? "该申请已归档；原记录不可覆盖，申请人可在详情中追加更正或废止说明。" : "当前节点由其他成员处理，你可以查看审批详情和流转记录。"}</div><Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>关闭详情</Button></>}
+        {isDraft ? <><Button variant="outline" onClick={() => onOpenChange(false)}>关闭</Button><Button className="primary-button" onClick={onEditDraft}><Pencil className="size-4" />继续编辑草稿</Button></> : (isReturned || isWithdrawn) ? isRequester ? <>{approval.type !== "保密协议" && <Textarea value={actionNote} onChange={(event) => setActionNote(event.target.value)} rows={3} placeholder="填写本次补充或修改说明" />}<div className="detail-footer-actions"><Button variant="outline" onClick={onEditDraft}><Pencil className="size-4" />{approval.type === "保密协议" ? "重新签名并提交" : "修改材料"}</Button>{approval.type !== "保密协议" && <Button className="primary-button" disabled={actionNote.trim().length < 2} onClick={() => onResubmit(actionNote.trim())}><Send className="size-4" />修改后重新提交</Button>}</div></> : <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>关闭详情</Button> : canAct ? <><Textarea value={actionNote} onChange={(event) => setActionNote(event.target.value)} rows={2} placeholder="审核意见（退回时必填）" /><div className="detail-footer-actions"><Button variant="outline" className="return-button" disabled={!actionNote.trim()} onClick={() => onReturn(actionNote.trim())}><RotateCcw className="size-4" />退回补充</Button><Button className="primary-button" disabled={Boolean((needsNextReviewer && !nextReviewerEmail) || (needsPurchaserAssignment && !selectedPurchaserEmail) || (isLaborRecommendation && (!suggestedAmount.trim() || compensationBasis.trim().length < 10)) || (isFinanceApproval && (!finalAmount.trim() || (finalAmountDiffers && !financeNote.trim()))) || (isPurchaseConfirmation && (purchaseNote.trim().length < 5 || !actualAmount.trim() || actualPurchaseAmount < 0 || purchaseAmountTooHigh)))} onClick={() => isPurchaseConfirmation ? onConfirmPurchase(purchaseNote.trim(), actualAmount.trim()) : sendApprove()}><BadgeCheck className="size-4" />{approval.type === "流转审批" ? approval.step === "流转确认" ? "确认已处理" : "同意审批" : approval.step === "开发人确认" ? "确认本人工作与占比" : needsNextReviewer ? "通过并转交" : isPurchaseConfirmation ? "确认采购并归档" : approval.type === "保密协议" ? ndaAgreementKind === "project_owner" ? "确认并归档" : "审核并归档" : approval.type === "劳务报酬" ? approval.step === "项目负责人" ? "通过并提交建议" : "审核并归档" : approval.type === "采购审核" ? "通过并进入统一采购" : "通过并归档"}</Button></div></> : <><div className="detail-readonly-note">{isVoided ? "该申请已作废，记录仅供查阅，不再继续流转。" : approval.status === "已归档" ? "该申请已归档；原记录不可覆盖，申请人可在详情中追加更正或废止说明。" : "当前节点由其他成员处理，你可以查看审批详情和流转记录。"}</div><Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>关闭详情</Button></>}
       </SheetFooter>
     </SheetContent>
   </Sheet>;
@@ -2208,8 +2202,7 @@ function RulesView() {
 }
 
 export default function Home() {
-  const [activeView, setActiveView] = useState<ViewKey>("project");
-  const [primaryView, setPrimaryView] = useState<OaPrimaryView>("project");
+  const [activeView, setActiveView] = useState<ViewKey>("home");
   const [knowledgeTab, setKnowledgeTab] = useState<KnowledgeTab>("ask");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   useEffect(() => { try { setSidebarCollapsed(localStorage.getItem("oa.sidebar.collapsed") === "true"); } catch { /* optional preference */ } }, []);
@@ -2626,9 +2619,9 @@ export default function Home() {
   const archiveNoteSelected = (noticeType: "correction" | "void", note: string) => applyApplicantAction("archive_note", note, noticeType);
   const openDraftEditor = () => { if (!selectedApproval) return; const draft = selectedApproval; closeApproval(); setEditingDraft(draft); setRequestDialogEpoch((current) => current + 1); setNewOpen(true); };
   const openMyPending = () => { setActiveView("todos"); setActiveFilter("全部"); setShowMineOnly(false); setMobileNavOpen(false); };
-  const navigate = (view: ViewKey) => { setActiveView(view); if (["chat", "people", "project", "profile"].includes(view)) setPrimaryView(view as OaPrimaryView); setShowMineOnly(false); setMobileNavOpen(false); };
+  const navigate = (view: ViewKey) => { setActiveView(view); setShowMineOnly(false); setMobileNavOpen(false); };
   const openMetricApproval = (id: string) => { setMetricPanel(null); openApproval(id); };
-  const secondaryTitle = activeView === "library" ? "资料库" : activeView === "home" ? "入组导览" : activeView === "chat" ? "消息" : activeView === "mail" ? "邮箱" : activeView === "dashboard" ? "审批工作台" : activeView === "todos" ? "统一待办" : activeView === "project" ? "工作台" : activeView === "requests" ? showMineOnly ? "待我审批" : "全部申请" : activeView === "people" ? "通讯录" : activeView === "knowledge" ? knowledgeTab === "ask" ? "AI 助手" : knowledgeTab === "submit" ? "上传资料" : knowledgeTab === "mine" ? "我的资料" : knowledgeTab === "review" ? "资料审核" : "知识资料管理" : activeView === "members" ? "成员审核" : activeView === "oem" ? "官网 OEM 申请" : activeView === "notifications" ? "飞书提醒" : activeView === "profile" ? "个人设置" : "流程与规则";
+  const secondaryTitle = activeView === "home" ? "主页" : activeView === "chat" ? "聊天" : activeView === "mail" ? "邮箱" : activeView === "dashboard" ? "审批工作台" : activeView === "todos" ? "统一待办" : activeView === "project" ? "管理台" : activeView === "requests" ? showMineOnly ? "待我审批" : "全部申请" : activeView === "people" ? "通讯录" : activeView === "knowledge" ? knowledgeTab === "ask" ? "AI 助手" : knowledgeTab === "submit" ? "上传资料" : knowledgeTab === "mine" ? "我的资料" : knowledgeTab === "review" ? "资料审核" : "知识资料管理" : activeView === "members" ? "成员审核" : activeView === "oem" ? "官网 OEM 申请" : activeView === "notifications" ? "飞书提醒" : activeView === "profile" ? "个人设置" : "流程与规则";
   if (!session) return <div className="registration-shell"><div className="registration-card"><div className="registration-brand-lockup"><strong>{officialBrand}</strong><span>联合研发 OA</span></div><a className="oa-gate-guide-link" href="/guide"><BookOpen className="size-4" />项目章程与使用指南</a><h1>请登录账号</h1><p className="registration-intro">正在确认登录状态。实验室 AI 仅在登录并完成 OA 准入与保密签署后显示。</p></div></div>;
   if (!session.registered && (session.accountBindingRequired || session.accountBindingConflict || session.platformIdentityMissing || session.externalIdentityLinkRequired || session.githubIdentityLinkRequired || session.feishuIdentityLinkRequired)) return <><Toaster position="top-right" /><IdentityAccessGate session={session} onRefresh={refreshSession} /></>;
   if (session.status === "pending") return <><Toaster position="top-right" /><PendingGate session={session} onRefresh={refreshSession} /></>;
@@ -2636,29 +2629,24 @@ export default function Home() {
   if (needsNda) return <><Toaster position="top-right" /><NdaAdmissionGate key={ndaAdmissionIdentityKey(session.user?.email)} session={session} onRefresh={refreshSession} /></>;
   return (
     <OaConversationProvider key={session.user?.email || "oa-member"} currentUser={session.user || undefined} visible={activeView === "knowledge" && knowledgeTab === "ask"} onOpenChat={() => { setKnowledgeTab("ask"); navigate("knowledge"); }}>
-    <OaAiMemberProvider onTeamChat={() => navigate("chat")}>
     <div className={`oa-app oa-workspace ${sidebarCollapsed ? "oa-sidebar-collapsed" : ""} ${activeView === "knowledge" && knowledgeTab === "ask" ? "oa-chat-open" : ""}`}>
       <Toaster position="top-right" />
       <button type="button" className={`mobile-nav-overlay ${mobileNavOpen ? "visible" : ""}`} onClick={() => { setMobileNavOpen(false); mobileMenuButtonRef.current?.focus(); }} aria-label="关闭导航" aria-hidden={!mobileNavOpen} tabIndex={mobileNavOpen ? 0 : -1} />
       <div ref={mobileSidebarRef} id="mobile-navigation" className={`mobile-sidebar ${mobileNavOpen ? "open" : ""}`} role="dialog" aria-modal="true" aria-label="移动导航" aria-hidden={!mobileNavOpen}>
-        <Sidebar activeView={activeView} setActiveView={navigate} onNew={() => { openNewRequest(); setMobileNavOpen(false); }} onProfile={() => navigate("profile")} userName={session.user?.displayName} userAvatarDataUrl={myAvatarDataUrl} authProvider={session.user?.authProvider} currentRole={session.role} isAdmin={Boolean(session.isAdmin)} canReviewKnowledge={Boolean(session.canReviewKnowledge)} selectedKnowledgeTab={knowledgeTab} onKnowledgeTab={(tab) => { setKnowledgeTab(tab); navigate("knowledge"); }} onMyPending={openMyPending} onOpenChat={() => setMobileNavOpen(false)} />
+        <Sidebar activeView={activeView} setActiveView={navigate} onNew={() => { openNewRequest(); setMobileNavOpen(false); }} onProfile={() => navigate("profile")} userName={session.user?.displayName} userAvatarDataUrl={myAvatarDataUrl} authProvider={session.user?.authProvider} currentRole={session.role} isAdmin={Boolean(session.isAdmin)} canReviewKnowledge={Boolean(session.canReviewKnowledge)} selectedKnowledgeTab={knowledgeTab} onKnowledgeTab={(tab) => { setKnowledgeTab(tab); navigate("knowledge"); }} onMyPending={openMyPending} />
       </div>
-      <div id="oa-desktop-navigation" className="oa-desktop-navigation"><Sidebar activeView={activeView} setActiveView={navigate} onNew={openNewRequest} onProfile={() => navigate("profile")} userName={session.user?.displayName} userAvatarDataUrl={myAvatarDataUrl} authProvider={session.user?.authProvider} currentRole={session.role} isAdmin={Boolean(session.isAdmin)} canReviewKnowledge={Boolean(session.canReviewKnowledge)} selectedKnowledgeTab={knowledgeTab} onKnowledgeTab={(tab) => { setKnowledgeTab(tab); navigate("knowledge"); }} onMyPending={openMyPending} onOpenChat={() => setMobileNavOpen(false)} /></div>
+      <div id="oa-desktop-navigation" className="oa-desktop-navigation"><Sidebar activeView={activeView} setActiveView={navigate} onNew={openNewRequest} onProfile={() => navigate("profile")} userName={session.user?.displayName} userAvatarDataUrl={myAvatarDataUrl} authProvider={session.user?.authProvider} currentRole={session.role} isAdmin={Boolean(session.isAdmin)} canReviewKnowledge={Boolean(session.canReviewKnowledge)} selectedKnowledgeTab={knowledgeTab} onKnowledgeTab={(tab) => { setKnowledgeTab(tab); navigate("knowledge"); }} onMyPending={openMyPending} /></div>
       <main className="main-shell">
         <header className="topbar">
           <button type="button" className="workspace-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "展开侧栏" : "收起侧栏"} aria-expanded={!sidebarCollapsed} aria-controls="oa-desktop-navigation"><Menu className="size-5" /></button>
           <button ref={mobileMenuButtonRef} className="mobile-menu-button" onClick={() => setMobileNavOpen(true)} aria-label="打开导航" aria-expanded={mobileNavOpen} aria-controls="mobile-navigation"><Menu className="size-5" /></button>
           <OaConversationTitle><div className="oa-topbar-secondary-title"><strong>{secondaryTitle}</strong>{activeView === "knowledge" && knowledgeTab === "ask" && <OaChatStatus />}</div></OaConversationTitle>
           <div className="topbar-actions">
-            <OaAiChatButton />
             <OaConversationMenu />
           </div>
         </header>
-        <OaQuickNavigation active={["dashboard", "requests", "todos"].includes(activeView) ? "approval" : activeView === "knowledge" && knowledgeTab === "submit" ? "upload" : activeView === "library" || (activeView === "knowledge" && ["mine", "manage"].includes(knowledgeTab)) ? "library" : undefined} hidden={activeView === "knowledge" && knowledgeTab === "ask"} onApproval={() => navigate("dashboard")} onUpload={() => { setKnowledgeTab("submit"); navigate("knowledge"); }} onLibrary={() => navigate("library")} />
-        <div className="project-pane" hidden={activeView !== "project" && activeView !== "todos"}><ProjectWorkspace mode={activeView === "todos" ? "todos" : "project"} approvals={approvals} approvalsReady={dataReady} currentUserEmail={session.user?.email} people={session.user ? [{ email: session.user.email, name: session.user.displayName }] : []} canReviewKnowledge={Boolean(session.canReviewKnowledge)} canManageProject={Boolean(session.isAdmin || session.role === "project_owner")} onOpenApproval={openApproval} onOpenKnowledgeReview={() => { setKnowledgeTab("review"); navigate("knowledge"); }} onOpenLibrary={() => navigate("library")} /></div>
-        {activeView === "profile" && <nav className="oa-my-tools" aria-label="我的工具"><button type="button" onClick={() => navigate("todos")}>我的待办</button><button type="button" onClick={() => { setKnowledgeTab("mine"); navigate("knowledge"); }}>我的资料</button><button type="button" onClick={() => navigate("mail")}>邮箱</button><button type="button" onClick={() => navigate("home")}>入组导览</button><button type="button" onClick={() => navigate("rules")}>流程规则</button>{session.isAdmin && <><button type="button" onClick={() => navigate("members")}>成员审核</button><button type="button" onClick={() => navigate("notifications")}>飞书提醒</button><a href="/admin">系统管理</a></>}</nav>}
         <div className="oa-knowledge-pane" hidden={activeView !== "knowledge"}><KnowledgeView canReviewKnowledge={Boolean(session.canReviewKnowledge)} isAdmin={Boolean(session.isAdmin)} activeSection={knowledgeTab} onSectionChange={setKnowledgeTab} /></div>
-        {activeView === "library" ? <OaLibraryWorkspace canManage={Boolean(session.canReviewKnowledge)} onMine={() => { setKnowledgeTab("mine"); navigate("knowledge"); }} onManage={() => { setKnowledgeTab("manage"); navigate("knowledge"); }} /> : activeView === "home" ? <StudentHomeView session={session} onNavigate={navigate} onOpenNewRequest={openNewRequest} /> : activeView === "chat" ? <><OaAiChatEntrances /><CollaborationWorkspace currentUserEmail={session.user?.email} /></> : activeView === "mail" ? <MailWorkspace /> : activeView === "notifications" ? <NotificationStatus /> : activeView === "oem" ? <OemInbox /> : activeView === "members" ? <MembersView currentEmail={session.user?.email} /> : activeView === "people" ? <PeopleView currentUser={session.user} canManageDepartments={Boolean(session.isAdmin)} /> : activeView === "knowledge" ? null : activeView === "todos" || activeView === "project" ? null : activeView === "profile" ? <ProfileSettingsView currentUser={session.user} currentRole={session.role} isAdmin={Boolean(session.isAdmin)} migrationExportEnabled={session.migrationExportEnabled} migrationUnfreezeEnabled={session.migrationUnfreezeEnabled} onIdentityChanged={(fullName, avatarDataUrl) => { setMyAvatarDataUrl(avatarDataUrl); setSession((current) => current?.user ? { ...current, user: { ...current.user, displayName: fullName } } : current); }} /> : activeView === "rules" ? <RulesView /> : activeView === "requests" ? <RequestsView approvals={approvals} filteredApprovals={filteredApprovals} myPendingApprovals={myPendingApprovals} dataReady={dataReady} activeFilter={activeFilter} setActiveFilter={setActiveFilter} showMineOnly={showMineOnly} onClearMine={() => setShowMineOnly(false)} onOpen={openApproval} /> : <>
+        {activeView === "home" ? <StudentHomeView session={session} onNavigate={navigate} onOpenNewRequest={openNewRequest} /> : activeView === "chat" ? <CollaborationWorkspace currentUserEmail={session.user?.email} /> : activeView === "mail" ? <MailWorkspace /> : activeView === "notifications" ? <NotificationStatus /> : activeView === "oem" ? <OemInbox /> : activeView === "members" ? <MembersView currentEmail={session.user?.email} /> : activeView === "people" ? <PeopleView currentUser={session.user} canManageDepartments={Boolean(session.isAdmin)} /> : activeView === "knowledge" ? null : activeView === "todos" || activeView === "project" ? <ProjectWorkspace mode={activeView} approvals={approvals} currentUserEmail={session.user?.email} people={session.user ? [{ email: session.user.email, name: session.user.displayName }] : []} canReviewKnowledge={Boolean(session.canReviewKnowledge)} canManageProject={Boolean(session.isAdmin || session.role === "project_owner")} onOpenApproval={openApproval} onOpenKnowledgeReview={() => { setKnowledgeTab("review"); navigate("knowledge"); }} /> : activeView === "profile" ? <ProfileSettingsView currentUser={session.user} currentRole={session.role} isAdmin={Boolean(session.isAdmin)} migrationExportEnabled={session.migrationExportEnabled} migrationUnfreezeEnabled={session.migrationUnfreezeEnabled} onIdentityChanged={(fullName, avatarDataUrl) => { setMyAvatarDataUrl(avatarDataUrl); setSession((current) => current?.user ? { ...current, user: { ...current.user, displayName: fullName } } : current); }} /> : activeView === "rules" ? <RulesView /> : activeView === "requests" ? <RequestsView approvals={approvals} filteredApprovals={filteredApprovals} myPendingApprovals={myPendingApprovals} dataReady={dataReady} activeFilter={activeFilter} setActiveFilter={setActiveFilter} showMineOnly={showMineOnly} onClearMine={() => setShowMineOnly(false)} onOpen={openApproval} /> : <>
           <section className="page-heading dashboard-heading">
             <div>
               <div className="eyebrow"><span className="eyebrow-line" />{officialName}</div>
@@ -2677,12 +2665,10 @@ export default function Home() {
           <FlowCard />
         </>}
       </main>
-      <OaPrimaryNavigation active={primaryView} onNavigate={navigate} />
       <NewRequestDialog key={requestDialogEpoch} open={newOpen} onOpenChange={setNewOpen} onCreate={createApproval} approvals={approvals} currentUser={session.user} currentRole={session.role} isAdmin={session.isAdmin} draft={editingDraft} onDraftConsumed={() => setEditingDraft(null)} />
       <DetailSheet approval={selectedApproval} events={detailEvents} loading={detailLoading} error={detailError} currentEmail={session.user?.email} isAdmin={session.isAdmin} open={Boolean(selectedId)} onOpenChange={(open) => { if (!open) closeApproval(); }} onRetry={retryApprovalDetail} onApprove={approveSelected} onConfirmPurchase={confirmPurchaseSelected} onReturn={returnSelected} onForceReturn={forceReturnSelected} onResubmit={resubmitSelected} onWithdraw={withdrawSelected} onVoid={voidSelected} onArchiveNote={archiveNoteSelected} onEditDraft={openDraftEditor} />
       <MetricDialog panel={metricPanel} approvals={approvals} monthlyApproved={monthlyApproved} archiveRatio={archiveRatio} onOpenApproval={openMetricApproval} onOpenChange={setMetricPanel} />
     </div>
-    </OaAiMemberProvider>
     </OaConversationProvider>
   );
 }

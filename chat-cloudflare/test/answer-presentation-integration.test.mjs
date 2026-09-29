@@ -52,7 +52,7 @@ test("failed synthesis never passes normal Markdown excerpts off as an answer", 
 
 for (const mode of ["ai", "retrieval"]) {
   test(`${mode} response hides metadata while preserving source binding and model grounding`, async (t) => {
-    const ORIGIN = "https://chat.omindos.ai";
+    const ORIGIN = "https://chat.omindos.cn";
     let prompt = "";
     const env = {
       DB: new D1DatabaseAdapter(), APP_ORIGIN: ORIGIN,

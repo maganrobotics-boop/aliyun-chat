@@ -20,7 +20,7 @@ import {
 } from "../src/oa-public.mjs";
 import { D1DatabaseAdapter } from "./d1-adapter.mjs";
 
-const ORIGIN = "https://chat.omindos.ai";
+const ORIGIN = "https://chat.omindos.cn";
 const SERVICE_TOKEN = "A".repeat(43);
 const SUGGESTIONS = Object.freeze([
   { id: "1", question: "《灵巧操作进展》有哪些值得关注的核心内容？", updatedAt: "2026-09-14" },

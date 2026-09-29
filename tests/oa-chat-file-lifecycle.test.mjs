@@ -27,7 +27,7 @@ function insertTask({ id = crypto.randomUUID(), age = 0, status = 'succeeded', o
 }
 const readTask = id => sqlite.prepare('SELECT * FROM ai_workbench_tasks WHERE id=?').get(id);
 const readRetention = id => sqlite.prepare('SELECT * FROM ai_workbench_retention WHERE task_id=?').get(id);
-const req = (id, more = {}, origin = 'https://oa.omindos.ai') => new Request('https://oa.omindos.ai/api/lab-ai/archive', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify({ id, confirmed: true, ...more }) });
+const req = (id, more = {}, origin = 'https://oa.omindos.cn') => new Request('https://oa.omindos.cn/api/lab-ai/archive', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify({ id, confirmed: true, ...more }) });
 beforeEach(() => {
   sqlite?.close(); sqlite = new DatabaseSync(':memory:');
   sqlite.exec(`PRAGMA foreign_keys=ON;
@@ -112,7 +112,7 @@ test('real archival creates pending internal knowledge exactly once, never searc
   assert.equal(approved.status, 'active');
   assert.ok((await knowledge.getActiveKnowledgeChunks(owner)).some(chunk => chunk.itemId === item.id));
   assert.deepEqual(await knowledge.getPublicActiveKnowledgeChunks(), []);
-  const approvedResponse = await archive.GET(new Request(`https://oa.omindos.ai/api/lab-ai/archive?id=${id}`));
+  const approvedResponse = await archive.GET(new Request(`https://oa.omindos.cn/api/lab-ai/archive?id=${id}`));
   assert.equal((await approvedResponse.json()).lifecycle.knowledgeStatus, 'active');
 });
 test('rate-limit or lost approval write leaves archival protection in place for retry', async () => {
@@ -123,7 +123,7 @@ test('rate-limit or lost approval write leaves archival protection in place for 
 });
 test('file conversion is private and validates auth, origin, type and actual content', async () => {
   const file = Buffer.from('%PDF-1.4\nsynthetic content\n%%EOF');
-  const request = (name = 'test.pdf', bytes = file, origin = 'https://oa.omindos.ai') => new Request('https://oa.omindos.ai/api/lab-ai/extract', { method: 'POST', headers: { origin, 'content-type': 'application/pdf', 'x-oa-file-name': encodeURIComponent(name) }, body: bytes });
+  const request = (name = 'test.pdf', bytes = file, origin = 'https://oa.omindos.cn') => new Request('https://oa.omindos.cn/api/lab-ai/extract', { method: 'POST', headers: { origin, 'content-type': 'application/pdf', 'x-oa-file-name': encodeURIComponent(name) }, body: bytes });
   let calls = 0; env.AI.toMarkdown = async () => { calls++; return { format: 'markdown', data: '这里是完整的文件解析正文，仅用于对话。' }; };
   assert.equal((await extraction.POST(request('test.pdf', file, 'https://evil.invalid'))).status, 403);
   assert.equal((await extraction.POST(request('../test.pdf'))).status, 400);

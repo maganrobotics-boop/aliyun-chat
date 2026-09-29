@@ -315,8 +315,8 @@ function publicAppHarness(store, {
   Object.assign(win, {
     localStorage: store, location: {
       pathname,
-      origin: "https://chat.omindos.ai",
-      href: `https://chat.omindos.ai${pathname}`,
+      origin: "https://chat.omindos.cn",
+      href: `https://chat.omindos.cn${pathname}`,
     },
     innerHeight: 800, confirm: () => true,
     matchMedia: (query) => ({

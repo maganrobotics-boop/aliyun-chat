@@ -7,7 +7,8 @@
     <title>新手村管理 · OriginMind × ARTS Robotics</title>
     <link rel="stylesheet" href="/assets/newbie-admin-20260926.css">
     <script type="module" src="/newbie-village-admin.js"></script>
-  <link rel="stylesheet" href="/assets/ui-polish-20260926/admin-6cd8f7180a2ed471.css"></head>
+  <link rel="stylesheet" href="/assets/ui-polish-20260926/admin-6cd8f7180a2ed471.css"><link rel="stylesheet" href="/assets/admin-entry/login-help-d69b82dc92039822.css">
+  </head>
   <body>
     <header class="topbar">
       <div class="brand"><small>ORIGINMIND × ARTS ROBOTICS</small><strong>新手村管理</strong></div>
@@ -17,7 +18,8 @@
       <section class="panel login-panel" aria-labelledby="login-heading">
         <div class="eyebrow">管理入口</div><h1 id="login-heading">管理员登录</h1>
         <p>查看注册情况、学生学习进度与课程提问，并审核保密协议。</p>
-        <form class="login-form"><label>管理员密码<input name="password" type="password" autocomplete="current-password" required></label><div class="status login-status" role="status"></div><button class="primary" type="submit">登录管理台</button></form>
+        <p class="login-note" id="admin-login-help">此处使用 Chat 管理密码，无需填写邮箱。OA 需先完成飞书或 GitHub 身份登录。</p>
+        <form class="login-form"><label>管理员密码<input name="password" type="password" autocomplete="current-password" maxlength="256" aria-describedby="admin-login-help" required></label><div class="status login-status" role="status" aria-live="polite"></div><button class="primary" type="submit">登录管理台</button></form>
       </section>
       <section class="admin-app" hidden>
         <div class="page-heading"><div><div class="eyebrow">教学与入村管理</div><h1>了解每位同学的进展</h1><p>从入村注册到课程学习，在这里查看和跟进。</p></div><button class="secondary refresh-current" type="button">刷新数据</button></div>

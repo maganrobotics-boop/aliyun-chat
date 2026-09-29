@@ -8,7 +8,7 @@ import { WORKERS_AI_MODEL } from "../src/constants.mjs";
 import { encryptSecret, sha256Hex } from "../src/crypto.mjs";
 import { D1DatabaseAdapter } from "./d1-adapter.mjs";
 
-const ORIGIN = "https://chat.omindos.ai";
+const ORIGIN = "https://chat.omindos.cn";
 const SERVICE_TOKEN = "A".repeat(43);
 const RELEASE_ID = `${"a".repeat(40)}-1`;
 
@@ -387,29 +387,24 @@ test("newbie village keeps an authenticated task path and personal homepage inde
   assert.equal(signed.body.signed, true);
   assert.equal(signed.body.archived, true);
   assert.equal(signed.body.agreement.accepted, true);
-  assert.equal(signed.body.agreement.approved, false);
-  assert.equal(signed.body.agreement.reviewStatus, "pending");
-  assert.equal(signed.body.profile, null);
-  assert.deepEqual(signed.body.tasks, []);
+  assert.equal(signed.body.agreement.approved, true);
+  assert.equal(signed.body.agreement.reviewStatus, "approved");
+  assert.equal(signed.body.profile.displayName, "student");
+  assert.equal(signed.body.tasks[0].id, "registration");
+  assert.equal(signed.body.tasks[0].unlocked, true);
 
   const archive = await env.DB.prepare(
     "SELECT * FROM newbie_agreement_acceptances WHERE email=? AND agreement_version=?",
   ).bind("student@stumail.sztu.edu.cn", initial.body.agreement.version).first();
   assert.equal(archive.signer_name, "小深同学");
   assert.match(archive.content_sha256, /^[a-f0-9]{64}$/u);
-  assert.equal(archive.review_status, "pending");
+  assert.equal(archive.review_status, "approved");
+  assert.equal(archive.reviewed_by, "system:auto:chat");
   assert.equal(Object.hasOwn(archive, "ip"), false);
   assert.equal(Object.hasOwn(archive, "user_agent"), false);
 
-  const blockedPending = await responseJson(await handleRequest(apiRequest("/api/newbie/profile", {
-    method: "PATCH",
-    cookie,
-    body: { displayName: "小深", grade: "2024", major: "机器人工程", direction: "navigation", bio: "" },
-  }), env, {}, runtime()));
-  assert.equal(blockedPending.status, 423);
-
   const visitorCannotReadArchive = await responseJson(await handleRequest(
-    apiRequest("/api/admin/newbie-agreements?status=pending", { cookie }), env, {}, runtime(),
+    apiRequest("/api/admin/newbie-agreements?status=approved", { cookie }), env, {}, runtime(),
   ));
   assert.equal(visitorCannotReadArchive.status, 403);
 
@@ -418,22 +413,7 @@ test("newbie village keeps an authenticated task path and personal homepage inde
     apiRequest("/api/admin/newbie-agreements?status=pending", { cookie: adminCookie }), env, {}, runtime(),
   ));
   assert.equal(queue.status, 200);
-  assert.equal(queue.body.records.length, 1);
-  assert.equal(queue.body.records[0].email, "student@stumail.sztu.edu.cn");
-  assert.equal(queue.body.records[0].reviewStatus, "pending");
-  assert.match(queue.body.agreement.title, /保密协议/u);
-
-  const reviewed = await responseJson(await handleRequest(apiRequest("/api/admin/newbie-agreements/review", {
-    method: "POST",
-    cookie: adminCookie,
-    body: {
-      email: "student@stumail.sztu.edu.cn",
-      agreementVersion: initial.body.agreement.version,
-      reviewStatus: "approved",
-      reviewNote: "身份与签署信息一致。",
-    },
-  }), env, {}, runtime()));
-  assert.deepEqual(reviewed, { status: 200, body: { saved: true, reviewStatus: "approved" } });
+  assert.equal(queue.body.records.length, 0);
 
   const admitted = await responseJson(await handleRequest(
     apiRequest("/api/newbie/dashboard", { cookie }), env, {}, runtime(),
@@ -790,7 +770,7 @@ test("verified Bailian config overrides Workers AI and uses hardened fetch optio
   t.after(() => env.DB.close());
   await storeVerifiedBailianConfig(env);
   const externalFetch = async (url, init) => {
-    if (url === "https://oa.omindos.ai/api/public/lab-ai/retrieve") return oaResponse();
+    if (url === "https://oa.omindos.cn/api/public/lab-ai/retrieve") return oaResponse();
     modelFetch = { url, init };
     return Response.json({ choices: [{ message: { role: "assistant", content: "百炼回答 [1]" } }] });
   };
@@ -826,7 +806,7 @@ test("model timing includes a failed Bailian attempt and its Workers fallback", 
   t.after(() => env.DB.close());
   await storeVerifiedBailianConfig(env);
   const externalFetch = async (url) => {
-    if (url === "https://oa.omindos.ai/api/public/lab-ai/retrieve") return oaResponse();
+    if (url === "https://oa.omindos.cn/api/public/lab-ai/retrieve") return oaResponse();
     await delay();
     return new Response(null, { status: 503 });
   };
@@ -852,7 +832,7 @@ test("an oversized Bailian response fails safely without returning retrieved tex
   t.after(() => env.DB.close());
   await storeVerifiedBailianConfig(env);
   const externalFetch = async (url) => {
-    if (url === "https://oa.omindos.ai/api/public/lab-ai/retrieve") return oaResponse();
+    if (url === "https://oa.omindos.cn/api/public/lab-ai/retrieve") return oaResponse();
     const first = new Uint8Array(200 * 1024).fill(0x20);
     const second = new Uint8Array(60 * 1024).fill(0x20);
     const body = new ReadableStream({

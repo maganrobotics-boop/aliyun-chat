@@ -192,14 +192,14 @@ async function frontendReturnedImportHarness({
   let remainingSubmittedPatchFailures = failSubmittedPatchCount;
   const api = runInNewContext(`${script.slice(start, end)}\n({ submitDocumentToOa, fetchAdminData });`, {
     state,
-    OA_CHAT_IMPORT_URL: "https://oa.omindos.ai/api/knowledge/import-chat",
-    OA_CHAT_IMPORT_STATUS_URL: "https://oa.omindos.ai/api/knowledge/import-chat/status",
+    OA_CHAT_IMPORT_URL: "https://oa.omindos.cn/api/knowledge/import-chat",
+    OA_CHAT_IMPORT_STATUS_URL: "https://oa.omindos.cn/api/knowledge/import-chat/status",
     CHAT_DIRECT_OA_THRESHOLD_CHARACTERS: 30_000,
     SAFE_RETURNED_KNOWLEDGE_ITEM_ID: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     AbortSignal,
     fetch: async (url, options) => {
       const request = JSON.parse(options.body);
-      if (url === "https://oa.omindos.ai/api/knowledge/import-chat/status") {
+      if (url === "https://oa.omindos.cn/api/knowledge/import-chat/status") {
         calls.statusRequests.push(request);
         calls.events.push("oa:status");
         if (deferStatus) return new Promise(() => {});
@@ -254,7 +254,7 @@ async function frontendReturnedImportHarness({
       return `${url.pathname}${url.search}${url.hash}`;
     },
     window: {
-      location: { href: "https://chat.omindos.ai/manage?keep=1&returnedKnowledgeItem=aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee#upload" },
+      location: { href: "https://chat.omindos.cn/manage?keep=1&returnedKnowledgeItem=aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee#upload" },
       history: {
         state: null,
         replaceState: (_state, _title, url) => { calls.replacedUrl = url; },
@@ -461,7 +461,7 @@ test("service worker caches only same-origin versioned static assets", async () 
       return response;
     },
     self: {
-      location: { origin: "https://chat.omindos.ai" },
+      location: { origin: "https://chat.omindos.cn" },
       clients: { claim: async () => undefined },
       skipWaiting: () => undefined,
       addEventListener: (type, handler) => { listeners.set(type, handler); },
@@ -477,7 +477,7 @@ test("service worker caches only same-origin versioned static assets", async () 
     return handled;
   };
 
-  const versioned = "https://chat.omindos.ai/assets/app-0123456789abcdef.js";
+  const versioned = "https://chat.omindos.cn/assets/app-0123456789abcdef.js";
   const firstVersioned = dispatchFetch(versioned);
   assert.ok(firstVersioned);
   await firstVersioned;
@@ -486,13 +486,13 @@ test("service worker caches only same-origin versioned static assets", async () 
   assert.equal(networkCalls.length, 1, "second request must use the static cache");
 
   for (const url of [
-    "https://chat.omindos.ai/",
-    "https://chat.omindos.ai/manage",
-    "https://chat.omindos.ai/api/chat",
-    "https://chat.omindos.ai/_health",
-    "https://chat.omindos.ai/assets/app.js",
-    "https://chat.omindos.ai/assets/app-0123456789abcdef.js?changed=1",
-    "https://oa.omindos.ai/assets/app-0123456789abcdef.js",
+    "https://chat.omindos.cn/",
+    "https://chat.omindos.cn/manage",
+    "https://chat.omindos.cn/api/chat",
+    "https://chat.omindos.cn/_health",
+    "https://chat.omindos.cn/assets/app.js",
+    "https://chat.omindos.cn/assets/app-0123456789abcdef.js?changed=1",
+    "https://oa.omindos.cn/assets/app-0123456789abcdef.js",
   ]) {
     assert.equal(dispatchFetch(url), null, url);
   }
@@ -566,7 +566,7 @@ test("text imports use normalized fatal UTF-8 decoding and a five MiB byte cap",
   assert.equal(helpers.returnedKnowledgeItemIdFromSearch("?returnedKnowledgeItem=not-an-id"), "");
   assert.equal(helpers.returnedKnowledgeItemIdFromSearch(`?returnedKnowledgeItem=${returnedId}&returnedKnowledgeItem=${returnedId}`), "");
   assert.equal(
-    helpers.withoutReturnedKnowledgeItemQuery(`https://chat.omindos.ai/manage?keep=1&returnedKnowledgeItem=${returnedId}#upload`),
+    helpers.withoutReturnedKnowledgeItemQuery(`https://chat.omindos.cn/manage?keep=1&returnedKnowledgeItem=${returnedId}#upload`),
     "/manage?keep=1#upload",
   );
 });
@@ -659,7 +659,7 @@ test("local drafts never inherit an unrelated returned-import context", async ()
     payload: { item: { id: oaItemId, status: "pending" }, partCount: 1 },
   });
   await local.api.submitDocumentToOa(local.draft);
-  assert.equal(local.calls.requestUrl, "https://oa.omindos.ai/api/knowledge/import-chat");
+  assert.equal(local.calls.requestUrl, "https://oa.omindos.cn/api/knowledge/import-chat");
   assert.equal(Object.hasOwn(local.calls.request, "returnedKnowledgeItemId"), false);
   assert.equal(local.calls.adminRequests.length, 2);
   assert.deepEqual(local.calls.adminRequests[0], {
@@ -982,10 +982,10 @@ test("vanilla frontend preserves every same-origin API and visibility contract",
   assert.match(script, /submitDocumentToOa\(document\)\);/u);
   const externalApis = [...script.matchAll(/https?:\/\/[^\s"'`]+\/api\/[^\s"'`]+/giu)].map((match) => match[0]);
   assert.deepEqual(externalApis, [
-    "https://oa.omindos.ai/api/knowledge/import-chat",
-    "https://oa.omindos.ai/api/knowledge/import-chat/status",
-    "https://oa.omindos.ai/api/knowledge/assets",
-    "https://oa.omindos.ai/api/knowledge/assets/finalize",
+    "https://oa.omindos.cn/api/knowledge/import-chat",
+    "https://oa.omindos.cn/api/knowledge/import-chat/status",
+    "https://oa.omindos.cn/api/knowledge/assets",
+    "https://oa.omindos.cn/api/knowledge/assets/finalize",
   ]);
 
   for (const forbidden of [

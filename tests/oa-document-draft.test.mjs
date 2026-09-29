@@ -26,7 +26,7 @@ function insert({ age = 0, status = 'succeeded', owner = 'alice' } = {}) {
   return id;
 }
 const draft = id => ({ title: '人工核对稿', result: `${result}\n补充：下一步先核对接口。`, expectedUpdatedAt: row(id).updated_at });
-const request = (id, more = {}, origin = 'https://oa.omindos.ai') => new Request('https://oa.omindos.ai/api/lab-ai/tasks', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'saveDraft', id, ...draft(id), ...more }) });
+const request = (id, more = {}, origin = 'https://oa.omindos.cn') => new Request('https://oa.omindos.cn/api/lab-ai/tasks', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'saveDraft', id, ...draft(id), ...more }) });
 beforeEach(() => {
   sqlite?.close(); sqlite = new DatabaseSync(':memory:');
   sqlite.exec(`PRAGMA foreign_keys=ON;
@@ -120,7 +120,7 @@ test('legacy completed tasks can be explicitly saved without enrolling unrelated
 test('task API saves and downloads the edited files without calling the model', async () => {
   const id = insert(); const response = await tasks.POST(request(id)); assert.equal(response.status, 200, await response.clone().text());
   const data = await response.json(); assert.equal(data.saved, true); assert.equal(data.task.title, '人工核对稿'); assert.equal(data.task.member_id, undefined);
-  for (const format of ['md', 'docx']) { const file = await tasks.GET(new Request(`https://oa.omindos.ai/api/lab-ai/tasks?id=${id}&format=${format}`)); assert.equal(file.status, 200); assert.ok((await file.arrayBuffer()).byteLength > 10); }
+  for (const format of ['md', 'docx']) { const file = await tasks.GET(new Request(`https://oa.omindos.cn/api/lab-ai/tasks?id=${id}&format=${format}`)); assert.equal(file.status, 200); assert.ok((await file.arrayBuffer()).byteLength > 10); }
 });
 test('task API rejects cross-origin writes, extra approval fields and missing versions', async () => {
   const id = insert(); assert.equal((await tasks.POST(request(id, {}, 'https://evil.invalid'))).status, 403);

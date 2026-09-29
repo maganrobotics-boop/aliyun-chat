@@ -6,7 +6,7 @@
     <meta name="description" content="机器人学习新手村：免登录学习 Git、Python、ROS2 和项目实践，本机保存进度，登录后正式提交。">
     <meta name="robots" content="noindex,nofollow">
     <meta name="theme-color" content="#f5f7fb">
-    <title>新手村 · 个人学习主页</title>
+    <title>课程 · OriginMind × ARTS Robotics</title>
     <style>
       :root {
         color: #20242b;
@@ -152,6 +152,12 @@
       input:focus, select:focus, textarea:focus { border-color: #7ca3ff; box-shadow: 0 0 0 3px rgba(51,112,255,.12); }
       .form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
       .form-status { flex: 1; color: #68707c; font-size: 12px; }
+      .profile-form .form-actions { flex-wrap: wrap; align-items: flex-start; }
+      .profile-form .form-status { flex: 1 1 180px; min-width: 0; line-height: 1.6; overflow-wrap: anywhere; }
+      .agreement-notice { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 18px; padding: 14px 16px; border: 1px solid #d9e5f5; border-radius: 13px; background: #f4f8fe; }
+      .agreement-notice p { flex: 1 1 260px; margin: 0; color: #405a80; font-size: 13px; line-height: 1.7; }
+      .sync-status { margin: 0 0 18px; color: #68707c; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+      .sync-status:empty { display: none; }
       dialog { color: #20242b; }
       .modal {
         width: min(520px,calc(100vw - 24px)); max-height: min(88dvh,760px); margin: auto; padding: 0;
@@ -231,30 +237,137 @@
       .close { width: 44px; height: 44px; }
       @media (max-width: 860px) { .sidebar { height: 69px; } .back-link { width: 44px; } }
       @media (max-width: 620px) { .nav-button { width: 44px; } }
+
+/* Newbie workspace: eight visible entrances; no account or approval changes. */
+.app { display: block; }
+.main { min-height: 100dvh; padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+.topbar { top: 0; min-height: 74px; padding: 14px max(20px,calc((100vw - 1120px)/2)); gap: 16px; flex-wrap: wrap; }
+.workspace-brand { display: flex; gap: 12px; align-items: center; color: inherit; text-decoration: none; }
+.workspace-brand .brand-mark { width: 34px; height: 34px; flex: 0 0 34px; }
+.topbar-title small { font-size: 10px; letter-spacing: .04em; color: #748498; }
+.topbar-title strong { margin: 0 0 3px; font-size: 19px; }
+.account-actions { flex-wrap: wrap; gap: 8px; }
+.account-actions .user-chip { max-width: 220px; }
+.account-actions button { min-height: 40px; padding-inline: 12px; font-size: 12px; }
+.workspace-back { color: #416183; font-size: 12px; text-decoration: none; display: inline-flex; align-items: center; min-height: 40px; }
+.content { width: min(1168px,100%); padding: 26px 24px 32px; }
+.workspace-top-nav { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; padding: 0 0 24px; }
+.workspace-nav-button { appearance: none; min-width: 0; border: 1px solid #e0e7f0; border-radius: 14px; background: #fff; color: #596f85; display: flex; align-items: center; justify-content: center; gap: 11px; min-height: 74px; padding: 12px; cursor: pointer; font: inherit; text-decoration: none; }
+.workspace-nav-button svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 22px; }
+.workspace-nav-icon { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: #edf3fb; color: #3b73b4; }
+.workspace-nav-copy { display: grid; gap: 4px; text-align: left; }
+.workspace-nav-copy strong { font-size: 14px; font-weight: 700; }
+.workspace-nav-copy small { color: #8491a1; font-size: 11px; }
+.workspace-nav-button:hover { background: #f5f8fd; border-color: #bed0e7; }
+.workspace-nav-button.active { color: #2368b5; border-color: #aac9ed; background: #eff6ff; }
+.workspace-nav-button:focus-visible { outline: 3px solid #75a7e3; outline-offset: 3px; }
+.workspace-nav-button:disabled { opacity: .5; cursor: not-allowed; }
+.workspace-bottom-nav { position: fixed; z-index: 20; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); padding: 8px max(12px,calc((100vw - 840px)/2)) calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid #dfe7f0; background: rgba(255,255,255,.97); backdrop-filter: blur(16px); }
+.workspace-bottom-nav .workspace-nav-button { min-height: 52px; padding: 5px; flex-direction: column; gap: 4px; border: 0; border-radius: 10px; background: transparent; font-size: 12px; }
+.workspace-bottom-nav .workspace-nav-button.active { background: #eff5fd; color: #2267b5; font-weight: 750; }
+.workspace-bottom-nav svg { width: 22px; height: 22px; }
+.workspace-view { scroll-margin-top: 100px; }
+.workspace-view > .view-head { margin-bottom: 22px; }
+.workspace-view .view-head h1, .workspace-hero h1 { font-size: clamp(26px,4vw,36px); line-height: 1.25; letter-spacing: -.025em; }
+.workspace-view .view-head p { max-width: 760px; font-size: 14px; }
+.workspace-view h1:focus { outline: none; }
+.workspace-hero { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(230px,.6fr); gap: 24px; background: #fff; border: 1px solid #dfe7f0; border-radius: 20px; padding: 30px; margin-bottom: 20px; }
+.workspace-hero .eyebrow { color: #4d7aaa; font-size: 11px; letter-spacing: .07em; }
+.workspace-hero h1 { margin: 10px 0 12px; }
+.workspace-hero p { color: #6b7b8c; font-size: 14px; line-height: 1.85; margin: 0; }
+.workspace-next { border-left: 1px solid #e7edf4; padding: 4px 0 4px 25px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.workspace-next > span { font-size: 12px; color: #788b9d; }
+.workspace-next > strong { font-size: 18px; color: #274664; }
+.workspace-next > small { color: #778899; line-height: 1.7; }
+.workspace-next > button { margin-top: auto; }
+.workspace-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin-bottom: 22px; }
+.workspace-stat { border: 1px solid #e1e8ef; background: #fff; border-radius: 15px; padding: 18px 20px; }
+.workspace-stat span { font-size: 12px; color: #8291a0; }
+.workspace-stat strong { display: block; margin-top: 8px; color: #2c4867; font-size: 24px; font-weight: 750; }
+.workspace-section-title { font-size: 17px; color: #314f6c; margin: 24px 0 14px; }
+.workspace-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.workspace-card { padding: 22px; border: 1px solid #e1e8ef; background: #fff; border-radius: 16px; min-width: 0; }
+.workspace-card > .eyebrow { font-size: 11px; color: #698aac; letter-spacing: .02em; }
+.workspace-card h2, .workspace-card h3 { font-size: 17px; margin: 9px 0; color: #2d4764; }
+.workspace-card p { font-size: 13px; line-height: 1.8; color: #6b7d8d; margin: 8px 0 16px; overflow-wrap: anywhere; }
+.workspace-card .workspace-actions { margin-top: 16px; }
+.workspace-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.workspace-actions a { display: inline-flex; align-items: center; min-height: 40px; padding: 9px 12px; color: #2869ad; font-size: 13px; border: 1px solid #d8e5f2; border-radius: 9px; text-decoration: none; background: #f7faff; }
+.workspace-actions button { font-size: 13px; }
+.workspace-note { padding: 14px 17px; background: #edf4fc; border: 1px solid #dce8f5; color: #4b6a8b; border-radius: 12px; font-size: 13px; line-height: 1.75; margin: 16px 0 22px; }
+.workspace-empty { padding: 26px; text-align: center; border: 1px dashed #cfdce9; border-radius: 14px; color: #6d8296; line-height: 1.8; }
+.workspace-course-select { max-width: 520px; margin: 20px 0; }
+.workspace-tutor-intro { padding: 22px; background: #fff; border: 1px solid #dee8f2; border-radius: 16px; }
+.workspace-tutor-intro h2 { margin-top: 0; font-size: 18px; }
+.workspace-tutor-intro p { color: #6c7c8e; line-height: 1.8; font-size: 14px; }
+.workspace-progress-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.workspace-progress-item { display: grid; grid-template-columns: 38px minmax(0,1fr) auto; gap: 13px; align-items: center; padding: 17px 20px; border: 1px solid #e1e8ef; background: #fff; border-radius: 14px; }
+.workspace-progress-item h2 { margin: 0 0 6px; font-size: 15px; color: #35516f; }
+.workspace-progress-item p { margin: 0; color: #7d8c9c; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.workspace-progress-item .secondary { min-height: 38px; font-size: 12px; padding: 0 12px; }
+.workspace-progress-item .status { display: inline-block; margin-left: 8px; font-size: 10px; }
+.workspace-view .passes-section { margin-top: 32px; padding-top: 28px; }
+.workspace-view .passes-head { display: block; }
+.workspace-view .passes-head h2 { font-size: 23px; }
+.workspace-view .passes-note { margin-top: 16px; }
+.workspace-view .task-card { min-height: 220px; }
+.workspace-view .task-card h3 { color: #304d6d; font-size: 17px; }
+.workspace-view .task-card p { font-size: 13px; }
+.workspace-view .task-card .lesson-link { font-size: 13px; }
+.workspace-account { margin-bottom: 20px; }
+.workspace-account p { margin: 0; font-size: 13px; color: #637d95; line-height: 1.75; }
+.workspace-account .workspace-actions { margin-top: 14px; }
+.workspace-view .profile-card { min-height: auto; }
+.toast { left: 50%; bottom: calc(94px + env(safe-area-inset-bottom)); max-width: calc(100vw - 32px); width: max-content; text-align: center; border-radius: 12px; line-height: 1.6; }
+.modal { max-height: calc(100dvh - 30px); }
+@media(max-width:720px) {
+  .topbar { padding: 12px 18px; gap: 9px; }
+  .workspace-brand { gap: 9px; }
+  .account-actions { gap: 5px; margin-left: auto; }
+  .account-actions .user-chip, .account-actions .sync-progress, .account-actions .logout-trigger { display: none; }
+  .workspace-back { display: none; }
+  .content { padding: 20px 16px 24px; }
+  .workspace-top-nav { gap: 8px; padding-bottom: 22px; }
+  .workspace-top-nav .workspace-nav-button { flex-direction: column; gap: 7px; min-height: 92px; padding: 10px 4px; border: 0; background: #fff; }
+  .workspace-nav-copy { text-align: center; }
+  .workspace-nav-copy strong { font-size: 12px; }
+  .workspace-nav-copy small { display: none; }
+  .workspace-nav-icon { width: 34px; height: 34px; }
+  .workspace-hero { grid-template-columns: 1fr; padding: 23px; gap: 20px; }
+  .workspace-next { border-left: 0; border-top: 1px solid #e5ecf4; padding: 20px 0 0; display: grid; grid-template-columns: 1fr auto; gap: 9px 12px; }
+  .workspace-next > span, .workspace-next > small { grid-column: 1/-1; }
+  .workspace-next > button { grid-column: 2; grid-row: 2; }
+  .workspace-stats { gap: 8px; }
+  .workspace-stat { padding: 15px 11px; }
+  .workspace-stat strong { font-size: 21px; }
+  .workspace-stat span { font-size: 11px; }
+  .workspace-grid { grid-template-columns: 1fr; }
+  .workspace-card { padding: 19px; }
+  .workspace-progress-item { padding: 16px 13px; gap: 9px; }
+  .workspace-progress-item h2 { font-size: 14px; }
+  .workspace-progress-item .status { display: block; width: fit-content; margin: 7px 0 0; }
+  .workspace-progress-item .secondary { padding: 0 9px; }
+  .workspace-view .view-head { gap: 15px; }
+  .workspace-view .profile-grid { grid-template-columns: 1fr; }
+}
+@media(prefers-reduced-motion:reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+
     </style>
-    <script type="module" src="/newbie-village.js?v=122d41fc2d3cba82"></script>
-  <link rel="stylesheet" href="/assets/ui-polish-20260926/village-11f66804c7da1e04.css"></head>
+    <script type="module" src="/newbie-village.js?v=20260927-online-r4"></script>
+  <link rel="stylesheet" href="/assets/ui-polish-20260926/village-11f66804c7da1e04.css"><link rel="stylesheet" href="/assets/workspace-r4.css?v=20260928-four-prompts">
+<script defer src="/assets/workspace-r4.js"></script>
+</head>
   <body>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div class="brand-copy"><strong>新手村</strong><span>OriginMind x ARTS Robotics</span></div></div>
-        <div class="side-label">学习空间</div>
-        <nav class="side-nav" aria-label="新手村导航">
-          <button class="nav-button active" type="button" data-view="tasks" aria-label="任务地图" disabled><span class="nav-icon" aria-hidden="true">⌁</span><span>任务地图</span></button>
-          <button class="nav-button" type="button" data-view="profile" aria-label="个人主页" disabled><span class="nav-icon" aria-hidden="true">◎</span><span>个人主页</span></button>
-          <a class="nav-button" href="#passes" aria-label="通行证"><span class="nav-icon" aria-hidden="true">◇</span><span>通行证</span></a>
-        </nav>
-        <div class="side-foot">
-          <p class="side-note">新手村与 OA 独立运行，学习进度只保存在 Chat 系统。</p>
-          <a class="back-link" href="/" aria-label="返回实验室大模型"><span class="nav-icon" aria-hidden="true">←</span><span>返回实验室大模型</span></a>
-        </div>
-      </aside>
+    <div class="app" data-newbie-workspace="eight-entry-v1">
+
       <main class="main">
         <header class="topbar">
-          <div class="topbar-title"><small>ROBOT LEARNING QUEST</small><strong>机器人学习闯关系统</strong></div>
-          <div class="account-actions"><span class="user-chip" hidden></span><button class="secondary login-trigger" type="button">登录并同步进度</button><button class="secondary sync-progress" type="button" hidden>同步本机进度</button><button class="ghost logout-trigger" type="button" hidden>退出账号</button></div>
+          <a class="workspace-brand" href="#learning"><span class="brand-mark" aria-hidden="true"></span><div class="topbar-title"><strong>新手村</strong><small>OriginMind × ARTS Robotics</small></div></a>
+          <div class="account-actions"><a class="workspace-back" href="/">返回 Chat</a><span class="user-chip" hidden></span><button class="secondary login-trigger" type="button" hidden>登录并同步进度</button><button class="secondary sync-progress" type="button" hidden>同步本机进度</button><button class="ghost logout-trigger" type="button" hidden>退出账号</button></div>
         </header>
         <div class="content">
+<nav class="workspace-top-nav" aria-label="学习工具"><button class="workspace-nav-button" type="button" data-view="courses" aria-controls="view-courses"><span class="workspace-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v16M3 4h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v15h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z"/></svg></span><span class="workspace-nav-copy"><strong>课程</strong><small>七关课程</small></span></button><button class="workspace-nav-button" type="button" data-view="practice" aria-controls="view-practice"><span class="workspace-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-12-2 18"/></svg></span><span class="workspace-nav-copy"><strong>实训</strong><small>动手练习</small></span></button><button class="workspace-nav-button" type="button" data-view="submissions" aria-controls="view-submissions"><span class="workspace-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v4H7zM7 5H4v16h16V5h-3M8 14l3 3 5-6"/></svg></span><span class="workspace-nav-copy"><strong>提交</strong><small>证据与复盘</small></span></button><button class="workspace-nav-button" type="button" data-view="resources" aria-controls="view-resources"><span class="workspace-nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h7l2 3h9v12H3zM3 6V3h6l2 3h9v3"/></svg></span><span class="workspace-nav-copy"><strong>资料</strong><small>教程与材料</small></span></button></nav>
+<noscript><style>.workspace-top-nav,.workspace-bottom-nav,.dashboard,.logged-out,.account-actions{display:none!important}.passes-section{display:block!important}</style><section class="panel"><h1>新手村公开课程</h1><p>七关教程和材料可直接阅读。启用 JavaScript 后可切换学习工作台、登录并保存记录。</p><p><a href="/assets/newbie-course-v5/index.html">打开七关完整在线教程</a> · <a href="/TA">助教使用说明</a> · <a href="/">返回 Chat</a></p></section></noscript>
           <section class="welcome logged-out">
             <div class="welcome-copy">
               <div class="eyebrow">START HERE</div>
@@ -274,11 +387,11 @@
           </section>
 
           <section class="agreement-gate" hidden>
-            <button class="secondary agreement-back" type="button">返回课程，稍后签署</button>
+            <button class="secondary agreement-back" type="button">返回课程</button>
             <header class="agreement-head">
               <div class="eyebrow">CONFIDENTIALITY GATE</div>
-              <h1>先签署，自动入村。</h1>
-              <p>协议签署后会自动归档为内部记录，不进入人工审核流程。归档成功后，个人主页和任务地图立即开放。</p>
+              <h1>保存与提交前，完成协议归档。</h1>
+              <p>公开课程无需签署即可学习。本人签署并完成自动归档后，可保存个人主页；正式提交任务还需满足前置任务要求。</p>
             </header>
             <article class="panel agreement-card">
               <div class="agreement-meta"><span class="agreement-version"></span><span class="agreement-effective"></span><span class="agreement-email"></span></div>
@@ -295,9 +408,50 @@
           </section>
 
           <section class="dashboard" hidden>
-            <div class="tasks-view">
+<section class="workspace-view learning-view" id="view-learning" data-workspace-view="learning" aria-labelledby="learning-heading">
+  <div class="workspace-hero">
+    <div><div class="eyebrow">ORIGINMIND × ARTS ROBOTICS</div><h1 id="learning-heading" tabindex="-1">从第一项任务，走到能交付。</h1><p>学习课程、动手实训、保存证据。遇到问题，随时带着当前关卡问助教。</p></div>
+    <div class="workspace-next"><span>建议下一步</span><strong class="workspace-next-title">查看课程</strong><small class="workspace-next-note"></small><button class="primary workspace-continue" type="button">继续学习</button></div>
+  </div>
+  <div class="workspace-stats"><article class="workspace-stat"><span>基础关卡</span><strong class="workspace-total">—</strong></article><article class="workspace-stat"><span>已有完成记录</span><strong class="workspace-completed">—</strong></article><article class="workspace-stat"><span>正在学习</span><strong class="workspace-in-progress">—</strong></article></div>
+  <p class="workspace-note workspace-mode-note" role="status"></p>
+  <h2 class="workspace-section-title">安排今天的学习</h2>
+  <div class="workspace-grid">
+    <article class="workspace-card"><div class="eyebrow">01 · LEARN</div><h2>先理解，再运行</h2><p>从课程地图选择一关。在线阅读目标、教程、代码和数据，按任务要求完成练习。</p><div class="workspace-actions"><button class="secondary" data-open-view="courses" type="button">打开课程地图</button><button class="secondary" data-open-view="practice" type="button">开始实训</button></div></article>
+    <article class="workspace-card"><div class="eyebrow">02 · DELIVER</div><h2>用证据说明你的改动</h2><p>记录代码、输出、错误和修复方法。按本关要求提交，之后查看自己的学习记录。</p><div class="workspace-actions"><button class="secondary" data-open-view="submissions" type="button">整理提交证据</button><button class="secondary" data-open-view="progress" type="button">查看学习进度</button></div></article>
+  </div>
+</section>
+<section class="workspace-view tutor-view" id="view-tutor" data-workspace-view="tutor" aria-labelledby="tutor-heading" hidden>
+  <div class="view-head"><div><div class="eyebrow">LEARNING SUPPORT</div><h1 id="tutor-heading" tabindex="-1">助教在这里</h1><p>选一关再提问，助教会带着课程上下文进入聊天。</p></div></div>
+  <div class="workspace-tutor-intro"><h2>带着代码、输出和你的判断来问</h2><p>写清你在做哪一步、预期是什么、实际发生了什么，并附上相关代码和输出。</p><label class="workspace-course-select">当前关卡<select class="workspace-tutor-course"></select></label><div class="workspace-actions"><a class="workspace-tutor-link" href="/?ta=1">开始本关对话</a><a href="/TA">查看助教使用说明</a></div></div>
+  <h2 class="workspace-section-title">从一个具体问题开始</h2><div class="workspace-grid workspace-tutor-prompts"></div>
+</section>
+<section class="workspace-view progress-view" id="view-progress" data-workspace-view="progress" aria-labelledby="progress-heading" hidden>
+  <div class="view-head"><div><div class="eyebrow">YOUR PROGRESS</div><h1 id="progress-heading" tabindex="-1">进度与记录</h1><p>按关卡查看实际保存的状态、证据和更新时间。</p></div></div>
+  <p class="workspace-note workspace-progress-note"></p><ol class="workspace-progress-list"></ol>
+  <div class="workspace-passes-slot"></div>
+</section>
+<section class="workspace-view practice-view" id="view-practice" data-workspace-view="practice" aria-labelledby="practice-heading" hidden>
+  <div class="view-head"><div><div class="eyebrow">HANDS-ON LAB</div><h1 id="practice-heading" tabindex="-1">实训台</h1><p>在线查看教程和材料，按步骤练习并对照验收标准。</p></div></div>
+  <div class="workspace-grid workspace-practice-grid"></div>
+</section>
+<section class="workspace-view submissions-view" id="view-submissions" data-workspace-view="submissions" aria-labelledby="submissions-heading" hidden>
+  <div class="view-head"><div><div class="eyebrow">EVIDENCE &amp; REVIEW</div><h1 id="submissions-heading" tabindex="-1">提交与复盘</h1><p>每一关使用原有任务表单，记录自己的成果和真实证据。</p></div></div>
+  <p class="workspace-note workspace-submission-note"></p><div class="workspace-grid workspace-submission-grid"></div>
+</section>
+<section class="workspace-view resources-view" id="view-resources" data-workspace-view="resources" aria-labelledby="resources-heading" hidden>
+  <div class="view-head"><div><div class="eyebrow">COURSE MATERIALS</div><h1 id="resources-heading" tabindex="-1">在线资料</h1><p>七关教程、代码示例与数据文件，按关卡在线阅读。</p></div></div>
+  <div class="workspace-grid workspace-resource-grid"></div>
+</section>
+
+            <div class="agreement-notice" hidden>
+              <p class="agreement-notice-text" role="status"></p>
+              <button class="secondary agreement-open" type="button">查看协议</button>
+            </div>
+            <p class="sync-status" role="status" aria-live="polite" aria-atomic="true"></p>
+            <div class="tasks-view workspace-view" id="view-courses" data-workspace-view="courses" aria-labelledby="courses-heading" hidden>
               <div class="view-head">
-                <div><div class="eyebrow">YOUR JOURNEY</div><h1>任务地图</h1><p>下载材料 → 运行示例 → 独立修改 → 对照标准 → 提交证据。</p><p>全部课程可直接查看，建议按顺序学习。</p><p class="storage-note" role="status"></p><a href="/assets/newbie-course-v5/index.html">七关完整教程与下载</a> · <a href="/TA">问实验室助教</a></div>
+                <div><div class="eyebrow">YOUR JOURNEY</div><h1 id="courses-heading" tabindex="-1">课程地图</h1><p>在线阅读 → 查看示例 → 完成练习 → 对照标准 → 提交证据。</p><p>全部课程可直接查看，建议按顺序学习。</p><p class="storage-note" role="status"></p><a href="/assets/newbie-course-v5/index.html">七关完整在线教程</a> · <a href="/TA">问实验室助教</a></div>
                 <div class="progress-summary"><div><span class="progress-number">0</span> / <span class="progress-total">7</span></div><div class="progress-track"><div class="progress-bar"></div></div></div>
               </div>
               <div class="metrics">
@@ -308,8 +462,9 @@
               <div class="task-grid"></div>
             </div>
 
-            <div class="profile-view" hidden>
-              <div class="view-head"><div><div class="eyebrow">PERSONAL HOME</div><h1>个人主页</h1><p>这些信息用于组织你的新手村学习路径，不会写入 OA。</p></div></div>
+            <div class="profile-view workspace-view" id="view-profile" data-workspace-view="profile" aria-labelledby="profile-heading" hidden>
+              <div class="view-head"><div><div class="eyebrow">PERSONAL HOME</div><h1 id="profile-heading" tabindex="-1">我的学习档案</h1><p>这些信息用于组织你的新手村学习路径，不会写入 OA。</p></div></div>
+<section class="workspace-account workspace-note"><p class="workspace-account-note"></p><div class="workspace-actions"><button class="secondary workspace-login" type="button">登录账号</button><button class="secondary workspace-sync" type="button" hidden>同步本机进度</button><button class="secondary workspace-agreement" type="button">查看协议</button><button class="secondary workspace-logout" type="button" hidden>退出账号</button><a href="/">返回 Chat</a></div></section>
               <div class="profile-grid">
                 <article class="panel profile-card">
                   <div class="avatar">新</div>
@@ -327,7 +482,7 @@
                     <label>兴趣方向<select name="direction"><option value="undecided">暂未确定</option><option value="perception">感知</option><option value="navigation">导航</option><option value="control">控制</option><option value="mechanics">机械</option><option value="ai">AI</option></select></label>
                   </div>
                   <label>个人介绍与阶段目标<textarea name="bio" maxlength="300" placeholder="写下你的基础、兴趣和这一阶段想完成的目标。"></textarea></label>
-                  <div class="form-actions"><span class="form-status" role="status"></span><button class="primary" type="submit">保存个人主页</button></div>
+                  <div class="form-actions"><span class="form-status" role="status" aria-live="polite" aria-atomic="true"></span><button class="primary" type="submit">保存个人主页</button></div>
                 </form>
               </div>
             </div>
@@ -353,15 +508,16 @@
       </main>
     </div>
 
-    <dialog class="modal login-dialog" aria-label="账号登录">
+<nav class="workspace-bottom-nav" aria-label="新手村主导航"><button class="workspace-nav-button" type="button" data-view="courses" aria-controls="view-courses"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>课程</span></button><button class="workspace-nav-button" type="button" data-view="tutor" aria-controls="view-tutor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H9l-5 4V4Z"/><path d="M8 8h8M8 12h5"/></svg><span>助教</span></button><button class="workspace-nav-button" type="button" data-view="progress" aria-controls="view-progress"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M6 16v-5M12 16V5M18 16V8"/></svg><span>进度</span></button><button class="workspace-nav-button" type="button" data-view="profile" aria-controls="view-profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg><span>我的</span></button></nav>
+    <dialog class="modal login-dialog" aria-label="校内邮箱登录">
       <div class="modal-inner">
-        <div class="modal-head"><div><h2>账号登录</h2><p>学生可输入学号或学号邮箱；首次登录密码就是账号前缀，例如学号邮箱的密码为学号。</p></div><button class="close login-close" type="button" aria-label="关闭">×</button></div>
+        <div class="modal-head"><div><h2>校内邮箱登录</h2><p>邮件服务尚未配置完整，暂时无法发送新验证码；已收到的有效验证码仍可验证。公开课程和本机进度可继续使用。</p></div><button class="close login-close" type="button" aria-label="关闭">×</button></div>
         <form class="login-form">
-          <label>账号<input class="email-input" type="text" autocomplete="username" placeholder="学号或学号@stumail.sztu.edu.cn" required></label>
-          <button class="secondary code-button" type="button" hidden>发送验证码</button>
-          <label>密码<input class="code-input" type="password" autocomplete="current-password" placeholder="首次登录密码为账号前缀" required></label>
+          <label>校内邮箱<input class="email-input" type="email" autocomplete="email" placeholder="学号@stumail.sztu.edu.cn 或教师@sztu.edu.cn" required></label>
+          <button class="secondary code-button" type="button" disabled>发送验证码</button>
+          <label>验证码<input class="code-input" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="6 位数字验证码" required></label>
           <div class="login-status" role="status"></div>
-          <button class="primary verify-button" type="submit">登录并进入新手村</button>
+          <button class="primary verify-button" type="submit" disabled>验证并登录</button>
         </form>
       </div>
     </dialog>
@@ -374,7 +530,7 @@
           <p class="task-goal"></p>
           <section class="task-materials" hidden>
             <a class="task-lesson-link" href="/assets/newbie-course-v5/index.html">打开本关完整教程</a>
-            <a class="task-download-link" href="/assets/newbie-course-v5/index.html" download>下载本关材料包</a>
+            <a class="task-download-link" href="/assets/newbie-course-v5/index.html">在线查看本关材料</a>
             <a class="task-ta-link" href="/">问本关助教（自动带入任务）</a>
           </section>
           <section class="task-extra-section">

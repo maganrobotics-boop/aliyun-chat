@@ -1,0 +1,320 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>在线课程材料 · 机器人自主移动与操作实验室</title><style>body{margin:0;background:#f7f9fb;color:#20354a;font:16px/1.75 system-ui,sans-serif}header{position:sticky;top:0;background:white;padding:12px 5%;border-bottom:1px solid #dde5ee;display:flex;align-items:center;gap:24px;z-index:2}h1{font-size:20px;margin:0}a{color:#176b52}main{max-width:1100px;margin:24px auto;padding:0 18px}nav{display:flex;flex-wrap:wrap;gap:8px}nav a{background:white;border:1px solid #dce5ee;padding:5px 12px;border-radius:7px;overflow-wrap:anywhere}section{background:white;border:1px solid #dce5ee;border-radius:12px;padding:18px;margin:20px 0;scroll-margin-top:90px}h2{font-size:17px;overflow-wrap:anywhere}pre{overflow:auto;background:#f1f5f8;padding:16px;border-radius:8px;font:14px/1.7 ui-monospace,monospace;tab-size:4}@media(max-width:600px){header{padding:10px 14px;gap:12px}h1{font-size:17px}main{padding:0 12px}section{padding:12px}}</style><header><a href="index.html">← 返回课程</a><h1>在线课程材料</h1></header><main><p>教程、代码和数据可直接在线阅读。</p><nav><a href="#file-0">README.md</a><a href="#file-1">check_pose.py</a><a href="#file-2">motion.py</a><a href="#file-3">run_ros.py</a><a href="#file-4">simulate.py</a><a href="#file-5">submission.md</a></nav><section id="file-0"><h2>README.md</h2><pre><code># 第 5 关：发布运动命令，记录实际反馈
+
+建议 60–90 分钟，ROS2 安装时间另计。前置：Python 日志关。目标是在 turtlesim 中完成一整圈，理解节点、话题和消息，修改圆的半径，并用记录的 pose 判断是否达到预期。
+
+## 1. 在线材料与核对环境
+
+[在线查看完整材料](materials.html) · [运动参数 motion.py](motion.py) · [ROS2 发布与记录程序](run_ros.py) · [离线理论轨迹](simulate.py) · [轨迹检查](check_pose.py) · [提交单](submission.md)
+
+本课环境基线为 Ubuntu 24.04 + ROS2 Jazzy，使用系统 python3 和 turtlesim。先按 [ROS2 官方安装说明](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debians.html) 完成软件源与 Jazzy 安装；不要把不同 Ubuntu/ROS2 版本的安装命令混用。ROS2 官方 [发布说明](https://github.com/ros2/ros2/releases) 也列出了 Jazzy 对应平台。
+
+已完成官方软件源配置后，如缺少 turtlesim，可在 Ubuntu 终端运行 `sudo apt install ros-jazzy-turtlesim`。每个新终端都先执行：
+
+```bash
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=42
+ros2 --help
+```
+
+多人在同一网络练习时，请先由教师分配各组的 ROS_DOMAIN_ID，三个终端使用同一组编号；42 只是示例，不能把命名空间当成网络隔离。不要在连接真机的网络中运行本练习。本题只操作独立命名空间 `/newbie_lab` 下的海龟仿真。关闭其他同名练习，避免多个发布者同时控制一只海龟；不把话题改为真实机器人的 cmd_vel。
+
+Windows 使用支持图形界面的 WSL2/Ubuntu 或实验室 Ubuntu 电脑；macOS 可用 Ubuntu 虚拟机。若 GUI 尚未就绪，可先完成离线部分，但本关状态应保留“进行中”。
+
+## 2. 跟着示例运行
+
+先在材料目录跑纯 Python 预检，不需要 ROS2：
+
+```text
+python3 simulate.py synthetic_pose.csv
+python3 check_pose.py synthetic_pose.csv
+```
+
+标准理论值：半径 1 仿真单位，角速度 1 rad/s，一圈约 6.283 s，路程约 6.283，起终点偏差约 0。simulate.py 明确标注 SYNTHETIC_ONLY；它是公式生成的数据，不是 ROS2 运行日志。
+
+现在执行真实仿真。终端 A 完成环境 source 后启动：
+
+```bash
+ros2 run turtlesim turtlesim_node --ros-args -r __ns:=/newbie_lab
+```
+
+终端 B 同样 source、设置同一 ROS_DOMAIN_ID，检查可见的系统：
+
+```bash
+ros2 node list --no-daemon --spin-time 3
+ros2 topic list -t --no-daemon --spin-time 3
+ros2 topic info /newbie_lab/turtle1/cmd_vel
+ros2 interface show geometry_msgs/msg/Twist
+ros2 topic echo /newbie_lab/turtle1/pose --once
+```
+
+首次发现需要时间；上面两条命令等待 3 秒再输出，避免把短暂的空列表当成启动失败。
+
+应看到 `/newbie_lab/turtlesim` 节点；cmd_vel 类型是 `geometry_msgs/msg/Twist`，pose 类型是 `turtlesim/msg/Pose`。Twist 中 linear.x 控制前进，angular.z 控制转动；pose 是反馈，不能把“发出了命令”当成“已经到达”。
+
+终端 C 进入材料目录，同样 source 和设置 domain，再运行：
+
+```bash
+python3 run_ros.py --output ros_pose.csv
+python3 check_pose.py ros_pose.csv
+```
+
+程序等待海龟 pose 与命令订阅者就绪，再持续发布约一圈的速度命令，同时订阅并保存 pose，最后发布零速度并结束。超过 10 秒没有就绪就报错，不会假装生成成功结果。输出文件若存在，改用新文件名；旧证据不会被覆盖。
+
+## 3. 修改代码，先预测再运行
+
+在 motion.py 中把 `LINEAR = 1.0` 改为 `LINEAR = 0.5`，保留 `ANGULAR = 1.0` 和一圈时长。先写预测：半径等于 |v/ω|，因此半径变为 0.5，周期不变，路程约 3.142。
+
+先运行离线检查：
+
+```bash
+python3 simulate.py synthetic_half.csv
+python3 check_pose.py synthetic_half.csv --radius 0.5
+```
+
+关闭并重新启动终端 A 的 turtlesim，让海龟回到初始状态；保持同一命名空间和 domain。再运行：
+
+```bash
+python3 run_ros.py --output ros_half.csv
+python3 check_pose.py ros_half.csv --radius 0.5
+```
+
+读代码练习：在 run_ros.py 中找到 create_publisher、create_subscription、定时回调和零速度发送各在哪里，用自己的话注释这四处。补充一个自主变化实验：把 ANGULAR 改成 -1，预测旋转方向变化，重新启动海龟再验证；保持本课参数范围。
+
+## 4. 对照标准结果
+
+| 指标 | 原始圆 | 半速圆 |
+| --- | --- | --- |
+| 理论半径 | 1 | 0.5 |
+| 一圈理论时长 | 2π，约 6.283 s | 同左 |
+| 理论路程 | 2π，约 6.283 | π，约 3.142 |
+| 实录时长容差 | 6.0–7.2 s，含停止缓冲 | 同左 |
+| 实录路程容差 | 与理论值差不超过 0.5 | 同左 |
+| 闭合误差 | 不超过 0.35 | 同左 |
+| 外接框宽/高 | 与直径 2 的差各不超过 0.35 | 与直径 1 的差各不超过 0.35 |
+
+这些坐标是 turtlesim 仿真单位，不是经过标定的真实米制结果。采样和调度会产生偏差，不要求每行数据完全相同。检查程序只判断几何指标，无法证明日志来源，必须同时提交真实 ROS2 运行证据。
+
+## 5. 提交证据
+
+提交修改前后的 motion.py、两份真实 CSV、节点/话题输出、海龟轨迹截图或短视频、两次检查结果、理论值与实际值对照、四处代码解释和自主实验。填写 submission.md。
+
+未完成真实仿真时如实填写阻塞原因、已尝试命令和报错；离线数据不得更名为实录或标记整关完成。助教可以协助排错，最终运行需本人完成。
+
+## 常见问题与助教提示
+
+- ros2 不存在或 No module named rclpy：在 Ubuntu 系统终端重新 source，使用系统 python3，不在未配置 ROS 的 Python 虚拟环境里运行。
+- 看不到海龟/Qt 无法连接显示：先确认 Ubuntu 图形终端可用，再排查 WSLg 或虚拟机桌面；这不是 Python 路程公式的问题。
+- 10 秒等待超时：比较三个终端的 domain、命名空间，核对节点和话题输出。
+- 圆形不闭合或撞墙：重启干净的海龟，关闭其他速度发布者，先恢复原参数再试，不要直接放宽验收阈值。
+- 问助教：“这是真实 pose 的前后几行、节点/话题列表、参数和检查结果。请判断是通信、初始状态还是几何计算问题。”
+
+## 参考资料
+
+[ROS2 官方 turtlesim 教程](https://docs.ros.org/en/jazzy/Tutorials/Beginner-CLI-Tools/Introducing-Turtlesim/Introducing-Turtlesim.html) · [ROS2 官方 Python 发布/订阅](https://docs.ros.org/en/jazzy/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Py-Publisher-And-Subscriber.html)。本课代码独立编写；运行结果以你自己的实验日志为准。
+</code></pre></section><section id="file-1"><h2>check_pose.py</h2><pre><code>&quot;&quot;&quot;Measure a full-circle pose recording; does not establish its provenance.&quot;&quot;&quot;
+import argparse
+import csv
+import math
+import sys
+from pathlib import Path
+
+
+def check(path, radius=1.0):
+    with Path(path).open(encoding=&quot;utf-8-sig&quot;, newline=&quot;&quot;) as handle:
+        rows = [{k: float(row[k]) for k in (&quot;time&quot;, &quot;x&quot;, &quot;y&quot;, &quot;theta&quot;)} for row in csv.DictReader(handle)]
+    if len(rows) &lt; 40 or not all(math.isfinite(v) for row in rows for v in row.values()):
+        raise ValueError(&quot;需要至少 40 行有效 pose 数据&quot;)
+    if any(b[&quot;time&quot;] &lt;= a[&quot;time&quot;] for a, b in zip(rows, rows[1:])):
+        raise ValueError(&quot;时间必须严格递增&quot;)
+    duration = rows[-1][&quot;time&quot;]-rows[0][&quot;time&quot;]
+    distance = sum(math.hypot(b[&quot;x&quot;]-a[&quot;x&quot;], b[&quot;y&quot;]-a[&quot;y&quot;]) for a, b in zip(rows, rows[1:]))
+    closure = math.hypot(rows[-1][&quot;x&quot;]-rows[0][&quot;x&quot;], rows[-1][&quot;y&quot;]-rows[0][&quot;y&quot;])
+    width = max(r[&quot;x&quot;] for r in rows)-min(r[&quot;x&quot;] for r in rows)
+    height = max(r[&quot;y&quot;] for r in rows)-min(r[&quot;y&quot;] for r in rows)
+    errors = []
+    if not 6.0 &lt;= duration &lt;= 7.2:
+        errors.append(&quot;时长不在 6.0–7.2 s；检查 DURATION、启动顺序和停止条件&quot;)
+    if abs(distance-2*math.pi*radius) &gt; 0.5:
+        errors.append(&quot;累计路程与整圆理论值相差超过 0.5 仿真单位&quot;)
+    if closure &gt; 0.35:
+        errors.append(&quot;起终点偏差超过 0.35；检查初始状态或命令丢失&quot;)
+    if abs(width-2*radius) &gt; 0.35 or abs(height-2*radius) &gt; 0.35:
+        errors.append(&quot;轨迹外接框不符合目标圆径；检查是否撞墙或走错路径&quot;)
+    return {&quot;samples&quot;: len(rows), &quot;duration&quot;: duration, &quot;distance&quot;: distance, &quot;closure&quot;: closure, &quot;width&quot;: width, &quot;height&quot;: height}, errors
+
+
+if __name__ == &quot;__main__&quot;:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(&quot;csv&quot;)
+    parser.add_argument(&quot;--radius&quot;, type=float, default=1.0)
+    args = parser.parse_args()
+    if not math.isfinite(args.radius) or args.radius &lt;= 0:
+        parser.error(&quot;radius 必须为正数&quot;)
+    try:
+        result, errors = check(args.csv, args.radius)
+        for key, value in result.items():
+            print(f&quot;{key}={value:.3f}&quot;)
+        print(&quot;\n&quot;.join(errors) if errors else &quot;轨迹指标通过；仍需 ROS2 节点/话题截图及原始运行证据。&quot;)
+        sys.exit(bool(errors))
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        print(&quot;无法检查：&quot;, error)
+        sys.exit(2)
+</code></pre></section><section id="file-2"><h2>motion.py</h2><pre><code>&quot;&quot;&quot;Pure motion settings for isolated turtlesim; not a real robot controller.&quot;&quot;&quot;
+import math
+
+LINEAR = 1.0
+ANGULAR = 1.0
+DURATION = 2 * math.pi
+
+
+def command(elapsed):
+    if 0 &lt;= elapsed &lt; DURATION:
+        return LINEAR, ANGULAR
+    return 0.0, 0.0
+
+
+def expected():
+    return {&quot;duration_s&quot;: DURATION, &quot;radius&quot;: abs(LINEAR / ANGULAR), &quot;distance&quot;: abs(LINEAR) * DURATION}
+</code></pre></section><section id="file-3"><h2>run_ros.py</h2><pre><code>&quot;&quot;&quot;Bounded publisher + pose subscriber, exclusively on /newbie_lab/turtle1/*.&quot;&quot;&quot;
+import argparse
+import csv
+import math
+import time
+from pathlib import Path
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+from turtlesim.msg import Pose
+from motion import command, LINEAR, ANGULAR, DURATION
+
+
+class CircleRecorder(Node):
+    def __init__(self, handle):
+        super().__init__(&quot;newbie_circle_recorder&quot;, namespace=&quot;/newbie_lab&quot;)
+        self.pub = self.create_publisher(Twist, &quot;/newbie_lab/turtle1/cmd_vel&quot;, 10)
+        self.sub = self.create_subscription(Pose, &quot;/newbie_lab/turtle1/pose&quot;, self.pose, 10)
+        self.writer = csv.writer(handle)
+        self.writer.writerow([&quot;time&quot;, &quot;x&quot;, &quot;y&quot;, &quot;theta&quot;])
+        self.started = None
+        self.waiting_since = time.monotonic()
+        self.done = False
+        self.failed = False
+        self.timer = self.create_timer(0.05, self.tick)
+
+    def pose(self, msg):
+        now = time.monotonic()
+        if self.started is None:
+            if self.pub.get_subscription_count() &lt; 1:
+                return
+            self.started = now
+        self.writer.writerow([now-self.started, msg.x, msg.y, msg.theta])
+
+    def send(self, linear, angular):
+        msg = Twist()
+        msg.linear.x, msg.angular.z = float(linear), float(angular)
+        self.pub.publish(msg)
+
+    def tick(self):
+        if self.started is None:
+            if time.monotonic()-self.waiting_since &gt; 10:
+                self.get_logger().error(&quot;10 秒未发现 turtlesim；检查命名空间和 ROS_DOMAIN_ID&quot;)
+                self.done, self.failed = True, True
+            return
+        elapsed = time.monotonic()-self.started
+        self.send(*command(elapsed))
+        if elapsed &gt;= DURATION+0.5:
+            self.done = True
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(&quot;--output&quot;, default=&quot;ros_pose.csv&quot;)
+    args = parser.parse_args()
+    if not all(math.isfinite(v) for v in (LINEAR, ANGULAR, DURATION)) or not (0 &lt; LINEAR &lt;= 1 and 0.5 &lt;= abs(ANGULAR) &lt;= 1 and 0 &lt; DURATION &lt;= 13):
+        parser.error(&quot;本课参数范围：0 &lt; LINEAR &lt;= 1、0.5 &lt;= |ANGULAR| &lt;= 1、0 &lt; DURATION &lt;= 13&quot;)
+    try:
+        with Path(args.output).open(&quot;x&quot;, newline=&quot;&quot;, encoding=&quot;utf-8&quot;) as handle:
+            rclpy.init(args=[])
+            node = CircleRecorder(handle)
+            try:
+                while rclpy.ok() and not node.done:
+                    rclpy.spin_once(node, timeout_sec=0.1)
+            except KeyboardInterrupt:
+                node.failed = True
+            finally:
+                if rclpy.ok():
+                    for _ in range(3):
+                        node.send(0, 0)
+                        rclpy.spin_once(node, timeout_sec=0.05)
+                node.destroy_node()
+                if rclpy.ok():
+                    rclpy.shutdown()
+            return int(node.failed)
+    except OSError as error:
+        print(&quot;不能创建日志（不覆盖旧文件）：&quot;, error)
+        return 2
+
+
+if __name__ == &quot;__main__&quot;:
+    raise SystemExit(main())
+</code></pre></section><section id="file-4"><h2>simulate.py</h2><pre><code>&quot;&quot;&quot;Analytic data for learning/checker tests, NOT a ROS2 execution log.&quot;&quot;&quot;
+import csv
+import math
+import sys
+from pathlib import Path
+from motion import LINEAR, ANGULAR, DURATION, expected
+
+if not math.isfinite(ANGULAR) or ANGULAR == 0 or not math.isfinite(LINEAR) or not math.isfinite(DURATION) or DURATION &lt;= 0:
+    raise SystemExit(&quot;本练习要求有限速度、非零角速度及正时长&quot;)
+output = Path(sys.argv[1] if len(sys.argv) &gt; 1 else &quot;synthetic_pose.csv&quot;)
+with output.open(&quot;x&quot;, newline=&quot;&quot;, encoding=&quot;utf-8&quot;) as handle:
+    writer = csv.writer(handle)
+    writer.writerow([&quot;time&quot;, &quot;x&quot;, &quot;y&quot;, &quot;theta&quot;])
+    for i in range(201):
+        t = DURATION * i / 200
+        writer.writerow([t, 5.544 + LINEAR/ANGULAR*math.sin(ANGULAR*t), 5.544 + LINEAR/ANGULAR*(1-math.cos(ANGULAR*t)), math.atan2(math.sin(ANGULAR*t), math.cos(ANGULAR*t))])
+print(&quot;SYNTHETIC_ONLY：理论轨迹已写入&quot;, output)
+print(expected())
+</code></pre></section><section id="file-5"><h2>submission.md</h2><pre><code># ROS2 仿真提交单
+
+- 姓名或昵称：
+- 日期：
+- 环境与版本：
+- 证据目录或授权链接：
+
+## 1. Ubuntu/ROS2 版本、每个终端的命令与 ROS_DOMAIN_ID
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 2. 真实节点/话题列表和轨迹截图；注明记录日期
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 3. 原参数与半速参数：理论半径/路程、真实 CSV、检查结果
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 4. motion.py 修改，以及发布、订阅、定时、停止四处代码解释
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 5. 自主实验的预测与结果；至少一个误差或失败原因
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 6. 尚未完成的项目与阻塞（离线公式数据不算真实 ROS2 实验）
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 助教与参考来源
+
+我独立完成了什么：
+使用了哪些参考代码或助教提示：
+哪些结论仍需验证：
+
+## 提交前核对
+
+- [ ] 已保存代码/数据/日志，链接可按授权访问。
+- [ ] 已对照本关标准，未把示例、自检或本机标记当作教师审核。
+- [ ] 未包含密码、令牌和不应公开的个人或项目资料。
+</code></pre></section></main></html>

@@ -2,7 +2,7 @@ const SITE_DOCUMENTS = Object.freeze([
   {
     id: "site:orientation",
     title: "机器人项目新手村",
-    url: "https://chat.omindos.ai/orientation",
+    url: "https://chat.omindos.cn/orientation",
     keywords: [
       "新手村",
       "机器人新手村",
@@ -32,7 +32,7 @@ AI 助教在新手村中应始终可见。学生可以随时询问：我今天�
   {
     id: "site:robotics-course",
     title: "机器人技术与应用课程",
-    url: "https://chat.omindos.ai/robotics-course",
+    url: "https://chat.omindos.cn/robotics-course",
     keywords: [
       "机器人课程",
       "robotics-course",
@@ -63,7 +63,7 @@ AI 教师可以负责讲课：用自然语言解释概念，用工程案例说�
   {
     id: "site:ta",
     title: "实验室 AI 助教系统",
-    url: "https://chat.omindos.ai/TA",
+    url: "https://chat.omindos.cn/TA",
     keywords: [
       "TA",
       "AI 助教",
@@ -127,7 +127,7 @@ export function siteKnowledgeDocuments(question, limit = 3) {
       published: 1,
       sectionTitle: "",
       paragraphRef: "",
-      sourceLabel: "chat.omindos.ai",
+      sourceLabel: "chat.omindos.cn",
       origin: "site_public",
     }));
 }

@@ -1,4 +1,3 @@
-import { consumeOaAnswerStream, checkStreamAbort, type OaNativeEvent } from './oa-native-stream.mjs';
 import { OA_CHAT_ORIGIN, OA_CHAT_PATH, signOaChatRequest } from '../chat-cloudflare/src/oa-chat-bridge.mjs';
 import { getDb } from '../db';
 import { listKnowledgeRevisionAssets } from './knowledge-assets';
@@ -59,30 +58,6 @@ async function bridge(payload: object, timeoutMs: number): Promise<BridgeRespons
   catch { throw new Error('CHAT_BRIDGE_INVALID_RESPONSE'); }
   if (!data || data.received !== true) throw new Error('CHAT_BRIDGE_INVALID_RESPONSE');
   return data;
-}
-export type OaChatStreamOptions = { signal: AbortSignal; onEvent: (event: OaNativeEvent) => void | Promise<void> };
-async function bridgeStreaming(payload: object, options: OaChatStreamOptions): Promise<BridgeResponse> {
-  const { env } = await import('cloudflare:workers');
-  const bindings = env as typeof env & { PUBLIC_LAB_AI_SERVICE_TOKEN?: string; CHAT_SERVICE?: { fetch: typeof fetch } };
-  const secret = bindings.PUBLIC_LAB_AI_SERVICE_TOKEN || '';
-  if (secret.length < 32) throw new Error('CHAT_BRIDGE_SECRET_MISSING');
-  const service = bindings.CHAT_SERVICE;
-  if (!service || typeof service.fetch !== 'function') throw new Error('CHAT_BRIDGE_SERVICE_BINDING_MISSING');
-  const body = JSON.stringify({ ...payload, stream: true });
-  if (new TextEncoder().encode(body).length > 96 * 1024) throw new Error('CHAT_BRIDGE_REQUEST_LIMIT');
-  checkStreamAbort(options.signal);
-  const signal = AbortSignal.any([options.signal, AbortSignal.timeout(80000)]);
-  const response = await service.fetch(`${OA_CHAT_ORIGIN}${OA_CHAT_PATH}`, {
-    method: 'POST', headers: { ...await signOaChatRequest(body, secret), accept: 'text/event-stream' }, body,
-    cache: 'no-store', redirect: 'manual', credentials: 'omit', signal,
-  });
-  if (!response.ok) { await response.body?.cancel().catch(() => {}); throw new Error(`CHAT_BRIDGE_HTTP_${response.status}`); }
-  // No automatic replay: a broken stream may already have consumed model budget.
-  const result = await consumeOaAnswerStream(response, { signal, async onEvent(event) {
-    if (event.type !== 'final') await options.onEvent(event);
-  } });
-  if (result.received !== true || !['ai', 'general'].includes(String(result.mode)) || result.provider !== 'bailian') throw new Error('CHAT_BRIDGE_INVALID_RESPONSE');
-  return result as BridgeResponse;
 }
 function reportBridgeFailure(error: unknown) {
   // Only allowlisted codes are logged. Never log the request, response body,
@@ -158,8 +133,7 @@ async function answerImages(question: string, chunks: RankedKnowledgeChunk[], in
 }
 /** Receives only chunks obtained by the authenticated OA route. Browser input
  * cannot set documents, visibility, item IDs or a retrieval capability. */
-export async function answerOaChatQuestion(question: string, ranked: RankedKnowledgeChunk[], history: OaChatHistory = [], stream?: OaChatStreamOptions) {
-  checkStreamAbort(stream?.signal);
+export async function answerOaChatQuestion(question: string, ranked: RankedKnowledgeChunk[], history: OaChatHistory = []) {
   const imageRequest = questionRequestsKnowledgeImages(question);
   // For image requests, keep a broader text-ranked window so a legacy
   // text-only item cannot mask a newer approved revision with ready assets.
@@ -169,13 +143,10 @@ export async function answerOaChatQuestion(question: string, ranked: RankedKnowl
     : questionAllowsGeneralKnowledge(question);
   if (generalKnowledge) {
     try {
-      const payload = { operation: 'answer', answerType: 'general', question, history: history.slice(-2), documents: [] };
-      const result = await (stream ? bridgeStreaming(payload, stream) : bridge(payload, 70000));
+      const result = await bridge({ operation: 'answer', answerType: 'general', question, history: history.slice(-2), documents: [] }, 70000);
       if (result.mode !== 'general' || typeof result.answer !== 'string' || !result.answer.trim() || result.answer.length > 12000 || !result.answer.isWellFormed()) throw new Error('CHAT_BRIDGE_INVALID_ANSWER');
       return { answer: `**来源类型：模型通用知识（未引用 OA 资料）**\n\n${result.answer.trim()}`, citations: [], images: [], mode: 'general', provider: result.provider, sourceType: 'model_general_knowledge' };
     } catch (error) {
-      checkStreamAbort(stream?.signal);
-      await stream?.onEvent({ type: 'reset' });
       reportBridgeFailure(error);
       return { answer: '这是普通常识问题，但通用知识回答服务暂不可用，请稍后重试。', citations: [], images: [], mode: 'retrieval', fallbackReason: 'general_model_unavailable', sourceType: 'model_general_knowledge' };
     }
@@ -194,13 +165,8 @@ export async function answerOaChatQuestion(question: string, ranked: RankedKnowl
     return { answer: '已找到相关文字资料，但当前已审核版本没有可展示的图片。请由管理员在知识资料中补充图片并完成审核后再试。', citations, images: [], mode: 'no_evidence', sourceType: 'oa_knowledge_images_unavailable' };
   }
   let result: BridgeResponse;
-  try {
-    const payload = { operation: 'answer', answerType: 'grounded', question, history: history.slice(-2), documents };
-    result = await (stream ? bridgeStreaming(payload, stream) : groundedBridge(payload));
-  }
+  try { result = await groundedBridge({ operation: 'answer', answerType: 'grounded', question, history: history.slice(-2), documents }); }
   catch (error) {
-    checkStreamAbort(stream?.signal);
-    await stream?.onEvent({ type: 'reset' });
     reportBridgeFailure(error);
     return { answer: '已检索到相关资料，但问答服务暂未能生成完整答复，请稍后重试。', citations: [], images: [], mode: 'retrieval', fallbackReason: 'shared_model_unavailable' };
   }

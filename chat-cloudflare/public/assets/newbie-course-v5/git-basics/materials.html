@@ -1,0 +1,232 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>在线课程材料 · 机器人自主移动与操作实验室</title><style>body{margin:0;background:#f7f9fb;color:#20354a;font:16px/1.75 system-ui,sans-serif}header{position:sticky;top:0;background:white;padding:12px 5%;border-bottom:1px solid #dde5ee;display:flex;align-items:center;gap:24px;z-index:2}h1{font-size:20px;margin:0}a{color:#176b52}main{max-width:1100px;margin:24px auto;padding:0 18px}nav{display:flex;flex-wrap:wrap;gap:8px}nav a{background:white;border:1px solid #dce5ee;padding:5px 12px;border-radius:7px;overflow-wrap:anywhere}section{background:white;border:1px solid #dce5ee;border-radius:12px;padding:18px;margin:20px 0;scroll-margin-top:90px}h2{font-size:17px;overflow-wrap:anywhere}pre{overflow:auto;background:#f1f5f8;padding:16px;border-radius:8px;font:14px/1.7 ui-monospace,monospace;tab-size:4}@media(max-width:600px){header{padding:10px 14px;gap:12px}h1{font-size:17px}main{padding:0 12px}section{padding:12px}}</style><header><a href="index.html">← 返回课程</a><h1>在线课程材料</h1></header><main><p>教程、代码和数据可直接在线阅读。</p><nav><a href="#file-0">README.md</a><a href="#file-1">README.template.md</a><a href="#file-2">check_repo.py</a><a href="#file-3">make_demo.py</a><a href="#file-4">submission.md</a></nav><section id="file-0"><h2>README.md</h2><pre><code># 第 3 关：让别人看懂你的修改历史
+
+建议 45–60 分钟。前置：第 2 关能运行 Git 和 Python。本关只操作新的本地练习仓库，不需要注册 GitHub，也不要求公开个人资料。
+
+## 1. 在线材料
+
+[在线查看完整材料](materials.html) · [自动示例](make_demo.py) · [README 模板](README.template.md) · [仓库检查](check_repo.py) · [提交单](submission.md)
+
+把个人练习仓库 my-repo 建在材料目录内；检查脚本保留在材料目录，不放入 my-repo。不要把练习建在已有项目仓库里面。
+
+## 2. 跟着示例观察
+
+在材料目录运行：
+
+```text
+python make_demo.py
+python check_repo.py demo-repo
+git -C demo-repo log --oneline --graph --all
+```
+
+脚本只新建 demo-repo，已有同名目录就停止；使用虚构作者且只设置此示例仓库。示例包含 3 次内容提交和 1 次合并提交。检查应输出“仓库结构检查通过”。哈希由提交内容和时间决定，不需要与教材相同。自动生成的示例不能作为个人作业。
+
+理解三个位置：工作区是你正在编辑的文件；暂存区是下一次提交选中的内容；提交记录是已经保存的快照。add 不等于 commit，commit 也不等于 push。
+
+## 3. 自己完成三次修改与合并
+
+在材料目录中新建独立的 my-repo（材料目录本身不能处于其他 Git 仓库中）：
+
+```text
+mkdir my-repo
+cd my-repo
+git init -b main
+git config user.name &quot;My Learning Name&quot;
+git config user.email &quot;learner@example.invalid&quot;
+```
+
+这里的示例作者仅用于本地练习，你可换成自己的学习昵称。正式团队仓库再按团队身份规范设置，不要修改全局配置。
+
+用编辑器将上级目录的 README.template.md 另存为 my-repo/README.md，并完成“本周目标”。执行第一次提交：
+
+```text
+git status
+git add README.md
+git diff --cached
+git commit -m &quot;docs: add weekly goal&quot;
+```
+
+补充“兴趣方向”和“学习记录”，再 add、查看 diff、commit，提交信息写 `docs: record first exercise`。每次必须有实际内容变化，不能用空提交凑数。
+
+创建分支并完成“合并复盘”，至少约 100 字，解释工作区、暂存区和提交记录，并记下一个自己的疑问：
+
+```text
+git switch -c practice
+```
+
+编辑并保存 README 后：
+
+```text
+git add README.md
+git commit -m &quot;docs: explain branch workflow&quot;
+git switch main
+git merge --no-ff practice -m &quot;merge: practice notes&quot;
+git log --oneline --graph --all
+git status --short
+python ../check_repo.py .
+```
+
+`--no-ff` 在本题中保留一个明确的合并提交，便于观察。验收前保留 practice 分支。不要用 reset --hard 清除不明修改。
+
+变化任务：再建 `improvement` 分支，把目标中的一个模糊词改成可验证指标，提交并合并。记录修改前后，解释为什么更便于验收。
+
+## 4. 对照标准结果
+
+| 项目 | 标准 |
+| --- | --- |
+| 当前分支 | main |
+| 内容历史 | 至少 3 次有意义的内容提交；主练习共至少 4 次提交含合并 |
+| 合并 | practice 已包含在 main 历史中，有合并提交 |
+| 工作区 | git status --short 不输出未提交项 |
+| README | 四节齐全、无“待填写”，能解释修改过程 |
+| 自检 | check_repo.py 退出码为 0；仍需人工阅读内容 |
+
+## 5. 提交证据
+
+填写 submission.md，附 README、图形日志和干净工作区截图、一次差异记录、个人变化任务。无需上传整个 .git；为保证可追溯可保存完整提交哈希。自检结果建议写在仓库外的 evidence 文件夹，以免刚生成的证据又变成未提交文件。
+
+## 常见问题与助教提示
+
+- nothing to commit：检查是否修改并保存、是否 add 了正确文件。
+- Author identity unknown：在本练习仓库设置上面的两项 user 配置。
+- 合并冲突：先用 git status 定位文件，理解两边内容后在编辑器保留正确版本、去掉冲突标记，再 add 和 commit；不确定时把完整差异交给助教解释。
+- 问助教：“我在这个目录运行了这些命令，状态如下。请说明改动目前在工作区、暂存区还是历史里。”
+
+## 参考资料
+
+[Git 官方：分支与合并](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging)。本课示例独立编写，命令和图形输出以你本机的实际结果为准。
+</code></pre></section><section id="file-1"><h2>README.template.md</h2><pre><code># 我的机器人学习记录
+
+## 本周目标
+
+待填写：本周要实现什么可验证的结果？
+
+## 兴趣方向
+
+待填写：一个方向和选择理由。
+
+## 学习记录
+
+待填写：日期、命令、结果、问题。
+
+## 合并复盘
+
+待填写：工作区、暂存区、提交记录之间有什么区别？practice 分支的内容如何进入 main？
+</code></pre></section><section id="file-2"><h2>check_repo.py</h2><pre><code>&quot;&quot;&quot;Inspect only the explicitly selected practice repository.&quot;&quot;&quot;
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+
+def validate(root):
+    errors = []
+    def git(*args):
+        return subprocess.run([&quot;git&quot;, &quot;-C&quot;, str(root), *args], capture_output=True, text=True, check=True, timeout=10).stdout.strip()
+    try:
+        actual = Path(git(&quot;rev-parse&quot;, &quot;--show-toplevel&quot;)).resolve()
+        if actual != root.resolve():
+            return [&quot;指定目录不是独立仓库根目录；不要在上级项目仓库中练习&quot;]
+        if git(&quot;branch&quot;, &quot;--show-current&quot;) != &quot;main&quot;:
+            errors.append(&quot;请切回 main&quot;)
+        if int(git(&quot;rev-list&quot;, &quot;--count&quot;, &quot;HEAD&quot;)) &lt; 3:
+            errors.append(&quot;至少需要三次提交&quot;)
+        if not git(&quot;log&quot;, &quot;--merges&quot;, &quot;--format=%H&quot;):
+            errors.append(&quot;缺少合并提交；本练习用 merge --no-ff 保留合并证据&quot;)
+        try:
+            git(&quot;merge-base&quot;, &quot;--is-ancestor&quot;, &quot;practice&quot;, &quot;main&quot;)
+        except subprocess.CalledProcessError:
+            errors.append(&quot;practice 不存在或尚未合并入 main；验收前保留该分支&quot;)
+        if git(&quot;status&quot;, &quot;--porcelain&quot;):
+            errors.append(&quot;仍有未提交文件，请核对后提交&quot;)
+        git(&quot;ls-files&quot;, &quot;--error-unmatch&quot;, &quot;README.md&quot;)
+        readme = (root / &quot;README.md&quot;).read_text(encoding=&quot;utf-8-sig&quot;)
+        for heading in (&quot;本周目标&quot;, &quot;兴趣方向&quot;, &quot;学习记录&quot;, &quot;合并复盘&quot;):
+            if heading not in readme:
+                errors.append(&quot;README 缺少：&quot; + heading)
+        if &quot;待填写&quot; in readme or len(readme) &lt; 180:
+            errors.append(&quot;请完成 README 和至少约 100 字的合并复盘&quot;)
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        errors.append(&quot;无法完成检查；确认 Git 可用且目录含已提交的 README：&quot; + str(error))
+    return errors
+
+
+if __name__ == &quot;__main__&quot;:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(&quot;repository&quot;, help=&quot;练习仓库的目录路径&quot;)
+    args = parser.parse_args()
+    errors = validate(Path(args.repository))
+    print(&quot;\n&quot;.join(errors) if errors else &quot;仓库结构检查通过；内容质量和个人理解需另行验收。&quot;)
+    sys.exit(bool(errors))
+</code></pre></section><section id="file-3"><h2>make_demo.py</h2><pre><code>&quot;&quot;&quot;Create a new local demo repo; never touches an existing repo or contacts a remote.&quot;&quot;&quot;
+import subprocess
+from pathlib import Path
+
+root = Path(&quot;demo-repo&quot;)
+if root.exists():
+    raise SystemExit(&quot;demo-repo 已存在；请查看已有示例，或在另一个新目录运行。&quot;)
+root.mkdir()
+
+def git(*args):
+    subprocess.run([&quot;git&quot;, &quot;-C&quot;, str(root), *args], check=True)
+
+git(&quot;init&quot;, &quot;-b&quot;, &quot;main&quot;)
+git(&quot;config&quot;, &quot;user.name&quot;, &quot;Course Example&quot;)
+git(&quot;config&quot;, &quot;user.email&quot;, &quot;example@example.invalid&quot;)
+git(&quot;config&quot;, &quot;commit.gpgsign&quot;, &quot;false&quot;)
+readme = root / &quot;README.md&quot;
+text = &quot;# 示例学习仓库（虚构）\n\n## 本周目标\n完成 Git 基础。\n\n## 兴趣方向\n导航。\n\n## 学习记录\n运行 git status。\n\n## 合并复盘\n&quot;
+readme.write_text(text, encoding=&quot;utf-8&quot;)
+git(&quot;add&quot;, &quot;README.md&quot;)
+git(&quot;commit&quot;, &quot;-m&quot;, &quot;docs: create learning plan&quot;)
+text += &quot;我先在工作区编辑文件，再用 add 选择本次提交的内容，最后用 commit 保存快照。修改文件不会自动进入历史。\n&quot;
+readme.write_text(text, encoding=&quot;utf-8&quot;)
+git(&quot;add&quot;, &quot;README.md&quot;)
+git(&quot;commit&quot;, &quot;-m&quot;, &quot;docs: explain staging&quot;)
+git(&quot;switch&quot;, &quot;-c&quot;, &quot;practice&quot;)
+text += &quot;我在 practice 分支补充记录，提交后切回 main，使用 merge --no-ff 合并。合并提交连接两条历史；分支名是指向提交的标签，不是复制文件夹。用图形日志可以核对两条线如何汇合。示例由程序生成，不属于我的个人作业证据。\n&quot;
+readme.write_text(text, encoding=&quot;utf-8&quot;)
+git(&quot;add&quot;, &quot;README.md&quot;)
+git(&quot;commit&quot;, &quot;-m&quot;, &quot;docs: record branch exercise&quot;)
+git(&quot;switch&quot;, &quot;main&quot;)
+git(&quot;merge&quot;, &quot;--no-ff&quot;, &quot;practice&quot;, &quot;-m&quot;, &quot;merge: practice into main&quot;)
+git(&quot;log&quot;, &quot;--oneline&quot;, &quot;--graph&quot;, &quot;--all&quot;)
+print(&quot;示例已生成。提交哈希会变化；请另建自己的练习仓库。&quot;)
+</code></pre></section><section id="file-4"><h2>submission.md</h2><pre><code># Git 协作提交单
+
+- 姓名或昵称：
+- 日期：
+- 环境与版本：
+- 证据目录或授权链接：
+
+## 1. 个人仓库位置或授权访问链接、最终提交哈希
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 2. 三次内容提交与 merge --no-ff 的图形日志
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 3. README.md 与 git status --short 结果
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 4. improvement 分支的修改前后对照
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 5. add、commit、push 的区别；一次疑问及解决过程
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 助教与参考来源
+
+我独立完成了什么：
+使用了哪些参考代码或助教提示：
+哪些结论仍需验证：
+
+## 提交前核对
+
+- [ ] 已保存代码/数据/日志，链接可按授权访问。
+- [ ] 已对照本关标准，未把示例、自检或本机标记当作教师审核。
+- [ ] 未包含密码、令牌和不应公开的个人或项目资料。
+</code></pre></section></main></html>

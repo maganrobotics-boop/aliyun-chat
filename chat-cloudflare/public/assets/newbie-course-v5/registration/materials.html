@@ -1,0 +1,208 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>在线课程材料 · 机器人自主移动与操作实验室</title><style>body{margin:0;background:#f7f9fb;color:#20354a;font:16px/1.75 system-ui,sans-serif}header{position:sticky;top:0;background:white;padding:12px 5%;border-bottom:1px solid #dde5ee;display:flex;align-items:center;gap:24px;z-index:2}h1{font-size:20px;margin:0}a{color:#176b52}main{max-width:1100px;margin:24px auto;padding:0 18px}nav{display:flex;flex-wrap:wrap;gap:8px}nav a{background:white;border:1px solid #dce5ee;padding:5px 12px;border-radius:7px;overflow-wrap:anywhere}section{background:white;border:1px solid #dce5ee;border-radius:12px;padding:18px;margin:20px 0;scroll-margin-top:90px}h2{font-size:17px;overflow-wrap:anywhere}pre{overflow:auto;background:#f1f5f8;padding:16px;border-radius:8px;font:14px/1.7 ui-monospace,monospace;tab-size:4}@media(max-width:600px){header{padding:10px 14px;gap:12px}h1{font-size:17px}main{padding:0 12px}section{padding:12px}}</style><header><a href="index.html">← 返回课程</a><h1>在线课程材料</h1></header><main><p>教程、代码和数据可直接在线阅读。</p><nav><a href="#file-0">README.md</a><a href="#file-1">check_profile.py</a><a href="#file-2">planning-sheet.md</a><a href="#file-3">profile.example.json</a><a href="#file-4">profile.template.json</a><a href="#file-5">submission.md</a></nav><section id="file-0"><h2>README.md</h2><pre><code># 第 1 关：把兴趣变成一周能完成的计划
+
+建议 20–30 分钟。无需编程基础，可先用手机阅读、阅读和填写。完成后应能说明“我现在会什么、投入多少时间、下周拿什么结果来证明”。
+
+## 1. 在线材料
+
+[在线查看完整材料](materials.html) · [虚构示例](profile.example.json) · [个人模板](profile.template.json) · [可选检查程序](check_profile.py) · [提交单](submission.md)
+
+本课教程及全部材料均可在线阅读。JSON 可用文本编辑器打开；尚未安装 Python 时按下方人工清单核对，完成第 2 关后再运行可选检查。不要因环境没装好卡在登记关。
+
+## 2. 跟着示例做一次
+
+示例同学是虚构的机械工程大二学生，每周可用 4 小时。他把 2 小时分配给环境和 Git，2 小时分配给 Python，证据分别是版本输出、提交记录和分析结果。计划总量 4 小时，没有超过可用时间。
+
+先回答：如果环境安装用了 3 小时，Python 任务还适合原样安排吗？应缩小本周任务或调整时间，而不是填一个不可能完成的计划。
+
+如果电脑已有 Python，可在材料目录中运行：
+
+```text
+python check_profile.py profile.example.json
+```
+
+标准输出：`资料结构检查通过；方向匹配仍需本人和导师讨论。` 这不是实名认证、注册成功或项目录取通知。
+
+## 3. 修改自己的资料
+
+零基础同学可先填写 planning-sheet.md，不需要编辑 JSON。希望练习数据格式时，再复制 profile.template.json，另存为 profile.json。填写昵称、专业、年级、当前基础、学习目标和需要的帮助。不要填写身份证号、家庭地址或账号密码；课程证据不需要这些信息。正式身份与联系方式在系统个人主页中按实际需要填写，不放进公开仓库。
+
+方向代码：`perception` 感知、`navigation` 导航、`control` 控制、`mechanics` 机械、`embedded` 嵌入式、`ai` AI 应用、`undecided` 待选择。这里是学习意向，不自动分配项目；系统个人主页没有对应选项时，在简介补充即可。
+
+- `weekly_hours` 写你实际能稳定安排的时间。
+- `week_plan` 每项同时写任务、小时数和具体证据；总时长不得超过可用时间。
+- `goal` 写可观察结果，例如“能解释并复现 10 m 路程的计算”，不要只写“学会 Python”。
+- `skills` 可以写“零基础”，无需虚报；`help_needed` 写当前最大的一个障碍。
+
+独立变化任务：先拟一个 8 小时计划，再缩减到 4 小时。指出保留哪项、推迟哪项，以及依据。保留修改前后两个版本，解释取舍。
+
+## 4. 对照标准核对
+
+| 验收项 | 通过标准 | 不通过的例子 |
+| --- | --- | --- |
+| 信息 | 模板无“待填写”，基础描述真实 | 全写“熟练”，无具体经历 |
+| 时间 | 每项可执行，总量不超过可用时间 | 可用 4 小时却安排 8 小时 |
+| 目标 | 有任务、输出和判断标准 | “努力学习机器人” |
+| 调整 | 能解释 8 小时到 4 小时的取舍 | 只把数字改小，任务完全不变 |
+
+可选运行 `python check_profile.py profile.json`。程序仅检查字段和时间，目标是否合理仍要对照清单自评。你也可以把计划表直接写在提交单中，按同一标准验收。
+
+## 5. 提交证据
+
+填写 submission.md：个人计划、调整前后对照、一个具体问题和下周交付。返回第 1 关，把证据链接或摘要粘贴进证据栏。免登录时只保存本机；正式提交需登录。文件仍应保留在自己的学习目录中。
+
+本关不以签署保密协议或等待审批作为公开课程阅读的前提。
+
+## 常见问题与助教提示
+
+- JSON 报错：检查英文双引号和逗号，最后一个字段后不加逗号。也可先用提交单完成内容。
+- 不知道选什么方向：先选待选择，做完 Python 和小项目后再比较兴趣，不必现在决定整个毕业课题。
+- 问助教：“我每周只有 4 小时，下面两项任务哪项应缩小？请根据验收结果而不是兴趣标签给建议。”
+
+## 我能解释
+
+“想研究导航”和“本周完成一张地图的最短路径验证”有什么区别？基础薄弱时如何给出诚实且可执行的计划？
+</code></pre></section><section id="file-1"><h2>check_profile.py</h2><pre><code>&quot;&quot;&quot;Optional local structure check; does not verify identity or enroll a member.&quot;&quot;&quot;
+import json
+import math
+import sys
+from pathlib import Path
+
+
+def filled(value):
+    return isinstance(value, str) and bool(value.strip()) and &quot;待填写&quot; not in value
+
+
+def hours(value):
+    return type(value) in (int, float) and math.isfinite(value) and 0 &lt; value &lt;= 40
+
+
+def validate(data):
+    errors = []
+    if not isinstance(data, dict):
+        return [&quot;资料必须是 JSON 对象&quot;]
+    for key in (&quot;display_name&quot;, &quot;major&quot;, &quot;year&quot;, &quot;goal&quot;, &quot;help_needed&quot;):
+        if not filled(data.get(key)):
+            errors.append(key + &quot; 未填写（不需要帮助可写‘暂不需要’）&quot;)
+    if data.get(&quot;direction&quot;) not in (&quot;undecided&quot;, &quot;perception&quot;, &quot;navigation&quot;, &quot;control&quot;, &quot;mechanics&quot;, &quot;embedded&quot;, &quot;ai&quot;):
+        errors.append(&quot;direction 必须使用教程中的方向代码&quot;)
+    skills = data.get(&quot;skills&quot;)
+    if not isinstance(skills, list) or not skills or not all(filled(x) for x in skills):
+        errors.append(&quot;skills 至少写一项当前基础，也可写‘零基础’&quot;)
+    if not hours(data.get(&quot;weekly_hours&quot;)):
+        errors.append(&quot;weekly_hours 应为 0–40 之间的正数；按自己的实际可用时间填写&quot;)
+    plans = data.get(&quot;week_plan&quot;)
+    if not isinstance(plans, list) or not plans:
+        errors.append(&quot;week_plan 至少安排一项任务&quot;)
+    else:
+        valid = all(isinstance(p, dict) and filled(p.get(&quot;task&quot;)) and filled(p.get(&quot;evidence&quot;)) and hours(p.get(&quot;hours&quot;)) for p in plans)
+        if not valid:
+            errors.append(&quot;每项计划需有 task、正数 hours 和具体 evidence&quot;)
+        elif hours(data.get(&quot;weekly_hours&quot;)) and sum(p[&quot;hours&quot;] for p in plans) &gt; data[&quot;weekly_hours&quot;]:
+            errors.append(&quot;计划总时长超过每周可投入时间&quot;)
+    return errors
+
+
+if __name__ == &quot;__main__&quot;:
+    try:
+        data = json.loads(Path(sys.argv[1] if len(sys.argv) &gt; 1 else &quot;profile.json&quot;).read_text(encoding=&quot;utf-8-sig&quot;))
+        errors = validate(data)
+        print(&quot;\n&quot;.join(errors) if errors else &quot;资料结构检查通过；方向匹配仍需本人和导师讨论。&quot;)
+        sys.exit(bool(errors))
+    except (OSError, ValueError) as error:
+        print(&quot;无法检查：&quot;, error)
+        sys.exit(2)
+</code></pre></section><section id="file-2"><h2>planning-sheet.md</h2><pre><code># 第 1 关：一周学习计划（无需编程）
+
+直接在本表中填写即可；JSON 模板和 Python 检查程序是可选练习。
+
+学习昵称：
+专业与年级：
+目前会什么（零基础可如实填写）：
+本周可投入时间：
+目前最需要的帮助：
+
+| 本周任务 | 预计小时数 | 交付文件或结果 | 如何判断完成 |
+|---|---:|---|---|
+| | | | |
+| | | | |
+
+## 计划调整练习
+
+假设每周有 8 小时：
+
+改为每周 4 小时后，保留什么、缩小什么、推迟什么：
+
+为什么这样调整：
+
+## 提交前核对
+
+任务总时长不超过可用时间；每项都有具体结果；没有把“想学会”当作已经完成；不包含身份证号、住址、密码或令牌。
+
+保存此表及调整说明，返回第 1 关记录证据。游客记录只在本机；正式提交需登录，是否通过以教师验收为准。
+</code></pre></section><section id="file-3"><h2>profile.example.json</h2><pre><code>{
+  &quot;display_name&quot;: &quot;示例同学（虚构）&quot;,
+  &quot;major&quot;: &quot;机械工程&quot;,
+  &quot;year&quot;: &quot;大二&quot;,
+  &quot;direction&quot;: &quot;navigation&quot;,
+  &quot;skills&quot;: [&quot;会用终端&quot;, &quot;Python 刚入门&quot;],
+  &quot;weekly_hours&quot;: 4,
+  &quot;week_plan&quot;: [
+    {&quot;task&quot;: &quot;环境与 Git 练习&quot;, &quot;hours&quot;: 2, &quot;evidence&quot;: &quot;版本输出和三次提交记录&quot;},
+    {&quot;task&quot;: &quot;Python 日志分析&quot;, &quot;hours&quot;: 2, &quot;evidence&quot;: &quot;练习代码、自检输出与复盘&quot;}
+  ],
+  &quot;goal&quot;: &quot;本周能独立运行日志分析，解释路程和位移的区别。&quot;,
+  &quot;help_needed&quot;: &quot;需要助教提示如何定位终端报错。&quot;
+}
+</code></pre></section><section id="file-4"><h2>profile.template.json</h2><pre><code>{
+  &quot;display_name&quot;: &quot;待填写&quot;,
+  &quot;major&quot;: &quot;待填写&quot;,
+  &quot;year&quot;: &quot;待填写&quot;,
+  &quot;direction&quot;: &quot;undecided&quot;,
+  &quot;skills&quot;: [&quot;待填写&quot;],
+  &quot;weekly_hours&quot;: 4,
+  &quot;week_plan&quot;: [
+    {&quot;task&quot;: &quot;待填写&quot;, &quot;hours&quot;: 2, &quot;evidence&quot;: &quot;待填写&quot;},
+    {&quot;task&quot;: &quot;待填写&quot;, &quot;hours&quot;: 2, &quot;evidence&quot;: &quot;待填写&quot;}
+  ],
+  &quot;goal&quot;: &quot;待填写&quot;,
+  &quot;help_needed&quot;: &quot;待填写&quot;
+}
+</code></pre></section><section id="file-5"><h2>submission.md</h2><pre><code># 登记与计划提交单
+
+- 姓名或昵称：
+- 日期：
+- 环境与版本：
+- 证据目录或授权链接：
+
+## 1. 当前基础与本周可投入时间
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 2. 8 小时计划与 4 小时计划的对照（任务、时长、证据）
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 3. 我的取舍理由；一个可验证学习目标
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 4. 人工清单或 check_profile.py 结果
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 5. 当前障碍、需要的帮助与下一步
+
+待填写：填写真实内容，并注明对应文件或截图。
+
+## 助教与参考来源
+
+我独立完成了什么：
+使用了哪些参考代码或助教提示：
+哪些结论仍需验证：
+
+## 提交前核对
+
+- [ ] 已保存代码/数据/日志，链接可按授权访问。
+- [ ] 已对照本关标准，未把示例、自检或本机标记当作教师审核。
+- [ ] 未包含密码、令牌和不应公开的个人或项目资料。
+</code></pre></section></main></html>

@@ -329,10 +329,10 @@ test("service smoke fetches recommendations and sends the first one to chat", as
 
 test("the administrator-only production smoke validates the exact origin once", async () => {
   const origins = [];
-  const result = await smokeAdminAuthentication("https://chat.omindos.ai", {
+  const result = await smokeAdminAuthentication("https://chat.omindos.cn", {
     verifyAdmin: async (origin) => origins.push(origin),
   });
-  assert.deepEqual(origins, ["https://chat.omindos.ai"]);
+  assert.deepEqual(origins, ["https://chat.omindos.cn"]);
   assert.deepEqual(result, { adminKdfCompatible: true });
   await assert.rejects(
     smokeAdminAuthentication("http://chat.omindos.ai", { verifyAdmin: async () => {} }),
@@ -343,7 +343,7 @@ test("the administrator-only production smoke validates the exact origin once", 
 test("administrator probes retry only transient failures and never retry a 429", async () => {
   let calls = 0;
   const sleeps = [];
-  await smokeAdminAuthentication("https://chat.omindos.ai", {
+  await smokeAdminAuthentication("https://chat.omindos.cn", {
     verifyAdmin: async () => {
       calls += 1;
       if (calls === 1) throw Object.assign(new Error("edge pending"), { status: 503 });
@@ -355,7 +355,7 @@ test("administrator probes retry only transient failures and never retry a 429",
 
   let rateLimitedCalls = 0;
   await assert.rejects(
-    smokeAdminAuthentication("https://chat.omindos.ai", {
+    smokeAdminAuthentication("https://chat.omindos.cn", {
       verifyAdmin: async () => {
         rateLimitedCalls += 1;
         throw Object.assign(new Error("rate limited"), { status: 429 });
@@ -371,12 +371,12 @@ test("the saved administrator password is consumed, verified, and not returned",
   const password = "saved-administrator-password";
   const environment = { CHAT_ADMIN_PASSWORD: password };
   const calls = [];
-  const result = await smokeSavedAdminAuthentication("https://chat.omindos.ai", {
+  const result = await smokeSavedAdminAuthentication("https://chat.omindos.cn", {
     environment,
     logoutAttempts: 1,
     verifyAdmin: async (origin, suppliedPassword) => calls.push({ origin, suppliedPassword }),
   });
-  assert.deepEqual(calls, [{ origin: "https://chat.omindos.ai", suppliedPassword: password }]);
+  assert.deepEqual(calls, [{ origin: "https://chat.omindos.cn", suppliedPassword: password }]);
   assert.equal("CHAT_ADMIN_PASSWORD" in environment, false);
   assert.deepEqual(result, { adminPasswordVerified: true, smokeSessionRevoked: true });
   assert.equal(JSON.stringify(result).includes(password), false);
@@ -427,7 +427,7 @@ test("saved-password smoke logs in once and retries logout with the same session
     });
   };
   const sleeps = [];
-  const result = await smokeSavedAdminAuthentication("https://chat.omindos.ai", {
+  const result = await smokeSavedAdminAuthentication("https://chat.omindos.cn", {
     environment: { CHAT_ADMIN_PASSWORD: password },
     logoutAttempts: 2,
     sleepImpl: async (milliseconds) => sleeps.push(milliseconds),
@@ -513,7 +513,7 @@ test("saved-password smoke revokes its session even when login response validati
     return new Response(JSON.stringify({ saved: true }), { status: 200, headers });
   };
   await assert.rejects(
-    smokeSavedAdminAuthentication("https://chat.omindos.ai", {
+    smokeSavedAdminAuthentication("https://chat.omindos.cn", {
       environment: { CHAT_ADMIN_PASSWORD: "saved-administrator-password" },
     }),
     /saved administrator password was not accepted/u,

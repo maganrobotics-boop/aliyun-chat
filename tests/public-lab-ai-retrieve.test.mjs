@@ -77,7 +77,7 @@ function candidate(index) {
   };
 }
 
-function request(body = { question: "机械臂如何急停复位？" }, headers = {}, url = "https://oa.omindos.ai/api/public/lab-ai/retrieve") {
+function request(body = { question: "机械臂如何急停复位？" }, headers = {}, url = "https://oa.omindos.cn/api/public/lab-ai/retrieve") {
   return new Request(url, {
     method: "POST",
     headers: {
@@ -140,7 +140,7 @@ test("request schema and stream bytes are bounded before D1", async () => {
     [request({ question: "A".repeat(501) }), 400],
     [request({ question: "\uD800机械臂" }), 400],
     [request({ question: "机械臂", padding: "中".repeat(2_000) }), 413],
-    [request({ question: "机械臂" }, {}, "https://oa.omindos.ai/api/public/lab-ai/retrieve?debug=1"), 400],
+    [request({ question: "机械臂" }, {}, "https://oa.omindos.cn/api/public/lab-ai/retrieve?debug=1"), 400],
   ];
   for (const [input, status] of cases) assert.equal((await route.POST(input)).status, status);
   assert.equal(globalThis[stateKey].d1Calls, 0);

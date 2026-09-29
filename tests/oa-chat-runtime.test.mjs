@@ -56,7 +56,7 @@ const chunk = { itemId:'11111111-2222-4333-8444-555555555555',revisionId:'aaaaaa
 test('OA uses the signed service binding even when same-zone public fetch is unavailable', async () => {
   assert.deepEqual(await client.oaChatModelStatus(),{bridgeReady:true,modelReady:true,budgetReady:true});
   const {url,init}=globalThis[stateKey].calls[0];
-  assert.equal(url,'https://chat.omindos.ai/api/internal/oa-answer');
+  assert.equal(url,'https://chat.omindos.cn/api/internal/oa-answer');
   assert.equal(globalThis[stateKey].publicCalls,0);
   assert.equal(init.cache,'no-store'); assert.equal(init.redirect,'manual'); assert.equal(init.credentials,'omit');
   assert.equal(init.headers.cookie,undefined); assert.equal(init.headers.origin,undefined);

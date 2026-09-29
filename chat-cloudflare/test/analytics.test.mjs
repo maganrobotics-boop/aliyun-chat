@@ -11,7 +11,7 @@ import { handleRequest } from "../src/app.mjs";
 import { sha256Hex } from "../src/crypto.mjs";
 import { D1DatabaseAdapter } from "./d1-adapter.mjs";
 
-const ORIGIN = "https://chat.omindos.ai";
+const ORIGIN = "https://chat.omindos.cn";
 const SERVICE_TOKEN = "A".repeat(43);
 const QUESTION = "实验室目前有哪些机器人设备？";
 const SECOND_QUESTION = "实验室主要研究哪些机器人方向？";

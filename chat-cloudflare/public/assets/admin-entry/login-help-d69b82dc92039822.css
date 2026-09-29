@@ -1,0 +1,4 @@
+.login-panel .login-note{margin:0 0 18px;font-size:13px;line-height:1.65;overflow-wrap:anywhere}
+.login-panel input[type=password]{font-size:16px;min-height:44px}
+dialog.review-dialog{max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
+dialog.review-dialog .dialog-inner{min-width:0}

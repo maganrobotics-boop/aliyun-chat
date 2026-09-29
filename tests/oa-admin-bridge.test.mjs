@@ -48,7 +48,7 @@ test('未签名、篡改、带浏览器来源或 Cookie 的请求在引擎前被
   const variants = [
     new Request(`${OA_ADMIN_ORIGIN}${OA_ADMIN_PATH}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }),
     new Request(valid, { body: JSON.stringify({ operation: 'login', password: 'changed' }) }),
-    new Request(await signedRequest(payload), { headers: { ...(Object.fromEntries((await signedRequest(payload)).headers)), origin: 'https://oa.omindos.ai' } }),
+    new Request(await signedRequest(payload), { headers: { ...(Object.fromEntries((await signedRequest(payload)).headers)), origin: 'https://oa.omindos.cn' } }),
     new Request(await signedRequest(payload), { headers: { ...(Object.fromEntries((await signedRequest(payload)).headers)), cookie: 'session=browser' } }),
   ];
   for (const request of variants) {

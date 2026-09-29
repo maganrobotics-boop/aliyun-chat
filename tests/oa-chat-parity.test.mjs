@@ -7,7 +7,7 @@ import { OA_CHAT_PATH, signOaChatRequest, handleOaChatBridge, validOaChatPayload
 import { buildGroundedChatMessages } from '../chat-cloudflare/src/grounded-prompt.mjs';
 
 const secret = 's'.repeat(48);
-const origin = 'https://chat.omindos.ai';
+const origin = 'https://chat.omindos.cn';
 const privateMarker = 'PRIVATE-OA-ONLY-TEST-CONTENT';
 const documents = [{ id: '1', title: '内部机器人测试记录', body: `机器人底盘先解除急停再执行复位。${privateMarker}`, updatedAt: '2026-09-17', origin: 'oa_internal', assets: [{ alt: '底盘实验平台' }] }];
 const payload = () => ({ operation: 'answer', question: '机器人底盘如何复位？', history: [], documents });
@@ -52,7 +52,7 @@ for (const reason of ['unsigned', 'tampered', 'expired', 'browser-origin', 'brow
     let body = await request.text();
     if (reason === 'unsigned') headers.delete('authorization');
     if (reason === 'tampered') body = body.replace('复位', '启动');
-    if (reason === 'browser-origin') headers.set('origin', 'https://oa.omindos.ai');
+    if (reason === 'browser-origin') headers.set('origin', 'https://oa.omindos.cn');
     if (reason === 'browser-cookie') headers.set('cookie', 'fake-session=1');
     request = new Request(origin + OA_CHAT_PATH, { method: 'POST', headers, body });
     const { engine, state } = isolatedEngine();

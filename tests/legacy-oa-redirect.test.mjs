@@ -5,17 +5,17 @@ import { legacyOaRedirect } from "../lib/legacy-oa-redirect.mjs";
 test("legacy navigation keeps the destination host fixed and discards query values", () => {
   const response = legacyOaRedirect(new Request("https://oa.originmindos.com/guide?state=private"), "true");
   assert.equal(response.status, 308);
-  assert.equal(response.headers.get("location"), "https://oa.omindos.ai/guide");
+  assert.equal(response.headers.get("location"), "https://oa.omindos.cn/guide");
   assert.equal(response.headers.get("referrer-policy"), "no-referrer");
-  assert.equal(legacyOaRedirect(new Request("https://oa.originmindos.com//external.example/"), "true").headers.get("location"), "https://oa.omindos.ai//external.example/");
+  assert.equal(legacyOaRedirect(new Request("https://oa.originmindos.com//external.example/"), "true").headers.get("location"), "https://oa.omindos.cn//external.example/");
 });
 
 test("old forms and OAuth callbacks do not replay writes or authorization data", () => {
   const post = legacyOaRedirect(new Request("https://oa.originmindos.com/api/approvals", { method: "POST", body: "old-form" }), "true");
   assert.equal(post.status, 303);
-  assert.equal(post.headers.get("location"), "https://oa.omindos.ai/");
+  assert.equal(post.headers.get("location"), "https://oa.omindos.cn/");
   const callback = legacyOaRedirect(new Request("https://oa.originmindos.com/api/auth/feishu/callback?code=private&state=private"), "true");
-  assert.equal(callback.headers.get("location"), "https://oa.omindos.ai/");
+  assert.equal(callback.headers.get("location"), "https://oa.omindos.cn/");
 });
 
 test("new production and the preserved source stay outside legacy redirect scope", () => {

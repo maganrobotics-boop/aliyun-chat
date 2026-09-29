@@ -99,7 +99,7 @@ Register exact GitHub and Feishu callbacks for each origin; wildcard callback ma
 Public address plan:
 
 - Website: `https://omindos.ai`
-- OA: `https://oa.omindos.ai`
+- OA: `https://oa.omindos.cn`
 - Documentation: `https://docs.omindos.ai`
 - API: `https://api.omindos.ai`
 

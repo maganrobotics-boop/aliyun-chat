@@ -19,7 +19,7 @@ let server;
 let browser;
 const externalOrigin = process.env.ANSWER_BROWSER_ORIGIN;
 const renderTimeout = externalOrigin ? 60_000 : 15_000;
-if (externalOrigin && externalOrigin !== "https://chat.omindos.ai") throw Error("Unexpected browser-check origin");
+if (externalOrigin && externalOrigin !== "https://chat.omindos.cn") throw Error("Unexpected browser-check origin");
 let origin = externalOrigin;
 if (!origin) {
   server = createServer(async (req, res) => {
