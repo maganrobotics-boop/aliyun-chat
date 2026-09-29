@@ -1,0 +1,61 @@
+name: Apply in-page learning registration
+on:
+  pull_request:
+    paths:
+      - .github/workflows/apply-learning-registration.yml
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Configure SSH
+        env:
+          SSH_KEY_B64: ${{ secrets.OMINDOS_SSH_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_KEY_B64"
+          install -m 700 -d ~/.ssh
+          printf '%s' "$SSH_KEY_B64" | base64 --decode > ~/.ssh/omindos
+          chmod 600 ~/.ssh/omindos
+          ssh-keyscan -H 39.108.50.65 >> ~/.ssh/known_hosts
+      - name: Verify exact live files and prepare update
+        run: |
+          set -euo pipefail
+          remote=/opt/omindos-deploy/chat-current/chat-cloudflare/public/learning
+          mkdir /tmp/learning-inline
+          scp -i ~/.ssh/omindos -o IdentitiesOnly=yes "admin@39.108.50.65:$remote/app.js" /tmp/learning-inline/app.js
+          scp -i ~/.ssh/omindos -o IdentitiesOnly=yes "admin@39.108.50.65:$remote/style.css" /tmp/learning-inline/style.css
+          printf '%s  %s\n' f3bc7f640c306f285113428475d7e0157b3f8a938e3374982f215e6d1f9666a1 /tmp/learning-inline/app.js | sha256sum -c -
+          printf '%s  %s\n' d32a8cd1abe88371a6b90e5f963b3f34cc7c847278e863029b07b9a2c38ee571 /tmp/learning-inline/style.css | sha256sum -c -
+          node ops/update-learning-inline-registration.mjs /tmp/learning-inline
+          node --check /tmp/learning-inline/app.js
+          sha256sum /tmp/learning-inline/app.js | cut -d ' ' -f1 > /tmp/inline-js-sha
+          sha256sum /tmp/learning-inline/style.css | cut -d ' ' -f1 > /tmp/inline-css-sha
+      - name: Replace only current learning assets with rollback copies
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/omindos -o IdentitiesOnly=yes /tmp/learning-inline/app.js admin@39.108.50.65:/tmp/learning-inline-app.js
+          scp -i ~/.ssh/omindos -o IdentitiesOnly=yes /tmp/learning-inline/style.css admin@39.108.50.65:/tmp/learning-inline-style.css
+          js_sha=$(cat /tmp/inline-js-sha)
+          css_sha=$(cat /tmp/inline-css-sha)
+          ssh -i ~/.ssh/omindos -o IdentitiesOnly=yes admin@39.108.50.65 \
+            "sudo bash -s -- '$js_sha' '$css_sha'" <<'REMOTE'
+          set -euo pipefail
+          js_sha="$1"
+          css_sha="$2"
+          root=/opt/omindos-deploy/chat-current/chat-cloudflare/public/learning
+          test "$(readlink -f /opt/omindos-deploy/chat-current)" = /opt/omindos-deploy/releases/chat-learning-20260929T133715Z
+          test "$(sha256sum "$root/app.js" | cut -d ' ' -f1)" = f3bc7f640c306f285113428475d7e0157b3f8a938e3374982f215e6d1f9666a1
+          test "$(sha256sum "$root/style.css" | cut -d ' ' -f1)" = d32a8cd1abe88371a6b90e5f963b3f34cc7c847278e863029b07b9a2c38ee571
+          test "$(sha256sum /tmp/learning-inline-app.js | cut -d ' ' -f1)" = "$js_sha"
+          test "$(sha256sum /tmp/learning-inline-style.css | cut -d ' ' -f1)" = "$css_sha"
+          cp -a "$root/app.js" "$root/app.js.bak-inline-registration"
+          cp -a "$root/style.css" "$root/style.css.bak-inline-registration"
+          cp /tmp/learning-inline-app.js "$root/app.js"
+          cp /tmp/learning-inline-style.css "$root/style.css"
+          test "$(sha256sum "$root/app.js" | cut -d ' ' -f1)" = "$js_sha"
+          test "$(sha256sum "$root/style.css" | cut -d ' ' -f1)" = "$css_sha"
+          REMOTE
