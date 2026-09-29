@@ -1,0 +1,24 @@
+name: Inspect live learning asset
+on:
+  push:
+    branches: [codex/arts-robotics-pathway]
+    paths:
+      - .github/workflows/inspect-learning.yml
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_KEY_B64: ${{ secrets.OMINDOS_SSH_KEY_B64 }}
+        run: |
+          test -n "$SSH_KEY_B64"
+          install -m 700 -d ~/.ssh
+          printf '%s' "$SSH_KEY_B64" | base64 --decode > ~/.ssh/omindos
+          chmod 600 ~/.ssh/omindos
+          ssh-keyscan -H 39.108.50.65 >> ~/.ssh/known_hosts
+      - name: Locate active learning app
+        run: |
+          ssh -i ~/.ssh/omindos -o IdentitiesOnly=yes admin@39.108.50.65 \
+            "sudo find /var/www /opt -path '*/learning/app.js' -type f -print 2>/dev/null | head -30"
