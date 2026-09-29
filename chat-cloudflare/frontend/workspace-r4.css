@@ -17,6 +17,12 @@
 .workspace-bottom-nav .workspace-nav-button.active { color: #245bdb; background: #edf3ff; font-weight: 750; }
 .workspace-bottom-nav .workspace-nav-button:focus-visible { outline: 3px solid #3370ff; outline-offset: -3px; }
 .chat-workspace-view .topbar, .chat-workspace-view .workspace-top-nav, .chat-workspace-view .sidebar { display: none !important; }
+.chat-workspace-view .topbar { display: flex !important; min-height: 58px; flex-wrap: nowrap; padding: 9px clamp(16px, 4vw, 44px); }
+.chat-workspace-view .workspace-brand { min-width: 0; }
+.chat-workspace-view .topbar-title { min-width: 0; }
+.chat-workspace-view .topbar-title strong { font-size: clamp(13px, 2.5vw, 19px); }
+.chat-workspace-view .topbar-title small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-workspace-view .account-actions { flex: 0 0 auto; }
 .chat-workspace-view .app { display: block; min-height: 100dvh; }
 .chat-workspace-view .content { width: min(1200px, 100%); padding: 24px clamp(16px, 4vw, 44px) calc(var(--workspace-nav-height) + 28px); }
 .chat-workspace-view .workspace-view { min-height: calc(100dvh - var(--workspace-nav-height) - 48px); }
@@ -29,6 +35,9 @@
 .chat-workspace-view .profile-email, .chat-workspace-view .profile-tags { grid-column: 2; margin: 0; overflow-wrap: anywhere; }
 .chat-workspace-view #view-profile .eyebrow { display: none; }
 .chat-workspace-view .workspace-account a[href="/"] { display: none; }
+.chat-workspace-view .account-actions > :not(.account-profile-trigger) { display: none !important; }
+.chat-workspace-view .account-profile-trigger { min-height: 40px; max-width: min(180px, 30vw); padding: 7px 12px; border: 1px solid #dbe5f2; border-radius: 12px; background: #fff; color: #245bdb; font: 600 13px/1.4 system-ui, sans-serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.chat-workspace-view .account-profile-trigger:focus-visible { outline: 3px solid #3370ff; outline-offset: 2px; }
 dialog.workspace-fullscreen-page[open] {
   position: fixed !important; inset: 0 !important; z-index: 80 !important;
   display: block; width: 100vw !important; height: 100dvh !important;
@@ -46,6 +55,7 @@ body:has(dialog.workspace-fullscreen-page[open]) .workspace-bottom-nav { display
 .chat-assistant-view .workspace { min-height: 0 !important; }
 .chat-assistant-view .village-nav-item, .chat-assistant-view button[aria-label="新手村"] { display: none !important; }
 @media (max-width: 640px) {
+  .chat-workspace-view .topbar-title small { display: none; }
   .chat-workspace-view .content { padding-top: 18px; }
   .chat-workspace-view .profile-card { padding: 14px; }
   dialog.workspace-fullscreen-page .modal-head { align-items: flex-start; gap: 12px; }

@@ -145,7 +145,7 @@ export async function routeStaticRequest(request, env) {
   if (kind === RouteKind.REDIRECT_TOPIC) {
     return redirect(request, TOPIC_TRAILING_REDIRECTS.get(url.pathname));
   }
-  if (url.pathname === "/newbie-village") {
+  if (url.pathname === "/newbie-village" || url.pathname === "/pathway") {
     if (!SAFE_METHODS.has(request.method)) return methodNotAllowed();
     return fetchAsset(request, env, "/newbie-village.html", "no-store");
   }
