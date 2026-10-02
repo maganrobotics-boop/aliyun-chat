@@ -134,7 +134,7 @@ export async function routeStaticRequest(request, env) {
   const workspaceHome = url.pathname === "/" && [...url.searchParams.keys()].every(key => ["release", "v", "verify", "probe"].includes(key));
   if (workspaceHome) {
     if (!SAFE_METHODS.has(request.method)) return methodNotAllowed();
-    return fetchAsset(request, env, "/newbie-village.html", "no-store");
+    return fetchAsset(request, env, "/index.html", "no-store");
   }
 
   if (kind === RouteKind.DYNAMIC) return null;
@@ -145,9 +145,8 @@ export async function routeStaticRequest(request, env) {
   if (kind === RouteKind.REDIRECT_TOPIC) {
     return redirect(request, TOPIC_TRAILING_REDIRECTS.get(url.pathname));
   }
-  if (url.pathname === "/newbie-village") {
-    if (!SAFE_METHODS.has(request.method)) return methodNotAllowed();
-    return fetchAsset(request, env, "/newbie-village.html", "no-store");
+  if (url.pathname === "/newbie-village" || url.pathname === "/newbie-village/") {
+    return redirect(request, "/learning");
   }
   if (url.pathname === "/newbie-village/admin") {
     if (!SAFE_METHODS.has(request.method)) return methodNotAllowed();

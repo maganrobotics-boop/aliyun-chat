@@ -1,5 +1,11 @@
 "use strict";
 
+// Retire the old course entry without changing onboarding routes.
+if (["/newbie-village", "/newbie-village/", "/newbie-village.html"].includes(window.location.pathname)
+    && window.location.hash === "#courses") {
+  window.location.replace("/learning");
+}
+
 const directionLabels = Object.freeze({
   undecided: "待选择",
   perception: "感知",
