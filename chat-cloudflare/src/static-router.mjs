@@ -134,7 +134,7 @@ export async function routeStaticRequest(request, env) {
   const workspaceHome = url.pathname === "/" && [...url.searchParams.keys()].every(key => ["release", "v", "verify", "probe"].includes(key));
   if (workspaceHome) {
     if (!SAFE_METHODS.has(request.method)) return methodNotAllowed();
-    return fetchAsset(request, env, "/newbie-village.html", "no-store");
+    return fetchAsset(request, env, "/index.html", "no-store");
   }
 
   if (kind === RouteKind.DYNAMIC) return null;
