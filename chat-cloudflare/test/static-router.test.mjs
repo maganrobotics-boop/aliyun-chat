@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 
 import {
   CANONICAL_ORIGIN,
@@ -121,16 +123,63 @@ test("robotics course page is served as a standalone non-cacheable document", as
   assert.deepEqual(calls.map((call) => call.pathname), ["/robotics-course.html"]);
 });
 
-test("newbie village page is served as a standalone non-cacheable document", async () => {
+test("retired newbie routes redirect GET and HEAD to learning without fetching assets", async () => {
   const { env, calls } = mockEnvironment();
-  const response = await routeStaticRequest(
-    new Request("https://chat.omindos.cn/newbie-village"),
-    env,
-  );
-  assert.equal(response.status, 200);
-  assert.equal(await response.text(), "asset:/newbie-village.html");
-  assertHardened(response);
-  assert.deepEqual(calls.map((call) => call.pathname), ["/newbie-village.html"]);
+  for (const pathname of ["/newbie-village", "/newbie-village/"]) {
+    for (const method of ["GET", "HEAD"]) {
+      const response = await routeStaticRequest(
+        new Request(`https://preview.example${pathname}?from=old#courses`, { method }), env,
+      );
+      assert.equal(response.status, 308);
+      assert.equal(response.headers.get("location"), "https://preview.example/learning");
+      assertHardened(response);
+    }
+  }
+  assert.equal(calls.length, 0);
+});
+
+test("plain root and release probes keep the main homepage asset", async () => {
+  const { env, calls } = mockEnvironment();
+  for (const path of ["/", "/?release=test&v=1&verify=1&probe=1"]) {
+    for (const method of ["GET", "HEAD"]) {
+      const response = await routeStaticRequest(
+        new Request(`https://chat.omindos.cn${path}`, { method }), env,
+      );
+      assert.equal(response.status, 200);
+      assert.equal(await response.text(), method === "HEAD" ? "" : "asset:/newbie-village.html");
+      assertHardened(response);
+    }
+  }
+  assert.deepEqual(calls.map(call => call.pathname), Array(4).fill("/newbie-village.html"));
+});
+
+test("legacy #courses entry redirects only on the old public workspace pages", () => {
+  const source = readFileSync(new URL("../public/newbie-village.js", import.meta.url), "utf8");
+  // Run the actual script through its entry guard, stopping at DOM initialization.
+  const stopAtDom = new Error("DOM initialization");
+  for (const pathname of ["/", "/newbie-village", "/newbie-village/", "/newbie-village.html",
+    "/newbie-village/admin", "/newbie-village-admin.html", "/manage", "/learning"]) {
+    for (const hash of ["#courses", "", "#profile"]) {
+      const redirects = [];
+      assert.throws(() => runInNewContext(source, {
+        window: { location: { pathname, hash, replace: value => redirects.push(value) } },
+        document: new Proxy({}, { get() { throw stopAtDom; } }),
+      }), error => error === stopAtDom);
+      const legacy = ["/", "/newbie-village", "/newbie-village/", "/newbie-village.html"].includes(pathname);
+      assert.deepEqual(redirects, legacy && hash === "#courses" ? ["/learning"] : [], `${pathname}${hash}`);
+    }
+  }
+});
+
+test("admin aliases retain their existing agreement review destination", async () => {
+  const { env, calls } = mockEnvironment();
+  for (const path of ["/admin", "/admin/", "/admin.html"]) {
+    const response = await routeStaticRequest(new Request(`https://chat.omindos.cn${path}`), env);
+    assert.equal(response.status, 308);
+    assert.equal(response.headers.get("location"), "https://chat.omindos.cn/newbie-village/admin");
+    assertHardened(response);
+  }
+  assert.equal(calls.length, 0);
 });
 
 test("newbie agreement review page is a standalone non-cacheable admin document", async () => {
@@ -257,6 +306,7 @@ test("unsafe methods cannot retrieve the shell or static assets", async () => {
     "/orientation.html",
     "/robotics-course.html",
     "/newbie-village",
+    "/newbie-village/",
     "/newbie-village/admin",
     "/newbie-village.js",
     "/newbie-village-admin.js",
@@ -352,4 +402,3 @@ test("the helper fails closed when the ASSETS binding is absent", async () => {
     /ASSETS binding is required/,
   );
 });
-
