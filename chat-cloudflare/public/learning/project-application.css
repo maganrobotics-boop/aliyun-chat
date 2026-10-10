@@ -3,3 +3,7 @@
 .project-work-course{display:block;width:100%;margin:10px 0;text-align:left}.project-application-dialog button:disabled{opacity:.55;cursor:wait}
 
 .project-course-links{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 16px}.project-course-links button{min-height:44px;font-size:15px;padding:10px 16px}
+
+.project-introduction-card{border:1px solid #dce6f2;border-radius:12px;padding:16px;margin:14px 0;overflow-wrap:anywhere}.project-introduction-card h4{margin:0 0 8px;font-size:17px}.project-introduction-card a{display:inline-block;color:#285da3;margin:0 12px 12px 0;min-height:30px}.project-introduction-card button{display:block;width:100%;text-align:left;margin-top:10px}.project-introduction-card button:disabled{cursor:not-allowed}.project-application-field select{box-sizing:border-box;width:100%;font:inherit;border:1px solid #c9d4e2;border-radius:8px;padding:10px 12px;background:#fff;color:#182538}.industrial-project-introductions{margin-bottom:24px}.project-application-dialog select:focus-visible{outline:3px solid #70a1eb;outline-offset:2px}
+
+.project-application-dialog header{position:sticky;top:-24px;z-index:2;background:#fff;padding:12px 0;border-bottom:1px solid #dce6f2}@media(max-width:480px){.project-application-dialog header{top:-18px}}
