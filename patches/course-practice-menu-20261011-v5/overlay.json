@@ -1,0 +1,25 @@
+{
+  "version": "course-practice-menu-20261011-v5",
+  "baseline": "course-menu-20261011-v4",
+  "edits": [
+    {
+      "path": "chat-cloudflare/public/learning/project-application.mjs",
+      "beforeSha256": "b139dc1abb6929e619e255038570148452dcff0f0fadb5d0a90c56624eaae445",
+      "afterSha256": "f9c6972cecaedfb97bd89220f976bda0247b9be0242eb2168b88832b4df7a41d",
+      "edits": [
+        {
+          "start": 42,
+          "end": 47,
+          "lines": [
+            "  const workEntry = el('button'); workEntry.type = 'button'; workEntry.id = 'project-work-courses-entry'; workEntry.setAttribute('role', 'menuitem');\n",
+            "  const workIcon = icon.cloneNode(true); workIcon.querySelector('path').setAttribute('d', 'M12 5v15M3 4h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6v15h-6a3 3 0 0 0-3 2 3 3 0 0 0-3-2H3Z');\n",
+            "  workEntry.append(workIcon, el('span', '工程实践类课程介绍'));\n",
+            "  document.querySelector('#account-menu [data-account-panel=\"profile\"]')?.after(workEntry, entry);\n",
+            "  workEntry.onclick = () => { onAccountEntry?.(); void openCourseProjects(); };\n"
+          ]
+        }
+      ]
+    }
+  ],
+  "newFiles": []
+}
