@@ -40,11 +40,11 @@ export function createProjectApplicationUI({ identity, onLogin, onReceipt, onPro
   const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg'), path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true'); path.setAttribute('d', 'M9 3h6M10 3v6l-6 10a1.3 1.3 0 0 0 1.1 2h13.8a1.3 1.3 0 0 0 1.1-2L14 9V3M7 15h10'); icon.append(path);
   entry.append(icon, el('span', '参与实验室科研项目')); entry.onclick = () => { onAccountEntry?.(); void open(); };
-  document.querySelector('#account-menu [data-account-panel="profile"]')?.after(entry);
-  const links = el('nav', undefined, 'project-course-links'); links.setAttribute('aria-label', '工程实践课程'); document.querySelector('main')?.prepend(links);
-  const workEntry = el('button', '工程实践类课程介绍', 'secondary'); workEntry.type = 'button'; workEntry.id = 'project-work-courses-entry';
-  links.prepend(workEntry);
-  workEntry.onclick = () => void openCourseProjects();
+  const workEntry = el('button'); workEntry.type = 'button'; workEntry.id = 'project-work-courses-entry'; workEntry.setAttribute('role', 'menuitem');
+  const workIcon = icon.cloneNode(true); workIcon.querySelector('path').setAttribute('d', 'M12 5v15M3 4h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6v15h-6a3 3 0 0 0-3 2 3 3 0 0 0-3-2H3Z');
+  workEntry.append(workIcon, el('span', '工程实践类课程介绍'));
+  document.querySelector('#account-menu [data-account-panel="profile"]')?.after(workEntry, entry);
+  workEntry.onclick = () => { onAccountEntry?.(); void openCourseProjects(); };
   let owner = '', pending = null, pendingSelection = null, submitting = false, resubmitId = null, returnFocus = null, generation = 0;
   const drafts = new Map(),fileDrafts=new Map();
   function current() { return owner && identity().email?.toLowerCase() === owner; }
