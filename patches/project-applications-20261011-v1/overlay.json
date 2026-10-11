@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "sourceRelease": "chat-stars-activity-20261007-v1",
+  "edits": [
+    {
+      "path": "aliyun/learning/service-core.mjs",
+      "beforeSha256": "82c3b923480d7678e7e0481a1f0d761c6d7f0952fd8a407a009cdf77ee5eb94b",
+      "afterSha256": "ad3556e75854c3b0808e04796647abed45b705921f4d4c5a933ba3e0cf9d8918",
+      "edits": [
+        {
+          "start": 3,
+          "end": 3,
+          "lines": [
+            "import { createProjectApplications } from './project-application.mjs';\n",
+            "import { APPLICATION_DECISION_PATH, projectApplicationIntent, PROJECT_APPLICATION_GUIDANCE } from '../../lib/project-application.mjs';\n"
+          ]
+        },
+        {
+          "start": 50,
+          "end": 50,
+          "lines": [
+            "  const projectWorkIds=new Set(advancedCourses.filter(c=>c.requiredProject||c.optional||c.parentProject||c.id==='capstone-mower').flatMap(c=>[c.id,...advancedCourses.filter(child=>child.parentId===c.id).map(child=>child.id)]));\n"
+          ]
+        },
+        {
+          "start": 62,
+          "end": 62,
+          "lines": [
+            "  files.add('project-application.mjs');\n",
+            "  files.add('project-application.css');\n"
+          ]
+        },
+        {
+          "start": 75,
+          "end": 76,
+          "lines": [
+            "    if (!email) { const p=courseProgression.calculate();return {...p,availableCourseIds:[...new Set([...p.availableCourseIds,...projectWorkIds])],projectWorkCourseIds:[...projectWorkIds],submissionCount:0}; }\n"
+          ]
+        },
+        {
+          "start": 81,
+          "end": 82,
+          "lines": [
+            "    const granted=db.prepare('SELECT course_id FROM learning_course_access_grants WHERE email=? COLLATE NOCASE').all(email).flatMap(row=>{const course=courses.find(c=>c.id===row.course_id);return course?[course.id,...(course.parentId?[course.parentId]:[])]:[];});\n",
+            "    return {...progress,availableCourseIds:[...new Set([...progress.availableCourseIds,...projectWorkIds,...granted])],grantedCourseIds:granted,projectWorkCourseIds:[...projectWorkIds],...(access?.scope==='all_courses'?{availableCourseIds:[...courseIds],accessMode:'all_courses'}:{}),submissionCount:rows.length};\n"
+          ]
+        },
+        {
+          "start": 224,
+          "end": 224,
+          "lines": [
+            "  const projectApplications=createProjectApplications({db,env,courses,progressFor,graduationSummary,owner,limit,profile:email=>{try{return env.DB.sqlite.prepare('SELECT display_name AS name,major,grade,bio FROM newbie_profiles WHERE lower(email)=?').get(email)||{};}catch{return {};}}});\n"
+          ]
+        },
+        {
+          "start": 226,
+          "end": 227,
+          "lines": [
+            "    if (!(url.pathname===APPLICATION_DECISION_PATH||url.pathname==='/learning'||url.pathname.startsWith('/learning/')||url.pathname.startsWith('/api/learning/'))) return null;\n"
+          ]
+        },
+        {
+          "start": 229,
+          "end": 229,
+          "lines": [
+            "      if(url.pathname===APPLICATION_DECISION_PATH)return json(await projectApplications.handleDecision(request));\n"
+          ]
+        },
+        {
+          "start": 234,
+          "end": 234,
+          "lines": [
+            "      if(route==='project-application')return json(await projectApplications.handle(request));\n"
+          ]
+        },
+        {
+          "start": 295,
+          "end": 295,
+          "lines": [
+            "        if(projectApplicationIntent(question)){\n",
+            "          const email=await owner(request);\n",
+            "          limit(email,'project-guidance',30);\n",
+            "          db.prepare('INSERT INTO learning_messages(id,email,course_id,kind,body,answer,created_at) VALUES(?,?,?,?,?,?,?)').run(randomUUID(),email,p.courseId,'project_interest',question,PROJECT_APPLICATION_GUIDANCE,Date.now());\n",
+            "          return json({answer:PROJECT_APPLICATION_GUIDANCE,courseId:p.courseId,projectApplication:true});\n",
+            "        }\n"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "chat-cloudflare/public/learning/app.js",
+      "beforeSha256": "122003078525db2e7f406fde1cd0498bc3f3b8700db95992782d683ccd899719",
+      "afterSha256": "cab8028688af2f7181f0da0601fa70788532ecdb90cc508d701aef44ba79ff34",
+      "edits": [
+        {
+          "start": 0,
+          "end": 0,
+          "lines": [
+            "import {createProjectApplicationUI} from './project-application.mjs';\n"
+          ]
+        },
+        {
+          "start": 198,
+          "end": 199,
+          "lines": [
+            "function clearLearningAccount(){projectApplicationUI?.reset();\n"
+          ]
+        },
+        {
+          "start": 439,
+          "end": 440,
+          "lines": [
+            "async function refresh(){const requestCourse=courseId,requestAuth=authGeneration;try{const data=await api('state?courseId='+encodeURIComponent(requestCourse));if(requestCourse!==courseId||requestAuth!==authGeneration)return;const previousKey=localKey;if(email!==data.email)$('review-profile')?.remove();email=data.email;applyCourseProgress(data.progress);projectApplicationUI?.ready();void graduationController?.refresh();void updateProfile();localKey=keyFor();cloud=data.draft;revision=cloud?.revision||0;submissions=data.submissions;if(previousKey!==localKey){$('conversation').replaceChildren(element('div','你好！你现在可以询问'+curriculum.find(c=>c.id===courseId).title+'的实验问题。','chat-message assistant'));gitState=null;const mine=draftFor();if(mine)applyDraft(mine);else if(cloud&&cloud.payload.courseId===courseId)applyDraft(cloud.payload);else applyDraft({});}$('account').textContent='已登录 · '+email+'。提交作业前，请按新手村要求完成协议确认。';renderHistory();}catch(error){if(requestCourse!==courseId||requestAuth!==authGeneration)return;if(error.status===401){if(email){saveLocal();authGeneration++;clearLearningAccount();}else void updateProfile();} $('account').replaceChildren(element('span',error.status===401?'无需登录即可阅读课程、运行浏览器内练习；服务器实验、AI 答疑和作业提交需要登录。':error.message));const link=element('button','登录后提问或查看点评','secondary');link.type='button';link.onclick=showLogin;$('account').append(element('br'),link);renderHistory();}}\n"
+          ]
+        },
+        {
+          "start": 459,
+          "end": 459,
+          "lines": [
+            "const projectApplicationUI=createProjectApplicationUI({identity:()=>({email,authGeneration}),onLogin:showLogin,onProgress:refresh,workCourses:()=>advancedTracks.flatMap(track=>track.courses).filter(c=>c.requiredProject||c.optional||c.parentProject||c.id==='capstone-mower'),onCourse:id=>{const track=advancedTracks.find(t=>t.courses.some(c=>c.id===id||(c.activities||[]).some(a=>a.id===id)));if(track)selectAdvanced(track.id,id);else{chooseCourse(id);tab('lab');}},onReceipt:()=>chatMessage('项目报名已送达 OA，请等待马淦老师审核。','assistant')});\n"
+          ]
+        },
+        {
+          "start": 467,
+          "end": 468,
+          "lines": [
+            "    if(courseId===id&&localKey===requestKey){chatMessage(result.answer,'assistant');if(result.projectApplication)void projectApplicationUI.open();$('review-status').textContent='回答已显示在这里。提交作业后的点评可在本页的“作业点评与修改记录”中找到。';}\n"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "aliyun/chat-server.mjs",
+      "beforeSha256": "6599e45d14b0552704dfb8a2c36311e95638afb5d693e28dd3fd178dc6d1ca1c",
+      "afterSha256": "3c50452f49e79d5ffee3b8c2fc1834634f2b134274ba336d734fc4cdf6deae69",
+      "edits": [
+        {
+          "start": 181,
+          "end": 182,
+          "lines": [
+            "    if (learningPath === '/learning' || learningPath.startsWith('/learning/') || learningPath.startsWith('/api/learning/') || learningPath === '/api/internal/project-application-decision') {\n"
+          ]
+        }
+      ]
+    }
+  ],
+  "newFiles": [
+    "lib/project-application.mjs",
+    "aliyun/learning/project-application.mjs",
+    "chat-cloudflare/public/learning/project-application.mjs",
+    "chat-cloudflare/public/learning/project-application.css"
+  ]
+}

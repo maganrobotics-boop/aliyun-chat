@@ -1,0 +1,435 @@
+{
+  "version": "course-project-selections-20261011-v2",
+  "baseline": "project-applications-20261011-v1",
+  "edits": [
+    {
+      "path": "lib/project-application.mjs",
+      "beforeSha256": "182007f1a20a1a7890d55e5a433c07899c2e084fba5eb7ef02c5d8bfb7072297",
+      "afterSha256": "12cf426db6a30ff4f75c1b8ee20f2860d8cc138c05d6e1f2d0abb9fe48d1da3f",
+      "edits": [
+        {
+          "start": 0,
+          "end": 0,
+          "lines": [
+            "import { industrialProjects } from './project-catalogue.mjs';\n"
+          ]
+        },
+        {
+          "start": 55,
+          "end": 56,
+          "lines": [
+            "export const PROJECT_APPLICATION_GUIDANCE = '参与实验室项目，请先查看官网现有的三个工业项目：'+industrialProjects.map(p=>`${p.title}（${p.url}）`).join('；')+'。请提供姓名、学校/专业/年级、课程成绩、个人介绍、技能与项目经历、项目意向和每周可投入时间。须先通过新手村最后一关；平台自动附上真实章节进度、作业记录、结业结果和助教点评。核对后提交给马淦老师，进入 OA 待处理。课程项目每学期只能选一个，选定后立即开放章节并通知 OA，无需等待报名审批。';\n"
+          ]
+        },
+        {
+          "start": 96,
+          "end": 98,
+          "lines": [
+            "export function applicationContent(fields, snapshot, { selection, labProjectId } = {}) {\n",
+            "  const project = industrialProjects.find(p => p.id === labProjectId);\n",
+            "  const prefix = selection ? `课程项目选题：${selection.semesterLabel}；选定后已开放对应章节，无需等待审批。\\n\\n` : project ? `实验室项目：${project.title}\\n官网介绍：${project.url}\\n\\n` : '';\n",
+            "  return prefix + [['姓名', fields.name], ['学校/专业/年级', fields.school], ['学生提供的课程成绩', fields.academicResults], ['个人介绍', fields.introduction], ['技能与项目经历', fields.experience], ['意向项目', fields.project], ['每周可投入时间', fields.availability], ['平台学习记录', learningSummary(snapshot)], ['记录时间', snapshot.capturedAt], ['成绩说明', '平台作业尚无统一数值评分；已提交、助教点评和结业通过分别记录。学生自述成绩及附件待老师核查。']].map(([label, value]) => `${label}：${value}`).join('\\n\\n');\n"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "aliyun/learning/project-application.mjs",
+      "beforeSha256": "d8edf0e4ab328918715ca4e1486f7e94bd880252e85f76d280a4445e8da9c718",
+      "afterSha256": "a2cf03860dc79939c284d8ebd8145982d60183b81f989a3d5cbdc94db98c6fce",
+      "edits": [
+        {
+          "start": 0,
+          "end": 0,
+          "lines": [
+            "import { industrialProjects, projectCourseIds } from '../../lib/project-catalogue.mjs';\n"
+          ]
+        },
+        {
+          "start": 15,
+          "end": 16,
+          "lines": [
+            "  return { eligibility:{canApply:graduation.status==='passed',requiredCourseId:'graduation',requiredCourseTitle:catalogue.find(c=>c.id==='graduation')?.title||'新手村最后一关',reason:graduation.status==='passed'?'已通过新手村最后一关':'请先完成并通过新手村最后一关，再申请参与项目。'}, catalogue:courses.map(c=>({id:c.id,title:c.title,openWithoutApplication:false,requiresProjectSelection:Boolean(c.requiredProject||c.optional||c.parentProject||c.id==='capstone-mower'||courses.find(parent=>parent.id===c.parentId)?.requiredProject),...(c.parentId?{parentId:c.parentId}:{})})), version: APPLICATION_VERSION, source: 'learning_database', capturedAt: new Date(now).toISOString(), totalChapters: catalogue.length, submittedChapters: chapterStats.size, submissionCount: totals.submissions, reviewedCount: totals.reviewed || 0, currentChapter: activity ? chapter(activity.course_id) : null, nextChapter: chapter(progress.currentCourseId), chapters: [...chapterStats.values()].sort((a, b) => a.index - b.index), exemptedChapters: (progress.exemptedCourseIds || []).map(chapter).filter(Boolean), graduation: {...graduation,checks}, reviews, numericGrade: null, gradeNote: '本平台尚无统一数值评分；已提交和助教点评不等于教师验收。' };\n"
+          ]
+        },
+        {
+          "start": 22,
+          "end": 24,
+          "lines": [
+            "  const snapshot = (email, now = Date.now()) => learningApplicationSnapshot({ db, courses, progressFor, graduationSummary, email, now });\n",
+            "  async function bridge(payload, timeoutMs = 45000) {\n"
+          ]
+        },
+        {
+          "start": 28,
+          "end": 29,
+          "lines": [
+            "    try { response = await env.OA_SERVICE.fetch(new Request(`https://oa.omindos.cn${APPLICATION_PATH}`, { method: 'POST', headers: await signApplication(body, env.PUBLIC_LAB_AI_SERVICE_TOKEN), body, redirect: 'manual', signal: AbortSignal.timeout(timeoutMs) })); }\n"
+          ]
+        },
+        {
+          "start": 44,
+          "end": 45,
+          "lines": [
+            "      return { email, profile: profile(email), learning, records: records.filter(r => r.kind !== 'course_project_selection'), synchronized, replies, reviewerName: '马淦' };\n"
+          ]
+        },
+        {
+          "start": 50,
+          "end": 51,
+          "lines": [
+            "    if (!exactKeys(data, ['fields', 'files', 'confirmed', 'idempotencyKey', 'resubmitId', 'expectedEmail', 'labProjectId']) || data.confirmed !== true) applicationError('请核对资料并确认提交给马淦。');\n"
+          ]
+        },
+        {
+          "start": 53,
+          "end": 53,
+          "lines": [
+            "    const labProject = industrialProjects.find(p => p.id === data.labProjectId);\n",
+            "    if (!labProject || fields.project !== labProject.title) applicationError('请从官网三个工业项目中选择意向项目。');\n"
+          ]
+        },
+        {
+          "start": 55,
+          "end": 56,
+          "lines": [
+            "    const hash = await applicationHash(JSON.stringify({ fields, files: data.files || [], resubmitId, labProjectId: labProject.id }));\n"
+          ]
+        },
+        {
+          "start": 70,
+          "end": 71,
+          "lines": [
+            "      const result = await bridge({ operation: 'submit', kind: 'lab_application', labProjectId: labProject.id, email, applicationId: old.application_id, submissionKey: idem, fields, files: data.files || [], learning, content: applicationContent(fields, learning, { labProjectId: labProject.id }), confirmed: true });\n"
+          ]
+        },
+        {
+          "start": 82,
+          "end": 83,
+          "lines": [
+            "    if(!db.prepare('SELECT 1 FROM learning_project_application_attempts WHERE email=? AND application_id=?').get(email,id) && !db.prepare('SELECT 1 FROM learning_course_project_selections WHERE email=? AND application_id=?').get(email,id))applicationError('未找到这位学生的项目申请。',404);\n"
+          ]
+        },
+        {
+          "start": 84,
+          "end": 85,
+          "lines": [
+            "    const courseIds=[...new Set(data.courseIds.flatMap(id=>[id,...projectCourseIds(courses,id)]))];\n"
+          ]
+        },
+        {
+          "start": 98,
+          "end": 99,
+          "lines": [
+            "  return { handle, snapshot, handleDecision, bridge }; \n"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "aliyun/learning/service-core.mjs",
+      "beforeSha256": "ad3556e75854c3b0808e04796647abed45b705921f4d4c5a933ba3e0cf9d8918",
+      "afterSha256": "ccada8934414e098d3833ec46b4d2310481c1ce2126b88e4718f06df10c2a1bc",
+      "edits": [
+        {
+          "start": 4,
+          "end": 4,
+          "lines": [
+            "import { createCourseProjectSelections } from './course-project-selections.mjs';\n"
+          ]
+        },
+        {
+          "start": 67,
+          "end": 67,
+          "lines": [
+            "  files.add('project-catalogue.mjs');\n"
+          ]
+        },
+        {
+          "start": 80,
+          "end": 81,
+          "lines": [
+            "    if (!email) { const p=courseProgression.calculate();return {...p,availableCourseIds:p.availableCourseIds.filter(id=>!projectWorkIds.has(id)),projectWorkCourseIds:[...projectWorkIds],submissionCount:0}; }\n"
+          ]
+        },
+        {
+          "start": 87,
+          "end": 88,
+          "lines": [
+            "    return {...progress,availableCourseIds:[...new Set([...progress.availableCourseIds.filter(id=>!projectWorkIds.has(id)),...courseProjectSelections.chosenCourseIds(email),...granted])],grantedCourseIds:granted,projectWorkCourseIds:[...projectWorkIds],...(access?.scope==='all_courses'?{availableCourseIds:[...courseIds],accessMode:'all_courses'}:{}),submissionCount:rows.length};\n"
+          ]
+        },
+        {
+          "start": 91,
+          "end": 91,
+          "lines": [
+            "    if(!canOpenCourse(progress,courseId)&&projectWorkIds.has(courseId))fail('请在“课程项目介绍与选课”中选择本学期的一个项目，选定后立即开放对应章节。',403);\n"
+          ]
+        },
+        {
+          "start": 230,
+          "end": 231,
+          "lines": [
+            "  const projectProfile=email=>{try{return env.DB.sqlite.prepare('SELECT display_name AS name,major,grade,bio FROM newbie_profiles WHERE lower(email)=?').get(email)||{};}catch{return {};}};\n",
+            "  const projectApplications=createProjectApplications({db,env,courses,progressFor,graduationSummary,owner,limit,profile:projectProfile});\n",
+            "  const courseProjectSelections=createCourseProjectSelections({db,env,courses,owner,limit,profile:projectProfile,snapshot:projectApplications.snapshot,bridge:projectApplications.bridge});\n"
+          ]
+        },
+        {
+          "start": 242,
+          "end": 242,
+          "lines": [
+            "      if(route==='course-project-selection')return json(await courseProjectSelections.handle(request));\n"
+          ]
+        },
+        {
+          "start": 444,
+          "end": 445,
+          "lines": [
+            "  return {handle,people:createLearningPeople({db,courses,progressFor,graduationSummary,canonicalId:courseProgression.canonicalId,stages:[{id:'foundation',title:'新手村',courses:basicCourses},...courseStages]}),close:()=>{courseProjectSelections.close();db.close();}};\n"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "chat-cloudflare/public/learning/app.js",
+      "beforeSha256": "cab8028688af2f7181f0da0601fa70788532ecdb90cc508d701aef44ba79ff34",
+      "afterSha256": "b4c3a23b192e2e82eb8efa7edd7c170094422ef981b7be794ed9c875a2f0773a",
+      "edits": [
+        {
+          "start": 53,
+          "end": 54,
+          "lines": [
+            "  button.title=available?'':courseProgress.projectWorkCourseIds?.includes(id)?'在“课程项目介绍与选课”中选定本学期项目后开放。':courseProgress.foundationComplete?'完成并提交当前节后开放。':'完成新手村或通过新手直通任务后，按顺序开放。';\n"
+          ]
+        },
+        {
+          "start": 83,
+          "end": 83,
+          "lines": [
+            "  if(courseProgress.projectWorkCourseIds?.includes(id)){void projectApplicationUI.openCourseProjects();return false;}\n"
+          ]
+        },
+        {
+          "start": 460,
+          "end": 461,
+          "lines": [
+            "const projectApplicationUI=createProjectApplicationUI({identity:()=>({email,authGeneration}),onLogin:showLogin,onProgress:refresh,workCourses:()=>advancedTracks.flatMap(track=>track.courses).filter(c=>c.requiredProject||c.optional||c.parentProject||c.id==='capstone-mower'),onCourse:id=>{const track=advancedTracks.find(t=>t.courses.some(c=>c.id===id||(c.activities||[]).some(a=>a.id===id)));if(track)selectAdvanced(track.id,track.courses.find(c=>c.id===id||(c.activities||[]).some(a=>a.id===id)).id);else{chooseCourse(id);tab('lab');}},onReceipt:receipt=>chatMessage(receipt.kind==='course_project_selection'?(receipt.oaDelivered?'课程选题已保存，对应章节已开放，选题已送达马淦老师的 OA 待处理。':'课程选题已保存，对应章节已开放；OA 待同步，系统会自动重试。'):'实验室报名已送达 OA，请等待马淦老师审核。','assistant')});\n"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "chat-cloudflare/public/learning/project-application.mjs",
+      "beforeSha256": "43aa000c2ffbe9129e168ac0df6c031e1eadaa232986d7dd6093c83042e3fb19",
+      "afterSha256": "86b9da0b66bca0aa11eae9af0b9be25d03b2e295a12fa808c96508212bf9e00b",
+      "edits": [
+        {
+          "start": 0,
+          "end": 0,
+          "lines": [
+            "import { academicSemester, courseProjects, industrialProjects } from './project-catalogue.mjs';\n"
+          ]
+        },
+        {
+          "start": 9,
+          "end": 11,
+          "lines": [
+            "async function api(method = 'GET', body, endpoint = 'project-application') {\n",
+            "  const response = await fetch('/api/learning/'+endpoint, { method, credentials: 'same-origin', cache: 'no-store', headers: body ? { 'content-type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined });\n"
+          ]
+        },
+        {
+          "start": 37,
+          "end": 38,
+          "lines": [
+            "  const entry = el('button', '参与实验室项目', 'secondary'); entry.type = 'button'; entry.id = 'project-application-entry'; entry.onclick = () => void open();\n"
+          ]
+        },
+        {
+          "start": 39,
+          "end": 40,
+          "lines": [
+            "  const workEntry = el('button', '课程项目介绍与选课', 'secondary'); workEntry.type = 'button'; workEntry.id = 'project-work-courses-entry';\n"
+          ]
+        },
+        {
+          "start": 41,
+          "end": 48,
+          "lines": [
+            "  workEntry.onclick = () => void openCourseProjects();\n",
+            "  let owner = '', pending = null, pendingSelection = null, submitting = false, resubmitId = null, returnFocus = null, generation = 0;\n"
+          ]
+        },
+        {
+          "start": 52,
+          "end": 53,
+          "lines": [
+            "  function reset() { generation++; owner = ''; pending = null; pendingSelection = null; resubmitId = null; submitting = false; drafts.clear();fileDrafts.clear(); dialog.close(); content.replaceChildren(); status.textContent = ''; }\n",
+            "  function industrialView() {\n",
+            "    const section = el('section', undefined, 'industrial-project-introductions');\n",
+            "    section.append(el('h3', '先了解官网的三个工业项目'), el('p', '实验室报名与课程选题分别处理。请阅读项目介绍，选择意向，再提供成绩、个人介绍和可投入时间。'));\n",
+            "    for (const project of industrialProjects) {\n",
+            "      const card = el('article', undefined, 'project-introduction-card'), link = el('a', '查看官网项目介绍');\n",
+            "      link.href = project.url; link.target = '_blank'; link.rel = 'noopener noreferrer';\n",
+            "      card.append(el('h4', project.title), el('small', project.stage), el('p', project.description), link);\n",
+            "      const choose = el('button', '报名意向：'+project.title, 'secondary'); choose.type = 'button';\n",
+            "      choose.onclick = () => { if (submitting) return; const account = identity(); if (!account.email) { dismiss(); onLogin(); return; } selectedLabId = project.id; drafts.set(account.email.toLowerCase(), { ...(drafts.get(account.email.toLowerCase()) || {}), project: project.title }); pending = null; void open(); };\n",
+            "      card.append(choose); section.append(card);\n",
+            "    }\n",
+            "    return section;\n",
+            "  }\n",
+            "  let selectedLabId = '';\n",
+            "  async function openCourseProjects() {\n",
+            "    if (submitting) return;\n",
+            "    const token = ++generation, account = identity(); owner = account.email?.toLowerCase() || '';\n",
+            "    title.textContent = '课程项目介绍与选课'; status.textContent = '';\n",
+            "    if (!dialog.open) { returnFocus = document.activeElement; dialog.showModal(); }\n",
+            "    content.replaceChildren(el('p', '正在读取本学期选题…'));\n",
+            "    let data = { semester: academicSemester(), selected: null };\n",
+            "    try { if (owner) data = await api('GET', undefined, 'course-project-selection'); }\n",
+            "    catch(error) { if (token !== generation) return; content.replaceChildren(el('p', error.message)); if (error.status === 401) { dismiss(); onLogin(); } return; }\n",
+            "    if (token !== generation || (owner && !current()) || (data.email && data.email !== owner)) return;\n",
+            "    const introduction = el('section');\n",
+            "    introduction.append(el('h3', data.semester.label), el('p', '每位学生每学期只能选择一个课程项目。选定后立即开放对应章节，并提交给马淦老师的 OA 待处理，无需等待审批。新手村的项目一是共同通关任务，不占本学期选题名额。'));\n",
+            "    if (data.selected) introduction.append(el('p', `本学期已选：${data.selected.courseTitle}。${data.selected.oaDelivered ? '已送达 OA，'+(data.synchronized?'当前状态：':'上次回执：')+data.selected.oaStatus : '章节已开放，OA 待同步，系统会自动重试。'}`));\n",
+            "    for (const reply of data.replies || []) { const card=el('article',undefined,'project-introduction-card');card.append(el('h4','马淦老师回复'),el('p',reply.reply));for(const [index,courseId] of reply.courseIds.entries()){const button=el('button','进入老师开通的课程：'+(reply.courses?.[index]||courseId),'secondary');button.type='button';button.onclick=()=>{dismiss();onCourse(courseId);};card.append(button);}introduction.append(card);}\n",
+            "    content.replaceChildren(introduction);\n",
+            "    for (const project of courseProjects) {\n",
+            "      const card = el('article', undefined, 'project-introduction-card'); card.dataset.project = project.id;\n",
+            "      card.append(el('h4', project.title), el('p', project.description), el('p', '项目产出：'+project.outcomes));\n",
+            "      const chosen = data.selected?.courseId === project.id, button = el('button', chosen ? '进入已选项目章节' : data.selected ? '本学期已选择其他项目' : '选择本学期项目', 'secondary');\n",
+            "      button.type = 'button'; button.disabled = Boolean(data.selected && !chosen);\n",
+            "      button.onclick = () => {\n",
+            "        if (submitting) return;\n",
+            "        if (!owner) { dismiss(); onLogin(); return; }\n",
+            "        if (chosen) { dismiss(); onCourse(project.id); return; }\n",
+            "        content.replaceChildren(el('h3', project.title), el('p', project.description), el('p', `确认选择后，${data.semester.label}的选题名额将锁定为此项目，对应章节立即开放，选题与平台学习记录会提交给马淦老师。`));\n",
+            "        const confirm = el('button', '确认选题并打开章节'), back = el('button', '返回项目介绍', 'secondary'); confirm.type = back.type = 'button';\n",
+            "        back.onclick = () => void openCourseProjects(); content.append(confirm, back);\n",
+            "        confirm.onclick = async () => {\n",
+            "          if (submitting || !current() || token !== generation) return;\n",
+            "          if (!pendingSelection || pendingSelection.courseId !== project.id || pendingSelection.expectedSemesterId !== data.semester.id) pendingSelection = { courseId: project.id, idempotencyKey: crypto.randomUUID(), expectedEmail: owner, expectedSemesterId: data.semester.id, confirmed: true };\n",
+            "          submitting = true; confirm.disabled = back.disabled = close.disabled = true; status.textContent = '正在保存本学期选题并开放章节…';\n",
+            "          try {\n",
+            "            const result = await api('POST', pendingSelection, 'course-project-selection');\n",
+            "            if (!current() || token !== generation || result.email !== owner) return;\n",
+            "            pendingSelection = null; await onProgress?.();\n",
+            "            if (!current() || token !== generation) return;\n",
+            "            submitting = false; dismiss(); onCourse(result.selected.courseId);\n",
+            "            onReceipt?.({ ...result.selected, kind: 'course_project_selection' });\n",
+            "          } catch(error) { if (current() && token === generation) status.textContent = error.message; }\n",
+            "          finally { submitting = false; confirm.disabled = back.disabled = close.disabled = false; }\n",
+            "        };\n",
+            "      };\n",
+            "      card.append(button); content.append(card);\n",
+            "    }\n",
+            "  }\n"
+          ]
+        },
+        {
+          "start": 71,
+          "end": 72,
+          "lines": [
+            "    title.textContent = '参与实验室项目';\n"
+          ]
+        },
+        {
+          "start": 73,
+          "end": 74,
+          "lines": [
+            "    if (!account.email) { title.textContent = '参与实验室项目'; ++generation; owner = ''; status.textContent = ''; content.replaceChildren(industrialView()); const login = el('button','登录后填写报名资料'); login.type='button'; login.onclick=()=>{dismiss();onLogin();};content.append(login); if(!dialog.open){returnFocus=document.activeElement;dialog.showModal();} return; }\n"
+          ]
+        },
+        {
+          "start": 85,
+          "end": 86,
+          "lines": [
+            "        const gate = el('section'); gate.append(snapshotView(data.learning), el('p', '参与实验室项目须先完成并通过新手村最后一关。课程项目按学期选题后即可学习，无需报名审批。'));\n"
+          ]
+        },
+        {
+          "start": 87,
+          "end": 88,
+          "lines": [
+            "        content.replaceChildren(industrialView(), gate, replies, historyView(data.records, data.synchronized)); return;\n"
+          ]
+        },
+        {
+          "start": 89,
+          "end": 90,
+          "lines": [
+            "      const form = el('form'), fields = new Map(), seed = { name: data.profile.name || '', school: [data.profile.major, data.profile.grade].filter(Boolean).join('，'), introduction: data.profile.bio || '', ...(drafts.get(owner) || {}) };\n"
+          ]
+        },
+        {
+          "start": 93,
+          "end": 95,
+          "lines": [
+            "        const group = el('label', undefined, 'project-application-field'), input = el(key === 'project' ? 'select' : ['academicResults', 'introduction', 'experience'].includes(key) ? 'textarea' : 'input');\n",
+            "        if (key === 'project') { const placeholderOption=el('option','请选择官网工业项目');placeholderOption.value='';input.append(placeholderOption);for(const project of industrialProjects){const option=el('option',project.title);option.value=project.title;input.append(option);} }\n",
+            "        input.name = key; input.required = true; input.maxLength = maxLength; input.placeholder = placeholder; input.value = key === 'project' ? seed.project || industrialProjects.find(p=>p.id===selectedLabId)?.title || '' : seed[key] || '';\n"
+          ]
+        },
+        {
+          "start": 97,
+          "end": 98,
+          "lines": [
+            "        input.addEventListener(key === 'project' ? 'change' : 'input', () => { drafts.set(owner, Object.fromEntries([...fields].map(([name, node]) => [name, node.value]))); pending = null; });\n"
+          ]
+        },
+        {
+          "start": 114,
+          "end": 115,
+          "lines": [
+            "          if (!pending) { const files = []; for (const file of selected) files.push({ name: file.name, base64: bytesToBase64(new Uint8Array(await file.arrayBuffer())) }); pending = { fields: values, labProjectId: industrialProjects.find(p=>p.title===values.project)?.id, files, confirmed: checkbox.checked, idempotencyKey: crypto.randomUUID(), expectedEmail: owner, ...(resubmitId ? { resubmitId } : {}) }; }\n"
+          ]
+        },
+        {
+          "start": 119,
+          "end": 120,
+          "lines": [
+            "          content.replaceChildren(el('h3', '申请已送达 OA'), el('p', `已提交给${receipt.reviewerName}，当前状态：${receipt.status}。报名编号：${receipt.id.slice(0, 8)}。`), el('p', '老师审核后，再打开“参与实验室项目”可查看处理结果或补充要求。'));\n"
+          ]
+        },
+        {
+          "start": 124,
+          "end": 125,
+          "lines": [
+            "      content.replaceChildren(industrialView(), form, replies, historyView(data.records, data.synchronized));\n"
+          ]
+        },
+        {
+          "start": 127,
+          "end": 129,
+          "lines": [
+            "  addEventListener('hashchange', () => { if (location.hash === '#project-application') void open(); else if (location.hash === '#course-projects') void openCourseProjects(); });\n",
+            "  return { open, openCourseProjects, reset, ready() { if (location.hash === '#project-application' && !dialog.open) void open(); else if (location.hash === '#course-projects' && (!dialog.open || (!owner && identity().email))) void openCourseProjects(); } };\n"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "chat-cloudflare/public/learning/project-application.css",
+      "beforeSha256": "9a421b4ac36ff19b62b7514a7c48f1b71915888808a8bb6bb8e9c660f15dd3f7",
+      "afterSha256": "94c78a4fdb17294504a35ae85dcb4cd2d2bdf21d2fccdc638c3983474368f814",
+      "edits": [
+        {
+          "start": 5,
+          "end": 5,
+          "lines": [
+            "\n",
+            ".project-introduction-card{border:1px solid #dce6f2;border-radius:12px;padding:16px;margin:14px 0;overflow-wrap:anywhere}.project-introduction-card h4{margin:0 0 8px;font-size:17px}.project-introduction-card a{display:inline-block;color:#285da3;margin:0 12px 12px 0;min-height:30px}.project-introduction-card button{display:block;width:100%;text-align:left;margin-top:10px}.project-introduction-card button:disabled{cursor:not-allowed}.project-application-field select{box-sizing:border-box;width:100%;font:inherit;border:1px solid #c9d4e2;border-radius:8px;padding:10px 12px;background:#fff;color:#182538}.industrial-project-introductions{margin-bottom:24px}.project-application-dialog select:focus-visible{outline:3px solid #70a1eb;outline-offset:2px}\n",
+            "\n",
+            ".project-application-dialog header{position:sticky;top:-24px;z-index:2;background:#fff;padding:12px 0;border-bottom:1px solid #dce6f2}@media(max-width:480px){.project-application-dialog header{top:-18px}}\n"
+          ]
+        }
+      ]
+    }
+  ],
+  "newFiles": [
+    "lib/project-catalogue.mjs",
+    "chat-cloudflare/public/learning/project-catalogue.mjs",
+    "aliyun/learning/course-project-selections.mjs"
+  ]
+}

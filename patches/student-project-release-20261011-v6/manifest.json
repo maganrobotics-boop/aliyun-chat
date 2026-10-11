@@ -1,0 +1,10 @@
+{
+  "baseline": "/opt/omindos-deploy/releases/chat-course-practice-menu-20261011-v5",
+  "files": [
+    {
+      "path": "aliyun/learning/course-project-selections.mjs",
+      "before": "5d2046ad334a4937b2b2f73d2d41392804555b7650e479c76334b3454b2f5eb5",
+      "after": "6151550c11e211e95bba0731eb8a85b8ded5be2d32ab261c5ae8191ed701d4c2"
+    }
+  ]
+}

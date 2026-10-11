@@ -1,0 +1,195 @@
+{
+  "version": "course-project-menu-20261011-v4",
+  "baseline": "course-identity-20261011-v3",
+  "edits": [
+    {
+      "path": "aliyun/learning/course-project-selections.mjs",
+      "beforeSha256": "5978a3e5dea2b4ce8e5df016c01ecbe7d8db23b21c2d17b5ac393ea4247aecab",
+      "afterSha256": "5d2046ad334a4937b2b2f73d2d41392804555b7650e479c76334b3454b2f5eb5",
+      "edits": [
+        {
+          "start": 7,
+          "end": 8,
+          "lines": [
+            "    learning_json TEXT NOT NULL,fields_json TEXT NOT NULL,student_number TEXT NOT NULL DEFAULT '',identity_update INTEGER NOT NULL DEFAULT 0,state TEXT NOT NULL DEFAULT 'pending',\n"
+          ]
+        },
+        {
+          "start": 11,
+          "end": 11,
+          "lines": [
+            "  if (!db.prepare('PRAGMA table_info(learning_course_project_selections)').all().some(column=>column.name==='identity_update')) db.exec('ALTER TABLE learning_course_project_selections ADD COLUMN identity_update INTEGER NOT NULL DEFAULT 0');\n"
+          ]
+        },
+        {
+          "start": 13,
+          "end": 14,
+          "lines": [
+            "  const publicRecord = row => row ? { courseId: row.course_id, name: JSON.parse(row.fields_json).name, studentNumber: row.student_number, courseTitle: courseProjects.find(c => c.id === row.course_id)?.title || row.course_id, semester: { id: row.semester_id, label: row.semester_label }, applicationId: row.application_id, selectedAt: row.created_at, openedCourseIds: projectCourseIds(courses, row.course_id), oaDelivered: row.state === 'delivered', oaStatus: row.receipt ? JSON.parse(row.receipt).status : '待同步', oaError: row.state !== 'delivered' ? row.error || '' : '', reviewerName: '马淦' } : null;\n"
+          ]
+        },
+        {
+          "start": 20,
+          "end": 21,
+          "lines": [
+            "      const result = await bridge({ operation: 'submit', kind: 'course_project_selection', ...(row.identity_update ? { updateIdentity: true } : {}), selection, email: row.email, applicationId: row.application_id, submissionKey: row.idem, fields, files: [], learning, content: applicationContent(fields, learning, { selection }), confirmed: true }, 8000);\n"
+          ]
+        },
+        {
+          "start": 22,
+          "end": 23,
+          "lines": [
+            "      db.prepare(\"UPDATE learning_course_project_selections SET state='delivered',receipt=?,error=NULL WHERE application_id=? AND idem=?\").run(JSON.stringify(result.application), row.application_id, row.idem);\n"
+          ]
+        },
+        {
+          "start": 24,
+          "end": 25,
+          "lines": [
+            "      db.prepare(\"UPDATE learning_course_project_selections SET error=?,next_retry_at=? WHERE application_id=? AND idem=? AND state!='delivered'\").run(error.status ? error.message : 'OA 待同步', clock() + 60000, row.application_id, row.idem);\n"
+          ]
+        },
+        {
+          "start": 53,
+          "end": 54,
+          "lines": [
+            "    if (!['POST','PATCH'].includes(request.method)) applicationError('不支持的方法。', 405);\n"
+          ]
+        },
+        {
+          "start": 57,
+          "end": 57,
+          "lines": [
+            "    if (request.method === 'PATCH') {\n",
+            "      if (!exactKeys(data,['applicationId','idempotencyKey','expectedEmail','name','studentNumber','confirmed']) || data.confirmed !== true) applicationError('请核对姓名、学号后确认同步。');\n",
+            "      if (applicationEmail(data.expectedEmail) !== email) applicationError('登录账号已变化，请重新打开选课入口。',409);\n",
+            "      const applicationIdValue=applicationId(data.applicationId),idem=applicationId(data.idempotencyKey),name=applicationText(data.name,60,'姓名',1),studentNumber=applicationText(data.studentNumber,40,'学号',2);\n",
+            "      if(!/^[A-Za-z0-9._-]{2,40}$/u.test(studentNumber))applicationError('请填写本人学号。');\n",
+            "      let row=db.prepare('SELECT * FROM learning_course_project_selections WHERE email=? AND application_id=?').get(email,applicationIdValue);\n",
+            "      if(!row)applicationError('未找到自己的课程选题。',404);\n",
+            "      const fields=JSON.parse(row.fields_json);\n",
+            "      if(row.student_number && (row.student_number!==studentNumber || fields.name!==name))applicationError('姓名、学号已同步，请联系马淦老师更正。',409);\n",
+            "      if(!row.student_number){\n",
+            "        if(row.state==='delivered'){\n",
+            "          const status=(await bridge({operation:'list',email},8000)).records?.find(r=>r.id===row.application_id)?.status;\n",
+            "          if(status!=='待审核')applicationError('这份选题已处理，请联系马淦老师补充姓名、学号。',409);\n",
+            "        }\n",
+            "        fields.name=name;\n",
+            "        db.exec('BEGIN IMMEDIATE');\n",
+            "        try{\n",
+            "          const changed=db.prepare(\"UPDATE learning_course_project_selections SET fields_json=?,student_number=?,identity_update=1,idem=?,state='pending',error=NULL,next_retry_at=0 WHERE email=? AND application_id=? AND student_number=''\").run(JSON.stringify(fields),studentNumber,idem,email,applicationIdValue);\n",
+            "          if(changed.changes!==1)applicationError('选题资料刚刚变化，请刷新查看。',409);\n",
+            "          db.prepare('INSERT INTO learning_student_project_identity VALUES(?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name,student_number=excluded.student_number,updated_at=excluded.updated_at').run(email,name,studentNumber,clock());\n",
+            "          db.exec('COMMIT');\n",
+            "        }catch(error){db.exec('ROLLBACK');throw error;}\n",
+            "        row=db.prepare('SELECT * FROM learning_course_project_selections WHERE application_id=?').get(applicationIdValue);\n",
+            "      }\n",
+            "      await synchronize(row);\n",
+            "      return {email,selected:publicRecord(db.prepare('SELECT * FROM learning_course_project_selections WHERE application_id=?').get(applicationIdValue)),opened:true};\n",
+            "    }\n"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "chat-cloudflare/public/learning/project-application.mjs",
+      "beforeSha256": "6bd8878d209fd48b5c22bbc6ab923655d20edf52dcafb83d46c84ef9c0f77c2b",
+      "afterSha256": "b139dc1abb6929e619e255038570148452dcff0f0fadb5d0a90c56624eaae445",
+      "edits": [
+        {
+          "start": 31,
+          "end": 32,
+          "lines": [
+            "export function createProjectApplicationUI({ identity, onLogin, onReceipt, onProgress, onCourse, onAccountEntry, workCourses }) {\n"
+          ]
+        },
+        {
+          "start": 38,
+          "end": 41,
+          "lines": [
+            "  const entry = el('button'); entry.type = 'button'; entry.id = 'project-application-entry'; entry.setAttribute('role', 'menuitem');\n",
+            "  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg'), path = document.createElementNS('http://www.w3.org/2000/svg', 'path');\n",
+            "  icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true'); path.setAttribute('d', 'M9 3h6M10 3v6l-6 10a1.3 1.3 0 0 0 1.1 2h13.8a1.3 1.3 0 0 0 1.1-2L14 9V3M7 15h10'); icon.append(path);\n",
+            "  entry.append(icon, el('span', '参与实验室科研项目')); entry.onclick = () => { onAccountEntry?.(); void open(); };\n",
+            "  document.querySelector('#account-menu [data-account-panel=\"profile\"]')?.after(entry);\n",
+            "  const links = el('nav', undefined, 'project-course-links'); links.setAttribute('aria-label', '工程实践课程'); document.querySelector('main')?.prepend(links);\n",
+            "  const workEntry = el('button', '工程实践类课程介绍', 'secondary'); workEntry.type = 'button'; workEntry.id = 'project-work-courses-entry';\n"
+          ]
+        },
+        {
+          "start": 66,
+          "end": 67,
+          "lines": [
+            "    title.textContent = '工程实践类课程介绍'; status.textContent = '';\n"
+          ]
+        },
+        {
+          "start": 76,
+          "end": 76,
+          "lines": [
+            "    if (data.selected && !data.selected.studentNumber) {\n",
+            "      const form=el('form'),nameInput=el('input'),numberInput=el('input');\n",
+            "      form.append(el('h4','补齐已选项目的姓名、学号'));\n",
+            "      for(const[label,node,key,value]of [['姓名',nameInput,'name',data.profile?.name||data.selected.name||''],['学号',numberInput,'studentNumber',data.profile?.studentNumber||'']]){\n",
+            "        const group=el('label',undefined,'project-application-field');node.name=key;node.required=true;node.maxLength=key==='name'?60:40;node.value=value;if(key==='studentNumber'){node.minLength=2;node.pattern='[A-Za-z0-9._-]{2,40}';}group.append(el('span',label),node);form.append(group);\n",
+            "      }\n",
+            "      const send=el('button','补齐姓名、学号并同步 OA');send.type='submit';form.append(send);introduction.append(form);\n",
+            "      let identityPending=null;\n",
+            "      form.onsubmit=async event=>{\n",
+            "        event.preventDefault();if(submitting||!current()||token!==generation)return;\n",
+            "        if(!identityPending||identityPending.name!==nameInput.value.trim()||identityPending.studentNumber!==numberInput.value.trim())identityPending={applicationId:data.selected.applicationId,idempotencyKey:crypto.randomUUID(),expectedEmail:owner,name:nameInput.value.trim(),studentNumber:numberInput.value.trim(),confirmed:true};\n",
+            "        submitting=true;send.disabled=nameInput.disabled=numberInput.disabled=close.disabled=true;status.textContent='正在同步姓名、学号到原 OA 待办…';\n",
+            "        try{const result=await api('PATCH',identityPending,'course-project-selection');if(!current()||token!==generation)return;submitting=false;if(result.selected.oaDelivered){await openCourseProjects();status.textContent='姓名、学号已同步给马淦老师。';}else status.textContent=result.selected.oaError||'资料已保存，OA 待同步，系统会自动重试。';}\n",
+            "        catch(error){if(current()&&token===generation)status.textContent=error.message;}\n",
+            "        finally{submitting=false;send.disabled=nameInput.disabled=numberInput.disabled=close.disabled=false;}\n",
+            "      };\n",
+            "    }\n"
+          ]
+        },
+        {
+          "start": 135,
+          "end": 136,
+          "lines": [
+            "    title.textContent = '参与实验室科研项目';\n"
+          ]
+        },
+        {
+          "start": 137,
+          "end": 138,
+          "lines": [
+            "    if (!account.email) { title.textContent = '参与实验室科研项目'; ++generation; owner = ''; status.textContent = ''; content.replaceChildren(industrialView()); const login = el('button','登录后填写报名资料'); login.type='button'; login.onclick=()=>{dismiss();onLogin();};content.append(login); if(!dialog.open){returnFocus=document.activeElement;dialog.showModal();} return; }\n"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "chat-cloudflare/public/learning/app.js",
+      "beforeSha256": "84f6d72d11063398e793a22aed50f3f23b6eae514cc8247ff463962b80bfde67",
+      "afterSha256": "3559a81f5fc579a1a08d7d13a5fa42d0c70bfbff4441e80d887f3b0ecbccb54a",
+      "edits": [
+        {
+          "start": 141,
+          "end": 142,
+          "lines": [
+            "  $('profile-name').textContent='我的';$('profile-avatar').textContent=[...display].slice(0,1).join('').toUpperCase();\n"
+          ]
+        },
+        {
+          "start": 145,
+          "end": 146,
+          "lines": [
+            "  $('profile-entry').setAttribute('aria-label',email?`我的（${display}）`:'我的：登录');\n"
+          ]
+        },
+        {
+          "start": 461,
+          "end": 462,
+          "lines": [
+            "const projectApplicationUI=createProjectApplicationUI({identity:()=>({email,authGeneration}),onLogin:showLogin,onAccountEntry:()=>{closeAccountMenu(true);closeAccountPanel();},onProgress:refresh,workCourses:()=>advancedTracks.flatMap(track=>track.courses).filter(c=>c.requiredProject||c.optional||c.parentProject||c.id==='capstone-mower'),onCourse:id=>{const track=advancedTracks.find(t=>t.courses.some(c=>c.id===id||(c.activities||[]).some(a=>a.id===id)));if(track)selectAdvanced(track.id,track.courses.find(c=>c.id===id||(c.activities||[]).some(a=>a.id===id)).id);else{chooseCourse(id);tab('lab');}},onReceipt:receipt=>chatMessage(receipt.kind==='course_project_selection'?(receipt.oaDelivered?'课程选题已保存，对应章节已开放，姓名、学号和选题已同步至马淦老师的 OA 待处理。':'课程选题已保存，对应章节已开放；OA 待同步，系统会自动重试。'):'实验室报名已送达 OA，请等待马淦老师审核。','assistant')});\n"
+          ]
+        }
+      ]
+    }
+  ],
+  "newFiles": []
+}
