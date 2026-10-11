@@ -29,16 +29,20 @@ function snapshotView(learning) {
   }
   return box;
 }
-export function createProjectApplicationUI({ identity, onLogin, onReceipt, onProgress, onCourse, workCourses }) {
+export function createProjectApplicationUI({ identity, onLogin, onReceipt, onProgress, onCourse, onAccountEntry, workCourses }) {
   const style = el('link'); style.rel = 'stylesheet'; style.href = '/learning/project-application.css'; document.head.append(style);
   const dialog = el('dialog', undefined, 'project-application-dialog'); dialog.setAttribute('aria-labelledby', 'project-application-title');
   const header = el('header'), title = el('h2', '申请参与项目'); title.id = 'project-application-title';
   const close = el('button', '关闭', 'secondary'); close.type = 'button'; header.append(title, close);
   const content = el('div'), status = el('p', '', 'project-application-status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
   dialog.append(header, content, status); document.body.append(dialog);
-  const entry = el('button', '参与实验室项目', 'secondary'); entry.type = 'button'; entry.id = 'project-application-entry'; entry.onclick = () => void open();
-  const links = el('nav', undefined, 'project-course-links'); links.setAttribute('aria-label', '项目课程与报名'); links.append(entry); document.querySelector('main')?.prepend(links);
-  const workEntry = el('button', '课程项目介绍与选课', 'secondary'); workEntry.type = 'button'; workEntry.id = 'project-work-courses-entry';
+  const entry = el('button'); entry.type = 'button'; entry.id = 'project-application-entry'; entry.setAttribute('role', 'menuitem');
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg'), path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true'); path.setAttribute('d', 'M9 3h6M10 3v6l-6 10a1.3 1.3 0 0 0 1.1 2h13.8a1.3 1.3 0 0 0 1.1-2L14 9V3M7 15h10'); icon.append(path);
+  entry.append(icon, el('span', '参与实验室科研项目')); entry.onclick = () => { onAccountEntry?.(); void open(); };
+  document.querySelector('#account-menu [data-account-panel="profile"]')?.after(entry);
+  const links = el('nav', undefined, 'project-course-links'); links.setAttribute('aria-label', '工程实践课程'); document.querySelector('main')?.prepend(links);
+  const workEntry = el('button', '工程实践类课程介绍', 'secondary'); workEntry.type = 'button'; workEntry.id = 'project-work-courses-entry';
   links.prepend(workEntry);
   workEntry.onclick = () => void openCourseProjects();
   let owner = '', pending = null, pendingSelection = null, submitting = false, resubmitId = null, returnFocus = null, generation = 0;
@@ -64,7 +68,7 @@ export function createProjectApplicationUI({ identity, onLogin, onReceipt, onPro
   async function openCourseProjects() {
     if (submitting) return;
     const token = ++generation, account = identity(); owner = account.email?.toLowerCase() || '';
-    title.textContent = '课程项目介绍与选课'; status.textContent = '';
+    title.textContent = '工程实践类课程介绍'; status.textContent = '';
     if (!dialog.open) { returnFocus = document.activeElement; dialog.showModal(); }
     content.replaceChildren(el('p', '正在读取本学期选题…'));
     let data = { semester: academicSemester(), selected: null };
@@ -74,6 +78,23 @@ export function createProjectApplicationUI({ identity, onLogin, onReceipt, onPro
     const introduction = el('section');
     introduction.append(el('h3', data.semester.label), el('p', '请每位同学每学期只选一个项目。选后，该项目所在章节自动解锁。系统会把你的姓名、学号同步给马淦老师，并进入 OA 待处理，无需等待审批。新手村的项目一是共同通关任务，不占本学期选题名额。'));
     if (data.selected) introduction.append(el('p', `姓名：${data.selected.name} · 学号：${data.selected.studentNumber || '尚未提供'}。`), el('p', `本学期已选：${data.selected.courseTitle}。${data.selected.oaDelivered ? '已送达 OA，'+(data.synchronized?'当前状态：':'上次回执：')+data.selected.oaStatus : '章节已开放，OA 待同步，系统会自动重试。'}`));
+    if (data.selected && !data.selected.studentNumber) {
+      const form=el('form'),nameInput=el('input'),numberInput=el('input');
+      form.append(el('h4','补齐已选项目的姓名、学号'));
+      for(const[label,node,key,value]of [['姓名',nameInput,'name',data.profile?.name||data.selected.name||''],['学号',numberInput,'studentNumber',data.profile?.studentNumber||'']]){
+        const group=el('label',undefined,'project-application-field');node.name=key;node.required=true;node.maxLength=key==='name'?60:40;node.value=value;if(key==='studentNumber'){node.minLength=2;node.pattern='[A-Za-z0-9._-]{2,40}';}group.append(el('span',label),node);form.append(group);
+      }
+      const send=el('button','补齐姓名、学号并同步 OA');send.type='submit';form.append(send);introduction.append(form);
+      let identityPending=null;
+      form.onsubmit=async event=>{
+        event.preventDefault();if(submitting||!current()||token!==generation)return;
+        if(!identityPending||identityPending.name!==nameInput.value.trim()||identityPending.studentNumber!==numberInput.value.trim())identityPending={applicationId:data.selected.applicationId,idempotencyKey:crypto.randomUUID(),expectedEmail:owner,name:nameInput.value.trim(),studentNumber:numberInput.value.trim(),confirmed:true};
+        submitting=true;send.disabled=nameInput.disabled=numberInput.disabled=close.disabled=true;status.textContent='正在同步姓名、学号到原 OA 待办…';
+        try{const result=await api('PATCH',identityPending,'course-project-selection');if(!current()||token!==generation)return;submitting=false;if(result.selected.oaDelivered){await openCourseProjects();status.textContent='姓名、学号已同步给马淦老师。';}else status.textContent=result.selected.oaError||'资料已保存，OA 待同步，系统会自动重试。';}
+        catch(error){if(current()&&token===generation)status.textContent=error.message;}
+        finally{submitting=false;send.disabled=nameInput.disabled=numberInput.disabled=close.disabled=false;}
+      };
+    }
     for (const reply of data.replies || []) { const card=el('article',undefined,'project-introduction-card');card.append(el('h4','马淦老师回复'),el('p',reply.reply));for(const [index,courseId] of reply.courseIds.entries()){const button=el('button','进入老师开通的课程：'+(reply.courses?.[index]||courseId),'secondary');button.type='button';button.onclick=()=>{dismiss();onCourse(courseId);};card.append(button);}introduction.append(card);}
     content.replaceChildren(introduction);
     for (const project of courseProjects) {
@@ -133,9 +154,9 @@ export function createProjectApplicationUI({ identity, onLogin, onReceipt, onPro
   }
   async function open() {
     if(submitting)return;
-    title.textContent = '参与实验室项目';
+    title.textContent = '参与实验室科研项目';
     const account = identity();
-    if (!account.email) { title.textContent = '参与实验室项目'; ++generation; owner = ''; status.textContent = ''; content.replaceChildren(industrialView()); const login = el('button','登录后填写报名资料'); login.type='button'; login.onclick=()=>{dismiss();onLogin();};content.append(login); if(!dialog.open){returnFocus=document.activeElement;dialog.showModal();} return; }
+    if (!account.email) { title.textContent = '参与实验室科研项目'; ++generation; owner = ''; status.textContent = ''; content.replaceChildren(industrialView()); const login = el('button','登录后填写报名资料'); login.type='button'; login.onclick=()=>{dismiss();onLogin();};content.append(login); if(!dialog.open){returnFocus=document.activeElement;dialog.showModal();} return; }
     const token = ++generation; owner = account.email.toLowerCase();
     if (!dialog.open) { returnFocus = document.activeElement; dialog.showModal(); }
     content.replaceChildren(el('p', '正在读取您的课程进度与申请记录…')); status.textContent = ''; close.disabled = false;

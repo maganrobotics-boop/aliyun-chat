@@ -5,24 +5,25 @@ export function createCourseProjectSelections({ db, env, courses, owner, limit, 
   db.exec(`CREATE TABLE IF NOT EXISTS learning_course_project_selections(
     email TEXT NOT NULL COLLATE NOCASE,semester_id TEXT NOT NULL,semester_label TEXT NOT NULL,
     course_id TEXT NOT NULL,application_id TEXT NOT NULL UNIQUE,idem TEXT NOT NULL,
-    learning_json TEXT NOT NULL,fields_json TEXT NOT NULL,student_number TEXT NOT NULL DEFAULT '',state TEXT NOT NULL DEFAULT 'pending',
+    learning_json TEXT NOT NULL,fields_json TEXT NOT NULL,student_number TEXT NOT NULL DEFAULT '',identity_update INTEGER NOT NULL DEFAULT 0,state TEXT NOT NULL DEFAULT 'pending',
     receipt TEXT,error TEXT,created_at INTEGER NOT NULL,next_retry_at INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY(email,semester_id),UNIQUE(email,idem));`);
   if (!db.prepare('PRAGMA table_info(learning_course_project_selections)').all().some(column=>column.name==='student_number')) db.exec("ALTER TABLE learning_course_project_selections ADD COLUMN student_number TEXT NOT NULL DEFAULT ''");
+  if (!db.prepare('PRAGMA table_info(learning_course_project_selections)').all().some(column=>column.name==='identity_update')) db.exec('ALTER TABLE learning_course_project_selections ADD COLUMN identity_update INTEGER NOT NULL DEFAULT 0');
   db.exec('CREATE TABLE IF NOT EXISTS learning_student_project_identity(email TEXT PRIMARY KEY COLLATE NOCASE,name TEXT NOT NULL,student_number TEXT NOT NULL,updated_at INTEGER NOT NULL)');
   const sending = new Set();
-  const publicRecord = row => row ? { courseId: row.course_id, name: JSON.parse(row.fields_json).name, studentNumber: row.student_number, courseTitle: courseProjects.find(c => c.id === row.course_id)?.title || row.course_id, semester: { id: row.semester_id, label: row.semester_label }, applicationId: row.application_id, selectedAt: row.created_at, openedCourseIds: projectCourseIds(courses, row.course_id), oaDelivered: row.state === 'delivered', oaStatus: row.receipt ? JSON.parse(row.receipt).status : '待同步', reviewerName: '马淦' } : null;
+  const publicRecord = row => row ? { courseId: row.course_id, name: JSON.parse(row.fields_json).name, studentNumber: row.student_number, courseTitle: courseProjects.find(c => c.id === row.course_id)?.title || row.course_id, semester: { id: row.semester_id, label: row.semester_label }, applicationId: row.application_id, selectedAt: row.created_at, openedCourseIds: projectCourseIds(courses, row.course_id), oaDelivered: row.state === 'delivered', oaStatus: row.receipt ? JSON.parse(row.receipt).status : '待同步', oaError: row.state !== 'delivered' ? row.error || '' : '', reviewerName: '马淦' } : null;
   async function synchronize(row) {
     if (row.state === 'delivered' || sending.has(row.application_id)) return;
     sending.add(row.application_id);
     try {
       const fields = JSON.parse(row.fields_json), learning = JSON.parse(row.learning_json);
       const selection = { courseId: row.course_id, semesterId: row.semester_id, semesterLabel: row.semester_label, studentNumber: row.student_number };
-      const result = await bridge({ operation: 'submit', kind: 'course_project_selection', selection, email: row.email, applicationId: row.application_id, submissionKey: row.idem, fields, files: [], learning, content: applicationContent(fields, learning, { selection }), confirmed: true }, 8000);
+      const result = await bridge({ operation: 'submit', kind: 'course_project_selection', ...(row.identity_update ? { updateIdentity: true } : {}), selection, email: row.email, applicationId: row.application_id, submissionKey: row.idem, fields, files: [], learning, content: applicationContent(fields, learning, { selection }), confirmed: true }, 8000);
       if (result.application?.id !== row.application_id) applicationError('选课回执编号不一致。', 503);
-      db.prepare("UPDATE learning_course_project_selections SET state='delivered',receipt=?,error=NULL WHERE application_id=?").run(JSON.stringify(result.application), row.application_id);
+      db.prepare("UPDATE learning_course_project_selections SET state='delivered',receipt=?,error=NULL WHERE application_id=? AND idem=?").run(JSON.stringify(result.application), row.application_id, row.idem);
     } catch(error) {
-      db.prepare("UPDATE learning_course_project_selections SET error=?,next_retry_at=? WHERE application_id=? AND state!='delivered'").run(error.status ? error.message : 'OA 待同步', clock() + 60000, row.application_id);
+      db.prepare("UPDATE learning_course_project_selections SET error=?,next_retry_at=? WHERE application_id=? AND idem=? AND state!='delivered'").run(error.status ? error.message : 'OA 待同步', clock() + 60000, row.application_id, row.idem);
     } finally { sending.delete(row.application_id); }
   }
   async function flushPending() {
@@ -51,10 +52,37 @@ export function createCourseProjectSelections({ db, env, courses, owner, limit, 
       const studentNumber = saved?.student_number || person.studentNumber || (/^[A-Za-z0-9._-]{2,40}@stumail\.sztu\.edu\.cn$/u.test(email) ? email.split('@')[0] : '');
       return { email, semester, profile: { name: person.name || saved?.name || '', studentNumber }, selected: publicRecord(row), synchronized, replies, history: db.prepare('SELECT * FROM learning_course_project_selections WHERE email=? ORDER BY created_at DESC LIMIT 20').all(email).map(publicRecord), projects: courseProjects };
     }
-    if (request.method !== 'POST') applicationError('不支持的方法。', 405);
+    if (!['POST','PATCH'].includes(request.method)) applicationError('不支持的方法。', 405);
     if (request.headers.get('origin') !== new URL(env.APP_ORIGIN).origin || request.headers.get('sec-fetch-site') === 'cross-site') applicationError('请从课程页面选课。', 403);
     if (!request.headers.get('content-type')?.startsWith('application/json')) applicationError('需要 JSON 请求。', 415);
     let data; try { data = JSON.parse(await readApplicationBody(request, 4096)); } catch(error) { if (error.status) throw error; applicationError('选课格式不正确。'); }
+    if (request.method === 'PATCH') {
+      if (!exactKeys(data,['applicationId','idempotencyKey','expectedEmail','name','studentNumber','confirmed']) || data.confirmed !== true) applicationError('请核对姓名、学号后确认同步。');
+      if (applicationEmail(data.expectedEmail) !== email) applicationError('登录账号已变化，请重新打开选课入口。',409);
+      const applicationIdValue=applicationId(data.applicationId),idem=applicationId(data.idempotencyKey),name=applicationText(data.name,60,'姓名',1),studentNumber=applicationText(data.studentNumber,40,'学号',2);
+      if(!/^[A-Za-z0-9._-]{2,40}$/u.test(studentNumber))applicationError('请填写本人学号。');
+      let row=db.prepare('SELECT * FROM learning_course_project_selections WHERE email=? AND application_id=?').get(email,applicationIdValue);
+      if(!row)applicationError('未找到自己的课程选题。',404);
+      const fields=JSON.parse(row.fields_json);
+      if(row.student_number && (row.student_number!==studentNumber || fields.name!==name))applicationError('姓名、学号已同步，请联系马淦老师更正。',409);
+      if(!row.student_number){
+        if(row.state==='delivered'){
+          const status=(await bridge({operation:'list',email},8000)).records?.find(r=>r.id===row.application_id)?.status;
+          if(status!=='待审核')applicationError('这份选题已处理，请联系马淦老师补充姓名、学号。',409);
+        }
+        fields.name=name;
+        db.exec('BEGIN IMMEDIATE');
+        try{
+          const changed=db.prepare("UPDATE learning_course_project_selections SET fields_json=?,student_number=?,identity_update=1,idem=?,state='pending',error=NULL,next_retry_at=0 WHERE email=? AND application_id=? AND student_number=''").run(JSON.stringify(fields),studentNumber,idem,email,applicationIdValue);
+          if(changed.changes!==1)applicationError('选题资料刚刚变化，请刷新查看。',409);
+          db.prepare('INSERT INTO learning_student_project_identity VALUES(?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name,student_number=excluded.student_number,updated_at=excluded.updated_at').run(email,name,studentNumber,clock());
+          db.exec('COMMIT');
+        }catch(error){db.exec('ROLLBACK');throw error;}
+        row=db.prepare('SELECT * FROM learning_course_project_selections WHERE application_id=?').get(applicationIdValue);
+      }
+      await synchronize(row);
+      return {email,selected:publicRecord(db.prepare('SELECT * FROM learning_course_project_selections WHERE application_id=?').get(applicationIdValue)),opened:true};
+    }
     if (!exactKeys(data, ['courseId', 'idempotencyKey', 'expectedEmail', 'expectedSemesterId', 'confirmed', 'name', 'studentNumber']) || data.confirmed !== true) applicationError('请确认本学期的项目选题。');
     if (applicationEmail(data.expectedEmail) !== email) applicationError('登录账号已变化，请重新打开选课入口。', 409);
     const name = applicationText(data.name, 60, '姓名', 1), studentNumber = applicationText(data.studentNumber, 40, '学号', 2);
