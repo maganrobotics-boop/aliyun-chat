@@ -72,8 +72,8 @@ export function createProjectApplicationUI({ identity, onLogin, onReceipt, onPro
     catch(error) { if (token !== generation) return; content.replaceChildren(el('p', error.message)); if (error.status === 401) { dismiss(); onLogin(); } return; }
     if (token !== generation || (owner && !current()) || (data.email && data.email !== owner)) return;
     const introduction = el('section');
-    introduction.append(el('h3', data.semester.label), el('p', '每位学生每学期只能选择一个课程项目。选定后立即开放对应章节，并提交给马淦老师的 OA 待处理，无需等待审批。新手村的项目一是共同通关任务，不占本学期选题名额。'));
-    if (data.selected) introduction.append(el('p', `本学期已选：${data.selected.courseTitle}。${data.selected.oaDelivered ? '已送达 OA，'+(data.synchronized?'当前状态：':'上次回执：')+data.selected.oaStatus : '章节已开放，OA 待同步，系统会自动重试。'}`));
+    introduction.append(el('h3', data.semester.label), el('p', '请每位同学每学期只选一个项目。选后，该项目所在章节自动解锁。系统会把你的姓名、学号同步给马淦老师，并进入 OA 待处理，无需等待审批。新手村的项目一是共同通关任务，不占本学期选题名额。'));
+    if (data.selected) introduction.append(el('p', `姓名：${data.selected.name} · 学号：${data.selected.studentNumber || '尚未提供'}。`), el('p', `本学期已选：${data.selected.courseTitle}。${data.selected.oaDelivered ? '已送达 OA，'+(data.synchronized?'当前状态：':'上次回执：')+data.selected.oaStatus : '章节已开放，OA 待同步，系统会自动重试。'}`));
     for (const reply of data.replies || []) { const card=el('article',undefined,'project-introduction-card');card.append(el('h4','马淦老师回复'),el('p',reply.reply));for(const [index,courseId] of reply.courseIds.entries()){const button=el('button','进入老师开通的课程：'+(reply.courses?.[index]||courseId),'secondary');button.type='button';button.onclick=()=>{dismiss();onCourse(courseId);};card.append(button);}introduction.append(card);}
     content.replaceChildren(introduction);
     for (const project of courseProjects) {
@@ -86,12 +86,21 @@ export function createProjectApplicationUI({ identity, onLogin, onReceipt, onPro
         if (!owner) { dismiss(); onLogin(); return; }
         if (chosen) { dismiss(); onCourse(project.id); return; }
         content.replaceChildren(el('h3', project.title), el('p', project.description), el('p', `确认选择后，${data.semester.label}的选题名额将锁定为此项目，对应章节立即开放，选题与平台学习记录会提交给马淦老师。`));
-        const confirm = el('button', '确认选题并打开章节'), back = el('button', '返回项目介绍', 'secondary'); confirm.type = back.type = 'button';
-        back.onclick = () => void openCourseProjects(); content.append(confirm, back);
-        confirm.onclick = async () => {
+        const form = el('form'), nameInput = el('input'), numberInput = el('input');
+        for (const [label,node,key,value] of [['姓名',nameInput,'name',data.profile?.name || ''],['学号',numberInput,'studentNumber',data.profile?.studentNumber || '']]) {
+          const group=el('label',undefined,'project-application-field');node.name=key;node.required=true;node.maxLength=key==='name'?60:40;node.value=value;node.autocomplete=key==='name'?'name':'off';
+          if(key==='studentNumber'){node.minLength=2;node.pattern='[A-Za-z0-9._-]{2,40}';node.placeholder='请填写本人学号';}else node.placeholder='请填写本人姓名';
+          group.append(el('span',label),node);form.append(group);
+        }
+        form.append(el('p','请核对本人姓名、学号。确认选题后，系统会将这些信息和项目选题同步给马淦老师。'));
+        const confirm = el('button', '确认选题并打开章节'), back = el('button', '返回项目介绍', 'secondary'); confirm.type = 'submit';back.type = 'button';
+        back.onclick = () => void openCourseProjects(); form.append(confirm,back);content.append(form);
+        form.onsubmit = async event => {
+          event.preventDefault();
           if (submitting || !current() || token !== generation) return;
-          if (!pendingSelection || pendingSelection.courseId !== project.id || pendingSelection.expectedSemesterId !== data.semester.id) pendingSelection = { courseId: project.id, idempotencyKey: crypto.randomUUID(), expectedEmail: owner, expectedSemesterId: data.semester.id, confirmed: true };
-          submitting = true; confirm.disabled = back.disabled = close.disabled = true; status.textContent = '正在保存本学期选题并开放章节…';
+          const name=nameInput.value.trim(),studentNumber=numberInput.value.trim();
+          if (!pendingSelection || pendingSelection.courseId !== project.id || pendingSelection.expectedSemesterId !== data.semester.id || pendingSelection.name !== name || pendingSelection.studentNumber !== studentNumber) pendingSelection = { courseId: project.id, idempotencyKey: crypto.randomUUID(), expectedEmail: owner, expectedSemesterId: data.semester.id, name, studentNumber, confirmed: true };
+          submitting = true; nameInput.disabled = numberInput.disabled = confirm.disabled = back.disabled = close.disabled = true; status.textContent = '正在保存本学期选题并开放章节…';
           try {
             const result = await api('POST', pendingSelection, 'course-project-selection');
             if (!current() || token !== generation || result.email !== owner) return;
@@ -100,7 +109,7 @@ export function createProjectApplicationUI({ identity, onLogin, onReceipt, onPro
             submitting = false; dismiss(); onCourse(result.selected.courseId);
             onReceipt?.({ ...result.selected, kind: 'course_project_selection' });
           } catch(error) { if (current() && token === generation) status.textContent = error.message; }
-          finally { submitting = false; confirm.disabled = back.disabled = close.disabled = false; }
+          finally { submitting = false; nameInput.disabled = numberInput.disabled = confirm.disabled = back.disabled = close.disabled = false; }
         };
       };
       card.append(button); content.append(card);

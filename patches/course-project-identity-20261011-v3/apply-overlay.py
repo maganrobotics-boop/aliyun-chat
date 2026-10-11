@@ -18,4 +18,4 @@ for name in manifest['newFiles']:
  if p.exists() and p.read_bytes()!=data:raise SystemExit('Conflicting module: '+name)
  planned[p]=data
 for p,data in planned.items():p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
-print('Verified and applied semester course project overlay.')
+print('Verified and applied course identity overlay.')
