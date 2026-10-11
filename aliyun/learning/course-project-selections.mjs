@@ -11,6 +11,15 @@ export function createCourseProjectSelections({ db, env, courses, owner, limit, 
   if (!db.prepare('PRAGMA table_info(learning_course_project_selections)').all().some(column=>column.name==='student_number')) db.exec("ALTER TABLE learning_course_project_selections ADD COLUMN student_number TEXT NOT NULL DEFAULT ''");
   if (!db.prepare('PRAGMA table_info(learning_course_project_selections)').all().some(column=>column.name==='identity_update')) db.exec('ALTER TABLE learning_course_project_selections ADD COLUMN identity_update INTEGER NOT NULL DEFAULT 0');
   db.exec('CREATE TABLE IF NOT EXISTS learning_student_project_identity(email TEXT PRIMARY KEY COLLATE NOCASE,name TEXT NOT NULL,student_number TEXT NOT NULL,updated_at INTEGER NOT NULL)');
+  // SQLite enforces the same student number across verified login accounts.
+  // Refuse ambiguous historical duplicates; never rewrite a student's selection.
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS learning_course_student_semester_unique ON learning_course_project_selections(semester_id,lower(student_number)) WHERE student_number!=''");
+  function verifyStudentNumber(email, studentNumber, semesterId) {
+    const schoolEmail = /^([A-Za-z0-9._-]{2,40})@stumail\.sztu\.edu\.cn$/iu.exec(email);
+    if (schoolEmail && schoolEmail[1].toLowerCase() !== studentNumber.toLowerCase()) applicationError('学号必须与已验证的学校邮箱一致。',409);
+    const duplicate = db.prepare('SELECT 1 FROM learning_course_project_selections WHERE semester_id=? AND lower(student_number)=lower(?) AND email!=? COLLATE NOCASE').get(semesterId,studentNumber,email);
+    if (duplicate) applicationError('该学号本学期已有选题，请使用原登录账号或联系马淦老师核对。',409);
+  }
   const sending = new Set();
   const publicRecord = row => row ? { courseId: row.course_id, name: JSON.parse(row.fields_json).name, studentNumber: row.student_number, courseTitle: courseProjects.find(c => c.id === row.course_id)?.title || row.course_id, semester: { id: row.semester_id, label: row.semester_label }, applicationId: row.application_id, selectedAt: row.created_at, openedCourseIds: projectCourseIds(courses, row.course_id), oaDelivered: row.state === 'delivered', oaStatus: row.receipt ? JSON.parse(row.receipt).status : '待同步', oaError: row.state !== 'delivered' ? row.error || '' : '', reviewerName: '马淦' } : null;
   async function synchronize(row) {
@@ -73,6 +82,7 @@ export function createCourseProjectSelections({ db, env, courses, owner, limit, 
         fields.name=name;
         db.exec('BEGIN IMMEDIATE');
         try{
+          verifyStudentNumber(email,studentNumber,row.semester_id);
           const changed=db.prepare("UPDATE learning_course_project_selections SET fields_json=?,student_number=?,identity_update=1,idem=?,state='pending',error=NULL,next_retry_at=0 WHERE email=? AND application_id=? AND student_number=''").run(JSON.stringify(fields),studentNumber,idem,email,applicationIdValue);
           if(changed.changes!==1)applicationError('选题资料刚刚变化，请刷新查看。',409);
           db.prepare('INSERT INTO learning_student_project_identity VALUES(?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name,student_number=excluded.student_number,updated_at=excluded.updated_at').run(email,name,studentNumber,clock());
@@ -87,6 +97,7 @@ export function createCourseProjectSelections({ db, env, courses, owner, limit, 
     if (applicationEmail(data.expectedEmail) !== email) applicationError('登录账号已变化，请重新打开选课入口。', 409);
     const name = applicationText(data.name, 60, '姓名', 1), studentNumber = applicationText(data.studentNumber, 40, '学号', 2);
     if (!/^[A-Za-z0-9._-]{2,40}$/u.test(studentNumber)) applicationError('请填写本人学号，仅使用数字、字母或点、短横线、下划线。');
+    verifyStudentNumber(email,studentNumber,data.expectedSemesterId);
     const idem = applicationId(data.idempotencyKey), project = courseProjects.find(c => c.id === data.courseId);
     if (!project || !courses.some(c => c.id === project.id)) applicationError('请从课程项目列表选择一个项目。');
     let row = db.prepare('SELECT * FROM learning_course_project_selections WHERE email=? AND idem=?').get(email, idem);
@@ -103,6 +114,7 @@ export function createCourseProjectSelections({ db, env, courses, owner, limit, 
         // This synchronous insert reserves the quota before any asynchronous OA call.
         db.exec('BEGIN IMMEDIATE');
         try {
+          verifyStudentNumber(email,studentNumber,semester.id);
           const inserted = db.prepare('INSERT OR IGNORE INTO learning_course_project_selections(email,semester_id,semester_label,course_id,application_id,idem,learning_json,fields_json,student_number,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)').run(email, semester.id, semester.label, project.id, crypto.randomUUID(), idem, JSON.stringify(snapshot(email, clock())), JSON.stringify(fields), studentNumber, clock());
           row = mine(email, semester);
           if (row?.course_id !== project.id) applicationError('本学期已有其他选题，请刷新列表。', 409);
