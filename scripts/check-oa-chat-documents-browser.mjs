@@ -117,13 +117,13 @@ try {
       assert.deepEqual(await hints.allTextContents(),['知识问答查公开与内部资料','新手村助教拆任务和给建议','项目总结周报和行动项','资料归档整理后送审','会议模式纪要和待办']);
       if (height > 520) {
         const prompts = [
-          '实验室有哪些研究方向？',
-          '请把材料整理成结构清晰的 Word 文档，保留关键事实。',
-          '请整理成会议纪要，区分讨论、决定和待办，未明确的信息标注待补充。',
-          '请把材料整理成项目总结文档，列出已完成工作、主要成果、存在问题和下一步计划，未明确的信息标注待补充。',
+          '机器人自主移动与操作实验室适合本科生参与的方向有哪些？',
+          '@项目总结 请把我的新手村任务拆成今天能做的清单：完善资料、确认可投入时间、阅读保密要求、选择项目方向、完成第一个学习记录。',
+          '@项目总结 请根据我上传或粘贴的材料，整理项目进展、问题、下一步行动项和负责人。',
+          '@资料归档 请把这份材料整理为 OA 可审核入库的 Markdown：标题、摘要、关键词、正文、待核验事项。',
         ];
         for (let index = 0; index < prompts.length; index++) {
-          await hints.nth(index + 1).click();
+          await hints.nth(index).click();
           assert.equal(await input.inputValue(),prompts[index]);
         }
         assert.equal(createRequests().length,0,'choosing a capability must not submit a task');

@@ -162,7 +162,7 @@ try {
     await page.locator(".task-card").first().waitFor();
     assert.equal(await page.locator(".task-card").count(), 7);
     assert.equal(await page.locator(".task-card").nth(0).locator("button").isEnabled(), true);
-    assert.equal(await page.locator(".task-card").nth(1).locator("button").isDisabled(), true);
+    assert.equal(await page.locator(".task-card").nth(1).locator("button").isEnabled(), true);
 
     await page.locator('[data-view="profile"]').click();
     await page.locator('[name="displayName"]').fill("小深");
