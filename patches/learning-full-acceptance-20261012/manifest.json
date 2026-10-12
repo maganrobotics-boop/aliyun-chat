@@ -1,0 +1,78 @@
+{
+  "base_release": "chat-learning-runtime-feedback-20261012-v1",
+  "files": [
+    {
+      "path": "aliyun/learning/service-core.mjs",
+      "kind": "edits",
+      "before_sha256": "098a0dca37fde1d5954d44b87d00b4d89f5f9e5a2703042fa4979998f7a65363",
+      "after_sha256": "90c721956df21b621ff80a64d22a737ac6da43b2d7da991c7becbe7735afe3d4",
+      "edits": [
+        {
+          "start": 9115,
+          "end": 9199,
+          "before": "    const progress=courseProgression.calculate(rows.map(row=>row.courseId),grants);\n",
+          "after": "    const progress=courseProgression.calculate(rows.map(row=>row.courseId),grants,[...projectWorkIds]);\n"
+        }
+      ]
+    },
+    {
+      "path": "chat-cloudflare/public/learning/course-progression.mjs",
+      "kind": "edits",
+      "before_sha256": "c99d4916db5b2f48908b8364bcf7d4e8d2807d402c6c223df392d3e0a67f008e",
+      "after_sha256": "1f4ec176c0aa786e293d62ee1ae4163c426dbda476c87279a5bd0c18da2ebfc6",
+      "edits": [
+        {
+          "start": 1208,
+          "end": 1268,
+          "before": "  function calculate(submittedIds = [], exemptedIds = []) {\n",
+          "after": "  function calculate(submittedIds = [], exemptedIds = [], independentlySelectedIds = []) {\n"
+        },
+        {
+          "start": 1698,
+          "end": 1902,
+          "before": "    const frontier = advancedSequence.findIndex(id => !completed.has(id));\n    const advancedPrefix = !foundationComplete ? [] : frontier < 0 ? advancedSequence : advancedSequence.slice(0, frontier + 1);\n",
+          "after": "    // Semester projects have their own access gate. They must not become\n    // mandatory prerequisites for common courses, or force mutually exclusive choices.\n    const independent = new Set(independentlySelectedIds.map(canonicalId));\n    const commonSequence = advancedSequence.filter(id => !independent.has(id));\n    const frontier = commonSequence.findIndex(id => !completed.has(id));\n    const advancedPrefix = !foundationComplete ? [] : frontier < 0 ? commonSequence : commonSequence.slice(0, frontier + 1);\n"
+        },
+        {
+          "start": 2321,
+          "end": 2463,
+          "before": "      currentCourseId: !foundationComplete ? foundationIds.find(id => !completed.has(id)) : frontier < 0 ? null : advancedSequence[frontier],\n",
+          "after": "      currentCourseId: !foundationComplete ? foundationIds.find(id => !completed.has(id)) : frontier < 0 ? null : commonSequence[frontier],\n"
+        }
+      ]
+    },
+    {
+      "path": "chat-cloudflare/public/learning/app.js",
+      "kind": "edits",
+      "before_sha256": "307b2373330c3cab6572c5b22bc8a41242be8ef110b6062bbf7b8580c3377570",
+      "after_sha256": "c50303b343a0ecd15e791e8dea50d611a5765159184046799ada60755cd67afe",
+      "edits": [
+        {
+          "start": 30478,
+          "end": 31202,
+          "before": "function saveLocal(){try{localStorage.setItem(localKey,JSON.stringify(current()));$('save-state').textContent='已保存到本机 · '+new Date().toLocaleTimeString();}catch{$('save-state').textContent='本机存储不可用，请保持页面打开';} $('stale').hidden=!changed();}\nfunction applyDraft(d){$('code').value=d.code||exercise.starter;$('csv').value=d.csv||exercise.datasets.normal;$('reflection').value=d.reflection||'';$('question').value=d.question||'';$('submission-kind').value=d.kind||(d.code?'experiment':'answer');lastRun=d.run&&((d.run.courseId||'python-basics')===courseId)?{...d.run,courseId}:null;$('output').textContent=lastRun?.output||'尚未运行';$('tests').textContent=lastRun?.tests||'尚未测试';$('stale').hidden=!changed();syncStructuredForm();}\n",
+          "after": "function saveLocal(){syncDatasetSelection();try{localStorage.setItem(localKey,JSON.stringify({...current(),pendingSubmission}));$('save-state').textContent='已保存到本机 · '+new Date().toLocaleTimeString();}catch{$('save-state').textContent='本机存储不可用，请保持页面打开';} $('stale').hidden=!changed();}\nfunction applyDraft(d){pendingSubmission=d.pendingSubmission&&typeof d.pendingSubmission.serialized==='string'&&typeof d.pendingSubmission.key==='string'?d.pendingSubmission:null;$('code').value=d.code||exercise.starter;$('csv').value=d.csv||exercise.datasets.normal;$('reflection').value=d.reflection||'';$('question').value=d.question||'';$('submission-kind').value=d.kind||(d.code?'experiment':'answer');lastRun=d.run&&((d.run.courseId||'python-basics')===courseId)?{...d.run,courseId}:null;$('output').textContent=lastRun?.output||'尚未运行';$('tests').textContent=lastRun?.tests||'尚未测试';$('stale').hidden=!changed();syncStructuredForm();syncDatasetSelection();}\nfunction syncDatasetSelection(){const select=$('dataset');if(!select||!exercise?.datasets)return;const match=Object.keys(exercise.datasets).find(key=>exercise.datasets[key]===$('csv').value);let custom=Array.from(select.options).find(option=>option.value==='__custom__');if(match===undefined&&!custom){custom=element('option','当前自定义输入');custom.value='__custom__';custom.disabled=true;select.append(custom);}select.value=match??'__custom__';}\n"
+        },
+        {
+          "start": 52917,
+          "end": 53057,
+          "before": "$('dataset').onchange=()=>{if(confirm('替换为所选教学数据？当前内容会先备份。')){backup();$('csv').value=exercise.datasets[$('dataset').value];saveLocal();}};\n",
+          "after": "$('dataset').onchange=()=>{const selected=$('dataset').value;if(confirm('替换为所选教学数据？当前内容会先备份。')){backup();$('csv').value=exercise.datasets[selected];saveLocal();}else syncDatasetSelection();};\n"
+        },
+        {
+          "start": 114790,
+          "end": 114975,
+          "before": "  if(view==='lab')host.append(renderMethodGuide(course,true),renderMechanicalDesignLab(course.id),renderChapterDeepening(course.id,'practice',email,companionActions(course.id,email)));\n",
+          "after": ""
+        }
+      ]
+    }
+  ],
+  "runtime": {
+    "chat-cloudflare/public/learning/runtime/python_stdlib.zip": "16611534726e5d8ac2bd8f926410b2dcb8d6f49aa24913463533b457a2115c16",
+    "chat-cloudflare/public/learning/runtime/pyodide.asm.wasm": "a50dd1843f805a0b7c45b61037ee0d7b26dfe85efe0e18ef95a34ad24e401f5f",
+    "chat-cloudflare/public/learning/runtime/pyodide.asm.js": "6b4c90de5b7172873f04f21884d0e9d2274e305fe32116558fe3e4fbe3618d51",
+    "chat-cloudflare/public/learning/runtime/pyodide.js": "b4cb23a53aba19c221659b9fb40a2f18281d685691dc06647fb0afd0681baf98",
+    "chat-cloudflare/public/learning/runtime/pyodide-lock.json": "9c45b916001a750f4102fc287494f3eab215909c7535c626a20db80fd6333e2c"
+  }
+}

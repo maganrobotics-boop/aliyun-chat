@@ -1,0 +1,28 @@
+✖ Newbie UI response-loss retry keeps the same submission after a page reload (38.685043ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 142.537654
+
+✖ failing tests:
+
+test at acceptance-patch/patches/learning-full-acceptance-20261012/acceptance.test.mjs:76:1
+✖ Newbie UI response-loss retry keeps the same submission after a page reload (38.685043ms)
+  AssertionError [ERR_ASSERTION]: reload after lost response must not create a duplicate
+  
+  2 !== 1
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/76449e49ed45/acceptance-patch/patches/learning-full-acceptance-20261012/acceptance.test.mjs:90:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
