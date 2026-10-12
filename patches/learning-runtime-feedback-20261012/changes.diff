@@ -1,0 +1,245 @@
+--- a/chat-cloudflare/public/learning/app.js
++++ b/chat-cloudflare/public/learning/app.js
+@@ -35 +35,2 @@
+-import {mountAdvancedWorkspace,formatLearningText} from './advanced-workspace.mjs?v=20261003-platformcopy1';
++import {mountAdvancedWorkspace,formatLearningText} from './advanced-workspace.mjs?v=20261012-runtime-feedback1';
++import {reviewStatus,reviewRequestError} from './review-status.mjs?v=20261012-runtime-feedback1';
+@@ -293 +294 @@
+-async function api(route,method='GET',body){const res=await fetch('/api/learning/'+route,{method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined});const data=await res.json();if(!res.ok)throw Object.assign(new Error(data.error||'服务暂不可用'),{status:res.status});return data;}
++async function api(route,method='GET',body){const res=await fetch('/api/learning/'+route,{method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined});const data=await res.json();if(!res.ok)throw reviewRequestError(data,res.status,res.headers.get('Retry-After'));return data;}
+@@ -440,2 +441,2 @@
+-  if(!ready){note('Python 页面正在准备，请稍后再试');return;}const code=$('code').value,csv=$('csv').value;if(!code.trim()||!csv.trim()){note('请填写代码与数据');return;}active={id:crypto.randomUUID(),code,csv,output:'',tests:'',mode:'output'};$('output').textContent='';$('tests').textContent='';$('run').disabled=true;$('stop').disabled=false;$('stale').hidden=true;$('runtime-status').textContent='正在自动加载 Python；首次使用可能需要一小段时间…';loadTimer=setTimeout(()=>{if(active){active.output+='\n环境加载超时，请重试。';$('output').textContent=active.output;finish('加载超时，代码已保留。');}},60000);$('runner').contentWindow.postMessage({channel:'arts-python-v1',type:'run',id:active.id,code,csv,harness:exercise.harness},'*');}
+-addEventListener('message',event=>{if(event.source!==$('runner').contentWindow||event.data?.channel!=='arts-python-v1')return;const d=event.data;if(d.type==='ready'){ready=true;return;}if(!active||d.id!==active.id)return;if(d.type==='status')$('runtime-status').textContent=d.text;if(d.type==='running'){clearTimeout(loadTimer);$('runtime-status').textContent='正在运行代码与测试…';runTimer=setTimeout(()=>{if(active){active.output+='\n运行超过 10 秒，已终止。';$('output').textContent=active.output;finish('已因超时停止；可以修改后重试。');}},10000);}if(d.type==='output'){if(d.text==='===ARTS_TESTS==='){active.mode='tests';return;}active[active.mode]=(active[active.mode]+d.text+'\n').slice(0,6000);$(active.mode).textContent=active[active.mode];}if(d.type==='error'){active.output+='\n'+d.text;$('output').textContent=active.output;finish('本次运行失败，请查看错误；可向助教提问。');}if(d.type==='done')finish('运行结束。请检查输出与测试，并解释结果。');});
++  if(!ready){note('Python 页面正在准备，请稍后再试');return;}const code=$('code').value,csv=$('csv').value;if(!code.trim()||!csv.trim()){note('请填写代码与数据');return;}active={id:crypto.randomUUID(),code,csv,output:'',tests:'',mode:'output'};$('output').textContent='';$('tests').textContent='';$('run').disabled=true;$('stop').disabled=false;$('stale').hidden=true;$('runtime-status').textContent='正在自动加载 Python；首次使用可能需要一小段时间…';loadTimer=setTimeout(()=>{if(active){active.output+='\n环境加载超时，请重试。';$('output').textContent=active.output;finish('Python 环境载入超时，代码尚未执行；代码和输入已保留。');}},100000);$('runner').contentWindow.postMessage({channel:'arts-python-v1',type:'run',id:active.id,code,csv,harness:exercise.harness},'*');}
++addEventListener('message',event=>{if(event.source!==$('runner').contentWindow||event.data?.channel!=='arts-python-v1')return;const d=event.data;if(d.type==='ready'){ready=true;return;}if(!active||d.id!==active.id)return;if(d.type==='status')$('runtime-status').textContent=d.text;if(d.type==='running'){clearTimeout(loadTimer);$('runtime-status').textContent='正在运行代码与测试…';runTimer=setTimeout(()=>{if(active){active.output+='\n运行超过 10 秒，已终止。';$('output').textContent=active.output;finish('已因超时停止；可以修改后重试。');}},10000);}if(d.type==='output'){if(d.text==='===ARTS_TESTS==='){active.mode='tests';return;}active[active.mode]=(active[active.mode]+d.text+'\n').slice(0,6000);$(active.mode).textContent=active[active.mode];}if(d.type==='error'){active.output+='\n'+d.text;$('output').textContent=active.output;finish(d.phase==='initializing'?'Python 环境载入未完成，代码尚未执行；代码和输入已保留，请稍后重试。':'本次代码运行失败，请查看错误后修改。');}if(d.type==='done')finish('运行结束。请检查输出与测试，并解释结果。');});
+@@ -444 +445 @@
+-function renderHistory(){const box=$('submissions');box.replaceChildren();if(!email){box.append(element('p','登录后查看已提交作业与点评；当前草稿仍保留在本机。'));return;}if(!submissions.length)box.append(element('p','尚未提交。填写题目回答，或完成本关检查并解释结果后，可提交第一版让 AI 提供修改建议。'));for(const s of submissions){const item=element('article',undefined,'submission');item.append(element('h3',(curriculum.find(c=>c.id===(s.payload.courseId||'python-basics'))?.title.split('｜')[0]||'课程')+' · '+(s.payload.kind==='answer'?'题目回答':'在线实验')+' · '+s.id.slice(0,8)),element('p',new Date(s.createdAt).toLocaleString()+' · '+s.status,'meta'));const label={pending:'等待 AI 点评',reviewing:'AI 正在点评',done:'助教点评已完成',failed:'点评暂未完成，可以重试'}[s.reviewState];item.append(element('p',label));const actions=element('div',undefined,'actions');const view=element('button','查看提交内容与点评','secondary');view.onclick=()=>{const detail=element('details');detail.open=true;detail.append(element('summary','这次提交的内容'),element('p',s.payload.question||''),element('pre',s.payload.code||''),element('pre',s.payload.run?.output||''),element('pre',s.payload.run?.tests||''),element('p',s.payload.reflection),formatLearningText(s.review||s.error||'尚无点评','feedback'));item.append(detail);view.disabled=true;};const edit=element('button','在这一版上修改','secondary');edit.onclick=()=>{if(confirm('将这份提交载入编辑器？当前内容会先保留为本机备份。')){backup();chooseCourse(s.payload.courseId||'python-basics');applyDraft(s.payload);saveLocal();tab(s.payload.kind==='answer'?'review':'lab');}};actions.append(view,edit);if(s.reviewState!=='done'){const retry=element('button','重试点评','secondary');retry.onclick=()=>review(s.id,retry);actions.append(retry);}item.append(actions);box.append(item);}const draft=$('cloud-draft');draft.replaceChildren();if(cloud){const load=element('button','载入云端草稿（版本 '+cloud.revision+'）','secondary');load.onclick=()=>{if(confirm('载入云端草稿？当前内容会保留为本机备份。')){const selected=cloud.payload;backup();chooseCourse(selected.courseId||'python-basics');applyDraft(selected);saveLocal();tab('lab');}};draft.append(load);}const guest=readLocal(keyFor(courseId,null))||(courseId==='python-basics'?readLocal('arts-learning-v1:guest'):null);if(guest){const use=element('button','导入登录前的本机练习','secondary');use.onclick=()=>{if(confirm('将这份游客练习载入当前账号的编辑器？正式提交前仍可修改。')){backup();applyDraft(guest);saveLocal();tab('lab');}};draft.append(use);}}
++function renderHistory(){const box=$('submissions');box.replaceChildren();if(!email){box.append(element('p','登录后查看已提交作业与点评；当前草稿仍保留在本机。'));return;}if(!submissions.length)box.append(element('p','尚未提交。填写题目回答，或完成本关检查并解释结果后，可提交第一版让 AI 提供修改建议。'));for(const s of submissions){const item=element('article',undefined,'submission');item.append(element('h3',(curriculum.find(c=>c.id===(s.payload.courseId||'python-basics'))?.title.split('｜')[0]||'课程')+' · '+(s.payload.kind==='answer'?'题目回答':'在线实验')+' · '+s.id.slice(0,8)),element('p',new Date(s.createdAt).toLocaleString()+' · '+s.status,'meta'));const label=reviewStatus(s);item.append(element('p',label));const actions=element('div',undefined,'actions');const view=element('button','查看提交内容与点评','secondary');view.onclick=()=>{const detail=element('details');detail.open=true;detail.append(element('summary','这次提交的内容'),element('p',s.payload.question||''),element('pre',s.payload.code||''),element('pre',s.payload.run?.output||''),element('pre',s.payload.run?.tests||''),element('p',s.payload.reflection),formatLearningText(s.review||reviewStatus(s),'feedback'));item.append(detail);view.disabled=true;};const edit=element('button','在这一版上修改','secondary');edit.onclick=()=>{if(confirm('将这份提交载入编辑器？当前内容会先保留为本机备份。')){backup();chooseCourse(s.payload.courseId||'python-basics');applyDraft(s.payload);saveLocal();tab(s.payload.kind==='answer'?'review':'lab');}};actions.append(view,edit);if(s.reviewState!=='done'){const retry=element('button','重试点评','secondary');retry.onclick=()=>review(s.id,retry);actions.append(retry);}item.append(actions);box.append(item);}const draft=$('cloud-draft');draft.replaceChildren();if(cloud){const load=element('button','载入云端草稿（版本 '+cloud.revision+'）','secondary');load.onclick=()=>{if(confirm('载入云端草稿？当前内容会保留为本机备份。')){const selected=cloud.payload;backup();chooseCourse(selected.courseId||'python-basics');applyDraft(selected);saveLocal();tab('lab');}};draft.append(load);}const guest=readLocal(keyFor(courseId,null))||(courseId==='python-basics'?readLocal('arts-learning-v1:guest'):null);if(guest){const use=element('button','导入登录前的本机练习','secondary');use.onclick=()=>{if(confirm('将这份游客练习载入当前账号的编辑器？正式提交前仍可修改。')){backup();applyDraft(guest);saveLocal();tab('lab');}};draft.append(use);}}
+@@ -451,3 +452,3 @@
+-    $('feedback').replaceChildren(formatLearningText(result.review||result.error||'点评仍在进行，请稍后刷新成果。'));
+-    $('history-status').textContent=result.reviewState==='done'?'助教点评已完成。':'作业已保存；点评尚未完成。';await refresh();
+-  }catch(error){if(current())$('history-status').textContent='作业已保存，点评暂未完成：'+error.message;}
++    $('feedback').replaceChildren(formatLearningText(result.review||reviewStatus(result)));
++    $('history-status').textContent=reviewStatus(result);await refresh();
++  }catch(error){if(current()){$('history-status').textContent=reviewStatus(error);await refresh();}}
+--- a/chat-cloudflare/public/learning/advanced-workspace.mjs
++++ b/chat-cloudflare/public/learning/advanced-workspace.mjs
+@@ -1,0 +2 @@
++import {reviewStatus,reviewRequestError} from './review-status.mjs?v=20261012-runtime-feedback1';
+@@ -227 +228 @@
+- async function api(route,method='GET',data){const response=await fetch('/api/learning/'+route,{method,credentials:'same-origin',signal:controller.signal,headers:data?{'Content-Type':'application/json'}:undefined,body:data?JSON.stringify(data):undefined});const result=await response.json();if(!response.ok)throw Object.assign(new Error(result.error||'操作未完成'),{status:response.status});return result;}
++ async function api(route,method='GET',data){const response=await fetch('/api/learning/'+route,{method,credentials:'same-origin',signal:controller.signal,headers:data?{'Content-Type':'application/json'}:undefined,body:data?JSON.stringify(data):undefined});const result=await response.json();if(!response.ok)throw reviewRequestError(result,response.status,response.headers.get('Retry-After'));return result;}
+@@ -263 +264 @@
+-   run={id:crypto.randomUUID(),code:state.code,csv:state.csv,output:'',tests:'',mode:'output'};state.run=null;save();output.textContent='';tests.textContent='';start.disabled=true;end.disabled=false;say('正在载入 Python 环境…');loadTimer=setTimeout(()=>stop('环境载入超时，请重试。'),60000);iframe.contentWindow.postMessage({channel:'arts-python-v1',type:'run',id:run.id,code:run.code,csv:run.csv,harness:lab.harness},'*');});start.dataset.run='true';start.disabled=true;say('正在准备运行环境…');
++   run={id:crypto.randomUUID(),code:state.code,csv:state.csv,output:'',tests:'',mode:'output'};state.run=null;save();output.textContent='';tests.textContent='';start.disabled=true;end.disabled=false;say('正在载入 Python 环境…');loadTimer=setTimeout(()=>stop('Python 环境载入超时，代码尚未执行；代码和输入已保留，请稍后重试。'),100000);iframe.contentWindow.postMessage({channel:'arts-python-v1',type:'run',id:run.id,code:run.code,csv:run.csv,harness:lab.harness},'*');});start.dataset.run='true';start.disabled=true;say('正在准备运行环境…');
+@@ -273 +274 @@
+-   if(d.type==='error'){run.output=(run.output+'\n'+d.text).slice(0,6000);output.textContent=run.output;stop('本次运行有错误，可带着输出向助教提问。');}
++   if(d.type==='error'){run.output=(run.output+'\n'+d.text).slice(0,6000);output.textContent=run.output;stop(d.phase==='initializing'?'Python 环境载入未完成，代码尚未执行；代码和输入已保留，请稍后重试。':'本次代码运行有错误，请查看输出后修改。');}
+@@ -307 +308 @@
+-  async function review(id,b){if(b)b.disabled=true;say('作业已保存，助教正在点评…');try{const data=await api('submissions/'+id+'/review','POST',{});if(!live())return;say(data.reviewState==='done'?'点评已保存。':data.error||'点评仍在处理中，可稍后刷新。');await refresh();}catch(e){failure(e);}finally{if(live()&&b)b.disabled=false;}}
++  async function review(id,b){if(b)b.disabled=true;say('作业已保存，助教正在点评…');try{const data=await api('submissions/'+id+'/review','POST',{});if(!live())return;await refresh();if(live())say(reviewStatus(data));}catch(e){if(e.name!=='AbortError'&&live()){await refresh();if(live())say(reviewStatus(e));}}finally{if(live()&&b)b.disabled=false;}}
+@@ -309 +310 @@
+-    for(const s of data.submissions){const item=el('section',undefined,'submission');item.append(el('h3',(s.payload.kind==='answer'?'题目回答':'在线实验')+' · '+new Date(s.createdAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})),formatLearningText(s.review||s.error||'作业已保存，等待点评。','feedback'),el('p',s.status,'small muted'));
++    for(const s of data.submissions){const item=el('section',undefined,'submission');item.append(el('h3',(s.payload.kind==='answer'?'题目回答':'在线实验')+' · '+new Date(s.createdAt).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})),el('p','提交编号：'+s.id.slice(0,8),'small muted'),el('p',reviewStatus(s),'submission-status'),formatLearningText(s.review||'','feedback'),el('p',s.status,'small muted'));
+--- a/aliyun/learning/service-core.mjs
++++ b/aliyun/learning/service-core.mjs
+@@ -29 +29 @@
+-const json = (data, status = 200) => Response.json(data, { status, headers: {
++const json = (data, status = 200, extraHeaders = {}) => Response.json(data, { status, headers: {
+@@ -31 +31 @@
+-  'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
++  'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'", ...extraHeaders,
+@@ -69,0 +70 @@
++  files.add('review-status.mjs');
+@@ -98,0 +100,5 @@
++  function retryAfter(email, kind, cap) {
++    const now = Math.floor(Date.now() / 3600000);
++    const row = db.prepare('SELECT count,window FROM learning_limits WHERE key=?').get(`${kind}:${digest(email)}`);
++    return row?.window===now && row.count>=cap ? Math.max(1,Math.ceil(((now+1)*3600000-Date.now())/1000)) : 0;
++  }
+@@ -103 +109,4 @@
+-    if (row?.window === now && row.count >= cap) fail('本小时操作较多，请稍后继续。草稿仍会保留。',429);
++    if (row?.window === now && row.count >= cap) {
++      const message=kind==='review'?'本小时 AI 点评次数已用完；作业已保存，无需重复提交。':kind==='submit'?'本小时提交次数已用完，本次尚未提交。请保留草稿，稍后重试。':'本小时操作较多，请稍后继续。草稿仍会保留。';
++      throw Object.assign(new Error(message),{status:429,code:kind==='review'?'review_rate_limited':'rate_limited',retryAfter:retryAfter(email,kind,cap)});
++    }
+@@ -155 +164,2 @@
+-  const view = row => ({id:row.id,createdAt:row.created_at,reviewState:row.review_state,
++  const view = row => ({id:row.id,createdAt:row.created_at,reviewState:row.review_state,saved:true,
++    retryAfter:row.review_state==='done'?0:retryAfter(row.email,'review',12),
+@@ -439 +449,5 @@
+-          limit(email,'review',12);
++          try { limit(email,'review',12); }
++          catch(error) {
++            if(error.status!==429)throw error;
++            return json({...view(row),saved:true,error:error.message,code:error.code,retryAfter:error.retryAfter},429,{'Retry-After':String(error.retryAfter)});
++          }
+@@ -453 +467 @@
+-    } catch(error) { return json({error:error.status?error.message:'课程服务暂不可用，草稿不会清除。'},error.status||503); }
++    } catch(error) { return json({error:error.status?error.message:'课程服务暂不可用，草稿不会清除。',...(error.code?{code:error.code,retryAfter:error.retryAfter}:{})},error.status||503,error.retryAfter?{'Retry-After':String(error.retryAfter)}:{}); }
+--- a/chat-cloudflare/public/learning/runner.js
++++ b/chat-cloudflare/public/learning/runner.js
+@@ -2,2 +2,2 @@
+-// This document has an opaque origin (sandbox allow-scripts, no same-origin).
+-// Blob workers inherit its restrictive CSP: network access is limited to runtime files.
++// Opaque-origin iframe + a fresh worker per run/initialization attempt.
++// Keep the sandbox/CSP and the parent's 10-second execution limit unchanged.
+@@ -5,5 +5,100 @@
+-let worker = null;
+-let runId = null;
+-let workerUrl = null;
+-function send(data) { parent.postMessage({channel:'arts-python-v1',...data},'*'); }
+-function reset() { if(worker) worker.terminate(); worker=null; if(workerUrl) URL.revokeObjectURL(workerUrl); workerUrl=null; }
++const initializationTimeoutMs = 45000;
++let worker = null, workerUrl = null, initializationTimer = null;
++function send(data) { parent.postMessage({channel:'arts-python-v1', ...data}, '*'); }
++function reset() {
++  clearTimeout(initializationTimer);
++  if (worker) worker.terminate();
++  worker = null;
++  if (workerUrl) URL.revokeObjectURL(workerUrl);
++  workerUrl = null;
++}
++
++// Pyodide 0.27.7 can swallow a failed stdlib fetch and later report missing
++// encodings; a failed WASM stream can leave initialization pending forever.
++// Fully receive and check both pinned local binaries before invoking Pyodide.
++// Supply those responses only during initialization, then restore native fetch.
++async function workerMain(runtimeBase, reload) {
++  self.onmessage = async event => {
++    const {code, csv, harness, id} = event.data;
++    let chars = 0, phase = 'initializing';
++    const emit = (stream, text) => {
++      const value = String(text);
++      if (chars < 10000) {
++        self.postMessage({type:'output', id, stream, text:value.slice(0,10000-chars)});
++        chars += value.length;
++      }
++    };
++    try {
++      const nativeFetch = self.fetch.bind(self);
++      const binaries = new Map();
++      async function receive(name, size, magic, mime) {
++        const url = runtimeBase + name;
++        const response = await nativeFetch(url, {credentials:'omit', cache:reload?'reload':'default'});
++        if (!response.ok) throw new Error('运行环境文件下载失败：'+name+'（'+response.status+'）');
++        const bytes = new Uint8Array(await response.arrayBuffer());
++        if (bytes.length !== size || magic.some((value,i)=>bytes[i]!==value)) {
++          throw new Error('运行环境文件不完整：'+name);
++        }
++        binaries.set(url, {bytes, mime});
++      }
++      self.postMessage({type:'status', id, phase, text:'正在下载并检查 Python 运行环境…'});
++      await Promise.all([
++        receive('python_stdlib.zip', 2360737, [80,75,3,4], 'application/zip'),
++        receive('pyodide.asm.wasm', 10105545, [0,97,115,109], 'application/wasm'),
++      ]);
++      let py;
++      try {
++        self.fetch = (input, init) => {
++          const entry = binaries.get(typeof input==='string'?input:input?.url||String(input));
++          return entry ? Promise.resolve(new Response(entry.bytes, {headers:{'Content-Type':entry.mime}})) : nativeFetch(input,init);
++        };
++        self.postMessage({type:'status', id, phase, text:'运行环境文件已就绪，正在启动 Python…'});
++        importScripts(runtimeBase+'pyodide.js'+(reload?'?recovery=1':''));
++        py = await loadPyodide({indexURL:runtimeBase, stdout:s=>emit('stdout',s), stderr:s=>emit('stderr',s)});
++      } finally {
++        self.fetch = nativeFetch;
++        binaries.clear();
++      }
++      phase = 'running';
++      self.postMessage({type:'running', id});
++      py.globals.set('student_source',code);
++      py.globals.set('student_csv',csv);
++      await py.runPythonAsync(harness);
++      self.postMessage({type:'done', id});
++    } catch (error) {
++      self.postMessage({type:'error', id, phase, text:String(error.message||error)});
++    }
++  };
++}
++
++function startAttempt(request, attempt=0) {
++  reset();
++  const source='('+workerMain.toString()+')('+JSON.stringify(base)+','+(attempt>0)+');';
++  workerUrl=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
++  let child=null, running=false;
++  function fail(text) {
++    if (child !== worker) return;
++    if (!running && attempt===0) {
++      send({type:'status', id:request.id, phase:'initializing', text:'Python 环境暂未载入，正在自动恢复一次；代码和输入已保留…'});
++      startAttempt(request,1);
++      return;
++    }
++    send({type:'error', id:request.id, phase:running?'running':'initializing', text:running?text:'Python 环境载入未完成，代码尚未执行。请稍后重试；代码和输入已保留。\n'+text});
++    reset();
++  }
++  try { child=worker=new Worker(workerUrl); }
++  catch(error) { fail(error.message||'运行环境创建失败'); return; }
++  initializationTimer=setTimeout(()=>fail('运行环境载入超过45秒。'),initializationTimeoutMs);
++  child.onmessage=event=>{
++    if (child!==worker || event.data?.id!==request.id) return;
++    const data=event.data;
++    if (data.type==='output' && !running) return;
++    if (data.type==='error') { fail(data.text); return; }
++    if (data.type==='running') { running=true; clearTimeout(initializationTimer); }
++    send(data);
++    if (data.type==='done') reset();
++  };
++  child.onerror=event=>{event.preventDefault?.();fail(event.message||'运行环境载入失败');};
++  child.postMessage(request);
++}
++
+@@ -11,26 +106,4 @@
+-  if(event.source!==parent || event.data?.channel!=='arts-python-v1') return;
+-  if(event.data.type==='ping'){send({type:'ready'});return;}
+-  if(event.data.type==='stop'){reset();return;}
+-  if(event.data.type!=='run')return;
+-  reset();runId=event.data.id;
+-  const source=`
+-    self.onmessage = async event => {
+-      const {code,csv,harness,id}=event.data;
+-      let chars=0;
+-      const emit=(stream,text)=>{const s=String(text); if(chars<10000){self.postMessage({type:'output',id,stream,text:s.slice(0,10000-chars)});chars+=s.length;}};
+-      try {
+-        self.postMessage({type:'status',id,text:'正在载入 Python…'});
+-        importScripts(${JSON.stringify(base+'pyodide.js')});
+-        const py=await loadPyodide({indexURL:${JSON.stringify(base)},stdout:s=>emit('stdout',s),stderr:s=>emit('stderr',s)});
+-        self.postMessage({type:'running',id});
+-        py.globals.set('student_source',code);py.globals.set('student_csv',csv);
+-        await py.runPythonAsync(harness);
+-        self.postMessage({type:'done',id});
+-      }catch(error){self.postMessage({type:'error',id,text:String(error.message||error)});}
+-    };
+-  `;
+-  const blob=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
+-  workerUrl=blob;worker=new Worker(blob);
+-  worker.onmessage=e=>send(e.data);
+-  worker.onerror=e=>send({type:'error',id:runId,text:e.message||'运行环境载入失败'});
+-  worker.postMessage(event.data);
++  if (event.source!==parent || event.data?.channel!=='arts-python-v1') return;
++  if (event.data.type==='ping') { send({type:'ready'}); return; }
++  if (event.data.type==='stop') { reset(); return; }
++  if (event.data.type==='run') startAttempt(event.data);
+--- a/chat-cloudflare/public/learning/review-status.mjs
++++ b/chat-cloudflare/public/learning/review-status.mjs
+@@ -0,0 +1,19 @@
++// Copyright (c) 2026 OriginMind. All rights reserved.
++// Use only after a server-confirmed submission, never for a failed save.
++export function reviewStatus(result={}) {
++  if (result.reviewState==='done') return '作业已保存，AI 点评已完成。正式验收由教师确认。';
++  if (result.reviewState==='reviewing') return '作业已保存，AI 正在点评。可稍后刷新点评，无需重复提交。';
++  const seconds=Number(result.retryAfter);
++  if (result.code==='review_rate_limited'||result.status===429||seconds>0) {
++    const wait=Number.isFinite(seconds)&&seconds>0?'约 '+Math.ceil(seconds/60)+' 分钟后':'稍后';
++    return '作业已保存，无需重复提交。本小时 AI 点评次数已用完，'+wait+'可重试点评。';
++  }
++  if (result.status===401) return '作业已保存，登录状态已失效。重新登录后可重试点评，无需重复提交。';
++  if (result.error||result.message||result.reviewState==='failed') return '作业已保存，AI 点评暂未完成。请稍后重试点评，无需重复提交。';
++  return '作业已保存，等待 AI 点评。无需重复提交。';
++}
++export function reviewRequestError(result,status,retryAfterHeader) {
++  return Object.assign(new Error(result.error||'操作未完成'),{
++    status, code:result.code, retryAfter:result.retryAfter??Number(retryAfterHeader||0), saved:result.saved===true,
++  });
++}

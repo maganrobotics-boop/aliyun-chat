@@ -100,9 +100,9 @@ function ConversationMenu() {
     focusComposerAfterClose.current = false;
     window.requestAnimationFrame(focusComposer);
   }}>
-    <SheetHeader><SheetTitle>聊天</SheetTitle><SheetDescription>选择 AI 助手或成员聊天</SheetDescription></SheetHeader>
+    <SheetHeader><SheetTitle>聊天</SheetTitle><SheetDescription>选择 AI 学长或成员聊天</SheetDescription></SheetHeader>
     <nav className="oa-conversation-drawer-list" aria-label="聊天列表">
-      <button type="button" aria-current={!chat.peer ? 'true' : undefined} onClick={() => navigate(chat.showAi)}><Bot /><span>AI 助手</span>{!chat.peer && <Check aria-hidden="true" />}</button>
+      <button type="button" aria-current={!chat.peer ? 'true' : undefined} onClick={() => navigate(chat.showAi)}><Bot /><span>AI 学长</span>{!chat.peer && <Check aria-hidden="true" />}</button>
       {loadingMembers && <p role="status">正在加载成员…</p>}
       {memberError && <button type="button" onClick={() => { resetMemberLoading(); setReload(value => value + 1); }}><RotateCcw /><span>{memberError}</span></button>}
       {!loadingMembers && !memberError && !members.length && <p>暂无可聊天成员</p>}

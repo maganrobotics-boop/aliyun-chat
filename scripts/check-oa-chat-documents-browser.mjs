@@ -102,28 +102,28 @@ try {
       await page.locator('.oa-shared-chat input[type=file][accept*=".markdown"]').setInputFiles({name,mimeType:'text/plain',buffer:Buffer.from(text)});
       await page.getByRole('article',{name:`已导入 ${name}`,exact:true}).waitFor();
     };
-    const input = page.getByPlaceholder('询问实验室大数据');
+    const input = page.getByPlaceholder('向 AI 学长提问');
     const send = async text => { await input.fill(text); await input.press('Enter'); };
     const preview = page.getByRole('dialog',{name:'文档预览',exact:true});
     const closePreview = async () => { await preview.waitFor(); await preview.getByRole('button',{name:'返回聊天',exact:true}).click(); await preview.waitFor({state:'hidden'}); };
     try {
-      await page.goto(origin); await page.locator('.collaboration-workspace').waitFor(); await page.locator('.collaboration-ai-entry').click(); await page.locator('.oa-shared-chat').waitFor();
+      await page.goto(origin); await page.locator('#oa-desktop-navigation .sidebar-nav-item').filter({hasText:'聊天'}).evaluate(button=>button.click()); await page.locator('.collaboration-workspace').waitFor(); await page.locator('.collaboration-ai-entry').click(); await page.locator('.oa-shared-chat').waitFor();
       if (name==='desktop') await page.getByRole('button',{name:'收起侧栏',exact:true}).click();
-      assert.equal(await page.getByRole('heading',{name:'实验室大模型能做什么',exact:true}).isVisible(),true);
-      assert.equal(await page.locator('.empty-hero p').innerText(),'知识问答、资料整理、会议纪要、项目总结等');
+      assert.equal(await page.getByRole('heading',{name:'先问问题，也可以让学长带你完成新手村',exact:true}).isVisible(),true);
+      assert.equal(await page.locator('.empty-hero p').innerText(),'AI 学长可用于知识问答、资料整理、会议纪要、项目总结和任务拆解；涉及入组与项目申请时，只依据已审核制度回答。上传文件后，回答可整理成 OA 审核资料。');
       assert.equal(await page.locator('.empty-hero p').isVisible(),true);
       assert.ok(await page.locator('.empty-hero').evaluate(element => [...element.querySelectorAll('h2,p')].every(child => child.scrollWidth <= child.clientWidth + 1)));
       const hints = page.locator('.oa-chat-examples button');
-      assert.deepEqual(await hints.allTextContents(),['会议模式','知识问答','资料整理','会议纪要','项目总结']);
+      assert.deepEqual(await hints.allTextContents(),['知识问答查公开与内部资料','新手村助教拆任务和给建议','项目总结周报和行动项','资料归档整理后送审','会议模式纪要和待办']);
       if (height > 520) {
         const prompts = [
-          '实验室有哪些研究方向？',
-          '请把材料整理成结构清晰的 Word 文档，保留关键事实。',
-          '请整理成会议纪要，区分讨论、决定和待办，未明确的信息标注待补充。',
-          '请把材料整理成项目总结文档，列出已完成工作、主要成果、存在问题和下一步计划，未明确的信息标注待补充。',
+          '机器人自主移动与操作实验室适合本科生参与的方向有哪些？',
+          '@项目总结 请把我的新手村任务拆成今天能做的清单：完善资料、确认可投入时间、阅读保密要求、选择项目方向、完成第一个学习记录。',
+          '@项目总结 请根据我上传或粘贴的材料，整理项目进展、问题、下一步行动项和负责人。',
+          '@资料归档 请把这份材料整理为 OA 可审核入库的 Markdown：标题、摘要、关键词、正文、待核验事项。',
         ];
         for (let index = 0; index < prompts.length; index++) {
-          await hints.nth(index + 1).click();
+          await hints.nth(index).click();
           assert.equal(await input.inputValue(),prompts[index]);
         }
         assert.equal(createRequests().length,0,'choosing a capability must not submit a task');
@@ -222,12 +222,12 @@ try {
       await page.waitForTimeout(100); assert.equal(await preview.isVisible(),false);
       assert.equal(await page.locator('.oa-document-card').last().getByRole('button',{name:'下载 Word',exact:true}).count(),0);
       // Reload can restore owner-authorized saved documents without a separate page.
-      mode='success'; await page.reload(); await page.locator('.collaboration-workspace').waitFor();
+      mode='success'; await page.reload(); await page.locator('#oa-desktop-navigation .sidebar-nav-item').filter({hasText:'聊天'}).evaluate(button=>button.click()); await page.locator('.collaboration-workspace').waitFor();
       await page.locator('.collaboration-ai-entry').click(); await page.locator('.empty-hero').waitFor();
       await page.getByRole('button',{name:'已保存文档',exact:true}).click();
       const history=page.getByRole('dialog',{name:'本人已保存文档',exact:true}); await history.waitFor();
-      await history.locator('.oa-document-history button').first().click(); await preview.waitFor();
-      assert.ok((await preview.innerText()).includes(finalBody)); await closePreview();
+      await history.locator('.oa-document-history button').filter({hasText:'人工核对稿'}).first().click(); await preview.waitFor();
+      assert.ok((await preview.innerText()).includes('最终确认：保留待验证事项，不宣称实机验收完成。')); await closePreview();
       assert.equal(new URL(page.url()).pathname,'/');
       // Unsupported import leaves existing material/results intact.
       await page.locator('.oa-shared-chat input[type=file][accept*=".markdown"]').setInputFiles({name:'不支持.pdf',mimeType:'application/pdf',buffer:Buffer.from('not a document')});

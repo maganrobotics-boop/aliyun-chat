@@ -794,7 +794,7 @@
       .side-footer { position: static; display: block !important; margin-left: auto; }
       .side-footer .bottom-actions { flex-direction: row; }
       .side-footer .new-chat-bottom, .side-footer .settings-trigger, .side-footer .recent-chat-trigger { width: 36px; height: 36px; border-radius: 50%; padding: 0; }
-      .recent-chat-trigger { display: grid; place-items: center; border: 1px solid #e3e5e8; background: #fff; color: #555b64; box-shadow: 0 2px 7px rgba(28,32,40,.05); cursor: pointer; }
+      .recent-chat-trigger { display: grid !important; place-items: center; border: 1px solid #e3e5e8; background: #fff; color: #555b64; box-shadow: 0 2px 7px rgba(28,32,40,.05); cursor: pointer; }
       .mobile-settings-trigger { display: grid; }
       .side-footer .new-chat-bottom span { display: none; }
       .workspace {

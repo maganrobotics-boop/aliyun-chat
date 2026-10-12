@@ -123,9 +123,9 @@ test("makes the official Feishu QR the primary login and keeps ChatGPT and GitHu
     choiceSource,
     /\{githubLoginEnabled\s*&&\s*<a[^>]*href="\/api\/auth\/github\/start"/,
   );
-  assert.match(pageSource, /进入实验室大模型/u);
+  assert.match(pageSource, /登录联合研发 OA/u);
   assert.match(pageSource, /游客试看公开问答/u);
-  assert.match(pageSource, /实习学生请使用飞书登录/u);
+  assert.match(pageSource, /新成员请使用飞书扫码/u);
   assert.match(pageSource, /fetch\("\/api\/auth\/feishu\/name-binding"/u);
   assert.match(pageSource, /fetch\("\/api\/auth\/feishu\/provision"/u);
   assert.match(pageSource, /provision-feishu-member/u);
@@ -134,10 +134,10 @@ test("makes the official Feishu QR the primary login and keeps ChatGPT and GitHu
   assert.match(pageSource, /LarkSSOSDKWebQRCode-1\.0\.3\.js/u);
   assert.match(pageSource, /qrLogin\.matchOrigin\(event\.origin\)\s*\|\|\s*!qrLogin\.matchData\(event\.data\)/u);
   assert.match(pageSource, /authorizeUrl\.searchParams\.set\("tmp_code", temporaryCode\)/u);
-  assert.match(pageSource, /本机已登录飞书，直接继续/u);
+  assert.match(pageSource, /在本机打开飞书登录/u);
   const gateSource = pageSource.slice(pageSource.indexOf("function RegistrationGate"), pageSource.indexOf("function IdentityAccessGate"));
   assert.doesNotMatch(gateSource, /首次使用登记|提交注册申请|<Field label="学号 \/ 工号|<Field label="当前认证身份"/u);
-  assert.match(gateSource, /完成基本信息和保密协议后进入个人主页与新手任务/u);
+  assert.match(gateSource, /完成身份验证 → 填写基本资料和可投入时间 → 签署保密协议 → 进入内部工作区/u);
   assert.match(gateSource, /游客仅能访问公开资料/u);
   assert.doesNotMatch(gateSource, /无需填写姓名、学号、工号或额外认证资料/u);
   assert.match(gateSource, /都不是我的，以当前飞书身份进入/u);

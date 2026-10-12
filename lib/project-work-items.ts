@@ -2,11 +2,21 @@ export const OA_PROJECT = 'OriginMind × ARTS Robotics 联合研发项目';
 
 export type WorkItemKind = 'task' | 'meeting_action' | 'risk' | 'milestone';
 export type WorkItemStatus = 'open' | 'in_progress' | 'done' | 'cancelled';
+export type MilestoneHistoryAction = 'updated' | 'accepted' | 'reopened' | 'cancelled';
+export type WorkItemMilestone = {
+  deliverables: string; acceptanceCriteria: string; evidence: string; acceptanceNote: string;
+  acceptedAt?: string | null; acceptedByName?: string; acceptedByEmail?: string;
+  historyTruncated?: boolean;
+  history?: Array<{
+    action: MilestoneHistoryAction; changedAt: string; changedByName?: string; changedByEmail?: string;
+    previousDueAt?: string | null; previous: { evidence?: string; acceptanceNote?: string };
+  }>;
+};
 export type WorkItem = {
   id: string; project: string; title: string; detail: string; kind: WorkItemKind; status: WorkItemStatus;
   priority: 'low' | 'normal' | 'high'; assigneeName: string; assigneeEmail: string; dueAt: string | null;
   sourceType: 'manual' | 'meeting' | 'approval'; sourceId: string; createdByName: string; createdByEmail: string;
-  completedAt: string | null; createdAt: string; updatedAt: string;
+  completedAt: string | null; createdAt: string; updatedAt: string; milestone?: WorkItemMilestone;
 };
 
 export type WorkItemRow = {

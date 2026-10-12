@@ -1,0 +1,48 @@
+✔ chapter storage lifecycle: registration (25.89957ms)
+✔ chapter storage lifecycle: toolkit (14.013632ms)
+✔ chapter storage lifecycle: git-basics (10.635265ms)
+✔ chapter storage lifecycle: python-basics (11.981401ms)
+✔ chapter storage lifecycle: ros2-simulation (10.041941ms)
+✔ chapter storage lifecycle: mini-project (10.920274ms)
+✔ chapter storage lifecycle: graduation (9.40411ms)
+✔ chapter storage lifecycle: ros2-development (10.093679ms)
+✔ chapter storage lifecycle: robot-perception (9.411592ms)
+✔ chapter storage lifecycle: localization-slam (10.617428ms)
+✔ chapter storage lifecycle: autonomous-navigation (10.26691ms)
+✔ chapter storage lifecycle: manipulation-foundations (10.969918ms)
+✔ chapter storage lifecycle: capstone-patrol (10.27347ms)
+✔ chapter storage lifecycle: robot-manipulation (11.078712ms)
+✔ chapter storage lifecycle: robot-learning (9.385804ms)
+✔ chapter storage lifecycle: robot-agent (9.977224ms)
+✔ chapter storage lifecycle: capstone-mobile-agent (8.179998ms)
+✔ chapter storage lifecycle: capstone-dual-arm (8.148079ms)
+✔ chapter storage lifecycle: robot-mechanical-systems (9.398052ms)
+✔ chapter storage lifecycle: robot-electrical-systems (8.245406ms)
+✔ chapter storage lifecycle: capstone-integration (8.632439ms)
+✔ chapter storage lifecycle: capstone-quadruped (8.200428ms)
+✖ normal learner progresses through common chapters without choosing every mutually exclusive project (13.177733ms)
+✔ project selection opens only chosen project; retry is stable and second choice rejected (24.017736ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 23
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 363.577986
+
+✖ failing tests:
+
+test at acceptance-patch/patches/learning-full-acceptance-20261012/acceptance.test.mjs:46:1
+✖ normal learner progresses through common chapters without choosing every mutually exclusive project (13.177733ms)
+  AssertionError [ERR_ASSERTION]: robot-learning should open after common foundations; current=capstone-patrol
+      at TestContext.<anonymous> (file:///workspace/scratch/76449e49ed45/acceptance-patch/patches/learning-full-acceptance-20261012/acceptance.test.mjs:51:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

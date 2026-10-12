@@ -1,0 +1,75 @@
+--- a/aliyun/learning/service-core.mjs
++++ b/aliyun/learning/service-core.mjs
+@@ -85,7 +85,7 @@
+     const rows=db.prepare("SELECT COALESCE(json_extract(payload,'$.courseId'),'python-basics') AS courseId FROM learning_submissions WHERE email=?").all(email);
+     const graduation=graduationSummary(email);
+     const grants=graduation.status==='passed'?[...graduation.exemptedCourses,'graduation']:[];
+-    const progress=courseProgression.calculate(rows.map(row=>row.courseId),grants);
++    const progress=courseProgression.calculate(rows.map(row=>row.courseId),grants,[...projectWorkIds]);
+     const access=db.prepare("SELECT scope FROM learning_access_grants WHERE email=? COLLATE NOCASE").get(email);
+     const granted=db.prepare('SELECT course_id FROM learning_course_access_grants WHERE email=? COLLATE NOCASE').all(email).flatMap(row=>{const course=courses.find(c=>c.id===row.course_id);return course?[course.id,...(course.parentId?[course.parentId]:[])]:[];});
+     return {...progress,availableCourseIds:[...new Set([...progress.availableCourseIds.filter(id=>!projectWorkIds.has(id)),...courseProjectSelections.chosenCourseIds(email),...granted])],grantedCourseIds:granted,projectWorkCourseIds:[...projectWorkIds],...(access?.scope==='all_courses'?{availableCourseIds:[...courseIds],accessMode:'all_courses'}:{}),submissionCount:rows.length};
+--- a/chat-cloudflare/public/learning/course-progression.mjs
++++ b/chat-cloudflare/public/learning/course-progression.mjs
+@@ -14,14 +14,18 @@
+   const foundationIds = basicCourses.map(course => course.id);
+   const advancedSequence = sequence.filter(id => !foundationIds.includes(id));
+   const canonicalId = id => canonical.get(id);
+-  function calculate(submittedIds = [], exemptedIds = []) {
++  function calculate(submittedIds = [], exemptedIds = [], independentlySelectedIds = []) {
+     const submitted = new Set(submittedIds.map(canonicalId).filter(id => sequence.includes(id)));
+     const exempted = new Set(exemptedIds.map(canonicalId).filter(id => sequence.includes(id)));
+     const completed = new Set([...submitted, ...exempted]);
+     // Newbie Village is one fully accessible introductory stage, including its direct-entry task.
+     const foundationComplete = foundationIds.every(id => completed.has(id));
+-    const frontier = advancedSequence.findIndex(id => !completed.has(id));
+-    const advancedPrefix = !foundationComplete ? [] : frontier < 0 ? advancedSequence : advancedSequence.slice(0, frontier + 1);
++    // Semester projects have their own access gate. They must not become
++    // mandatory prerequisites for common courses, or force mutually exclusive choices.
++    const independent = new Set(independentlySelectedIds.map(canonicalId));
++    const commonSequence = advancedSequence.filter(id => !independent.has(id));
++    const frontier = commonSequence.findIndex(id => !completed.has(id));
++    const advancedPrefix = !foundationComplete ? [] : frontier < 0 ? commonSequence : commonSequence.slice(0, frontier + 1);
+     const available = new Set([...foundationIds, ...advancedPrefix]);
+     return {
+       version: progressionVersion,
+@@ -31,7 +35,7 @@
+       foundationComplete,
+       submittedCourseIds: sequence.filter(id => submitted.has(id)),
+       exemptedCourseIds: sequence.filter(id => exempted.has(id)),
+-      currentCourseId: !foundationComplete ? foundationIds.find(id => !completed.has(id)) : frontier < 0 ? null : advancedSequence[frontier],
++      currentCourseId: !foundationComplete ? foundationIds.find(id => !completed.has(id)) : frontier < 0 ? null : commonSequence[frontier],
+       availableCourseIds: [...canonical].filter(([, id]) => available.has(id)).map(([id]) => id),
+     };
+   }
+--- a/chat-cloudflare/public/learning/app.js
++++ b/chat-cloudflare/public/learning/app.js
+@@ -295,8 +295,9 @@
+ function current(){return {courseId,code:$('code').value,csv:$('csv').value,reflection:$('reflection').value,question:$('question').value,kind:$('submission-kind').value,run:lastRun};}
+ function changed(){return lastRun && (lastRun.courseId!==courseId||lastRun.code!==$('code').value||lastRun.csv!==$('csv').value);}
+ function payload(){const p=current();if(changed())p.run=null;return p;}
+-function saveLocal(){try{localStorage.setItem(localKey,JSON.stringify(current()));$('save-state').textContent='已保存到本机 · '+new Date().toLocaleTimeString();}catch{$('save-state').textContent='本机存储不可用，请保持页面打开';} $('stale').hidden=!changed();}
+-function applyDraft(d){$('code').value=d.code||exercise.starter;$('csv').value=d.csv||exercise.datasets.normal;$('reflection').value=d.reflection||'';$('question').value=d.question||'';$('submission-kind').value=d.kind||(d.code?'experiment':'answer');lastRun=d.run&&((d.run.courseId||'python-basics')===courseId)?{...d.run,courseId}:null;$('output').textContent=lastRun?.output||'尚未运行';$('tests').textContent=lastRun?.tests||'尚未测试';$('stale').hidden=!changed();syncStructuredForm();}
++function saveLocal(){syncDatasetSelection();try{localStorage.setItem(localKey,JSON.stringify({...current(),pendingSubmission}));$('save-state').textContent='已保存到本机 · '+new Date().toLocaleTimeString();}catch{$('save-state').textContent='本机存储不可用，请保持页面打开';} $('stale').hidden=!changed();}
++function applyDraft(d){pendingSubmission=d.pendingSubmission&&typeof d.pendingSubmission.serialized==='string'&&typeof d.pendingSubmission.key==='string'?d.pendingSubmission:null;$('code').value=d.code||exercise.starter;$('csv').value=d.csv||exercise.datasets.normal;$('reflection').value=d.reflection||'';$('question').value=d.question||'';$('submission-kind').value=d.kind||(d.code?'experiment':'answer');lastRun=d.run&&((d.run.courseId||'python-basics')===courseId)?{...d.run,courseId}:null;$('output').textContent=lastRun?.output||'尚未运行';$('tests').textContent=lastRun?.tests||'尚未测试';$('stale').hidden=!changed();syncStructuredForm();syncDatasetSelection();}
++function syncDatasetSelection(){const select=$('dataset');if(!select||!exercise?.datasets)return;const match=Object.keys(exercise.datasets).find(key=>exercise.datasets[key]===$('csv').value);let custom=Array.from(select.options).find(option=>option.value==='__custom__');if(match===undefined&&!custom){custom=element('option','当前自定义输入');custom.value='__custom__';custom.disabled=true;select.append(custom);}select.value=match??'__custom__';}
+ function readLocal(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}}
+ const structuredFields={
+   registration:{task:{problem:'要解决的问题',input:'需要哪些输入：地图、起点和巡检点',output:'需要得到哪些结果或记录',constraints:'约束：允许区域和时间',success:'成功条件',failure:'失败条件与处理',evidence:'证明任务完成的材料'},data:{original_hours:'原计划各项工时（逗号分隔，总计 ≤ 8）',reduced_hours:'缩减后各项工时（逗号分隔，总计 ≤ 4）',removed:'删除的扩展任务',reason:'保留与删减的理由'}},
+@@ -458,7 +459,7 @@
+ $('run').onclick=run;$('stop').onclick=()=>finish('已手动停止；本次输出已保留。');$('restore').onclick=()=>{if(active){note('请先停止运行再恢复');return;}if(confirm(['task','evidence'].includes(labs[courseId].mode)?'恢复任务卡或交付记录的示例字段？输入与证据字段保持不变，当前草稿会先备份。':'恢复起始代码？输入数据保持不变，当前草稿会先备份。')){backup();$('code').value=exercise.starter;syncStructuredForm();saveLocal();}};
+ for(const id of ['code','csv','reflection','question','submission-kind'])$(id).addEventListener('input',saveLocal);
+ $('code').addEventListener('keydown',event=>{if(event.key==='Tab'){event.preventDefault();const e=event.target;e.setRangeText('    ',e.selectionStart,e.selectionEnd,'end');saveLocal();}});
+-$('dataset').onchange=()=>{if(confirm('替换为所选教学数据？当前内容会先备份。')){backup();$('csv').value=exercise.datasets[$('dataset').value];saveLocal();}};
++$('dataset').onchange=()=>{const selected=$('dataset').value;if(confirm('替换为所选教学数据？当前内容会先备份。')){backup();$('csv').value=exercise.datasets[selected];saveLocal();}else syncDatasetSelection();};
+ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));$('start-lab').onclick=()=>tab('lab');$('save-cloud').onclick=saveCloud;$('refresh').onclick=()=>{void refresh();void mountInstructor({courseId,studentEmail:email});};$('submit').onclick=submit;
+ const projectApplicationUI=createProjectApplicationUI({identity:()=>({email,authGeneration}),onLogin:showLogin,onAccountEntry:()=>{closeAccountMenu(true);closeAccountPanel();},onProgress:refresh,workCourses:()=>advancedTracks.flatMap(track=>track.courses).filter(c=>c.requiredProject||c.optional||c.parentProject||c.id==='capstone-mower'),onCourse:id=>{const track=advancedTracks.find(t=>t.courses.some(c=>c.id===id||(c.activities||[]).some(a=>a.id===id)));if(track)selectAdvanced(track.id,track.courses.find(c=>c.id===id||(c.activities||[]).some(a=>a.id===id)).id);else{chooseCourse(id);tab('lab');}},onReceipt:receipt=>chatMessage(receipt.kind==='course_project_selection'?(receipt.oaDelivered?'课程选题已保存，对应章节已开放，姓名、学号和选题已同步至马淦老师的 OA 待处理。':'课程选题已保存，对应章节已开放；OA 待同步，系统会自动重试。'):'实验室报名已送达 OA，请等待马淦老师审核。','assistant')});
+ function chatMessage(text,role){const message=role==='assistant'?formatLearningText(text,'chat-message assistant'):element('div',text,'chat-message '+role);$('conversation').append(message);message.scrollIntoView({block:'nearest'});}
+@@ -629,7 +630,6 @@
+     theory.append(units,renderChapterDeepening(course.id,'theory'));host.append(theory,project);connectVideoTasks(theory,course.id,openCompanion);
+   }else{
+     if(course.parentProject)host.append(advancedButton('返回项目六三选一',()=>selectAdvanced('capstone','capstone-quadruped'),true));
+-  if(view==='lab')host.append(renderMethodGuide(course,true),renderMechanicalDesignLab(course.id),renderChapterDeepening(course.id,'practice',email,companionActions(course.id,email)));
+     let workspaceCourse=course;
+     const armKey='arts-arm-activity-v1:'+email;
+     if(course.id==='robot-manipulation'){

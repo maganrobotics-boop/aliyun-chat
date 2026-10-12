@@ -117,13 +117,15 @@ try {
       calls.push({ pathname, method: request.method(), body: request.postDataJSON?.() });
       if (pathname === "/api/newbie/dashboard") {
         await route.fulfill(signedIn ? { json: dashboard(taskStatus, displayName, agreementStatus) } : { status: 401, json: { error: "请先登录。" } });
+      } else if (pathname === "/api/visitor/status") {
+        await route.fulfill({ json: { emailLoginConfigured: true } });
       } else if (pathname === "/api/visitor/request-code") {
         await route.fulfill({ json: { email: "student@stumail.sztu.edu.cn", devCode: "123456" } });
       } else if (pathname === "/api/visitor/verify-code") {
         signedIn = true;
         await route.fulfill({ json: { signedIn: true } });
       } else if (pathname === "/api/newbie/agreement") {
-        agreementStatus = "pending";
+        agreementStatus = "approved";
         await route.fulfill({ json: { signed: true, archived: true, ...dashboard(taskStatus, displayName, agreementStatus) } });
       } else if (pathname === "/api/newbie/profile") {
         displayName = request.postDataJSON().displayName;
@@ -137,45 +139,43 @@ try {
     });
 
     await page.goto(`${origin}/newbie-village`);
-    await page.getByRole("heading", { name: "从第一项任务，走到能交付。" }).waitFor();
-    assert.equal(await page.getByText("任务地图").count() > 0, true);
+    await page.getByRole("heading", { name: "Foundation 学习路径" }).waitFor();
+    assert.equal(await page.locator(".task-card").count(), 7);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
 
-    await page.getByRole("button", { name: "使用深技大邮箱进入" }).click();
+    await page.getByRole("button", { name: "登录并同步进度" }).click();
     const email = page.locator(".email-input");
-    assert.equal(await email.getAttribute("placeholder"), "学号@stumail.sztu.edu.cn");
+    assert.equal(await email.getAttribute("placeholder"), "学号@stumail.sztu.edu.cn 或教师@sztu.edu.cn");
     await email.fill("student@stumail.sztu.edu.cn");
     await page.getByRole("button", { name: "发送验证码" }).click();
     await page.locator(".code-input").fill("123456");
-    await page.getByRole("button", { name: "验证并进入新手村" }).click();
-    await page.getByRole("heading", { name: "先签署，审核后入村。" }).waitFor();
-    assert.equal(await page.locator(".task-card").count(), 0);
+    await page.locator(".code-input").press("Enter");
+    await page.getByRole("button", { name: "查看协议" }).click();
+    await page.getByRole("heading", { name: "保存与提交前，完成协议归档。" }).waitFor();
     await page.screenshot({ path: resolve(output, `newbie-agreement-${name}.png`), fullPage: true, animations: "disabled" });
     await page.locator('[name="signerName"]').fill("小深同学");
     await page.locator('[name="accepted"]').check();
-    await page.getByRole("button", { name: "签署并提交审核" }).click();
-    await page.getByRole("heading", { name: "签署记录已归档，等待管理员审核" }).waitFor();
+    await page.getByRole("button", { name: "签署并进入新手村" }).click();
+    await page.getByRole("heading", { name: "Foundation 学习路径" }).waitFor();
     assert.equal(calls.find((call) => call.pathname === "/api/newbie/agreement")?.body.signerName, "小深同学");
-    assert.equal(await page.locator(".task-card").count(), 0);
-    agreementStatus = "approved";
     await page.reload();
     await page.locator(".task-card").first().waitFor();
     assert.equal(await page.locator(".task-card").count(), 7);
     assert.equal(await page.locator(".task-card").nth(0).locator("button").isEnabled(), true);
-    assert.equal(await page.locator(".task-card").nth(1).locator("button").isDisabled(), true);
+    assert.equal(await page.locator(".task-card").nth(1).locator("button").isEnabled(), true);
 
     await page.locator('[data-view="profile"]').click();
     await page.locator('[name="displayName"]').fill("小深");
-    await page.getByRole("button", { name: "保存个人主页" }).click();
+    await page.locator(".profile-form").evaluate(form => form.requestSubmit());
     await page.getByRole("heading", { name: "小深" }).waitFor();
     assert.equal(calls.find((call) => call.pathname === "/api/newbie/profile")?.body.displayName, "小深");
 
-    await page.locator('[data-view="tasks"]').click();
-    await page.locator(".task-card").first().getByRole("button", { name: "查看任务" }).click();
+    await page.locator('[data-view="courses"]').first().click();
+    await page.locator(".task-card").first().getByRole("button", { name: "查看课程与任务" }).click();
     await page.getByRole("button", { name: "开始任务" }).click();
-    await page.locator(".task-card").first().getByRole("button", { name: "查看任务" }).click();
+    await page.locator(".task-card").first().getByRole("button", { name: "查看课程与任务" }).click();
     await page.locator(".task-evidence").fill("个人主页已经完成，准备开始下一关。");
-    await page.getByRole("button", { name: "提交完成" }).click();
+    await page.getByRole("button", { name: "正式提交" }).click();
     await page.waitForFunction(() => !document.querySelectorAll(".task-card")[1]?.querySelector("button")?.disabled);
     assert.equal(await page.locator(".task-card").nth(1).locator("button").isEnabled(), true);
     assert.equal(calls.some((call) => call.pathname.startsWith("/api/oa")), false);

@@ -1,0 +1,30 @@
+✖ advanced practice mounts its guide and data exercises only once (3.093939ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 90.323048
+
+✖ failing tests:
+
+test at acceptance-patch/patches/learning-full-acceptance-20261012/dataset-state.test.mjs:21:1
+✖ advanced practice mounts its guide and data exercises only once (3.093939ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 1
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/76449e49ed45/acceptance-patch/patches/learning-full-acceptance-20261012/dataset-state.test.mjs:27:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

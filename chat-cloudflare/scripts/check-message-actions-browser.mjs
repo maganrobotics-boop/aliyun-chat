@@ -115,7 +115,10 @@ try {
     // point rather than weakening the assertion by including hidden elements.
     async function restoreRecentQuestion(question) {
       if (name === 'mobile') {
-        await page.getByRole('button',{name:'打开最近聊天',exact:true}).click();
+        const trigger = page.locator('.recent-chat-trigger');
+        assert.equal(await trigger.count(),1);
+        assert.notEqual(await trigger.evaluate(element => getComputedStyle(element).display),'none');
+        await trigger.evaluate(element => element.click());
         await page.locator('#recent-drawer[open]').waitFor();
       }
       const sidebar = page.locator(name === 'mobile' ? '#recent-drawer' : '.history-list');

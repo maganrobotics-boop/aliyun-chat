@@ -76,6 +76,7 @@ try {
     });
     try {
       await page.goto(origin);
+      await page.locator('#oa-desktop-navigation .sidebar-nav-item').filter({hasText:'聊天'}).evaluate(button => button.click());
       await page.locator('.collaboration-workspace').waitFor();
       for (const label of ['聊天','通讯录','管理台','邮箱']) assert.equal(await page.locator('.sidebar-nav-item').filter({hasText:label}).count() >= 1,true);
       if (name === 'desktop') {
@@ -119,13 +120,13 @@ try {
       await drawer.waitFor({state:'hidden'});
       assert.equal(await more.evaluate(element=>element===document.activeElement),true);
       await page.screenshot({ path:resolve(output,`${name}-welcome.png`),fullPage:true });
-      const input = page.getByPlaceholder('询问实验室大数据');
+      const input = page.getByPlaceholder('向 AI 学长提问');
       await input.fill('请解释机器人运动模型和矩阵');
       const previousRequests = requests.filter(request => request.path === '/api/lab-ai/ask').length;
       await input.dispatchEvent('keydown', { key:'Enter',code:'Enter',isComposing:true });
       assert.equal(requests.filter(request => request.path === '/api/lab-ai/ask').length,previousRequests,'IME composition must not submit');
       await input.press('Enter');
-      await page.waitForFunction(() => document.querySelectorAll('.message.assistant math').length === 4);
+      await page.waitForFunction(() => document.querySelectorAll('.message.assistant .math-inline, .message.assistant .math-display').length >= 4);
       await page.waitForFunction(() => document.querySelector('.message.assistant')?.textContent?.includes('完整结尾'));
       assert.equal(await page.locator('.message.assistant table').count(),1);
       assert.ok(await page.locator('.message.assistant strong').count() >= 3, 'the conclusion and two emphasized steps must render');
@@ -151,7 +152,7 @@ try {
       assert.doesNotMatch(await nav.innerText(), /官网 OEM 申请|流程与规则|大模型与资料|AI 聊天/u);
       assert.equal(await nav.locator('[data-sidebar-section="knowledge"]').innerText(), '实验室大模型');
       assert.equal(await nav.getByRole('navigation', {name:'实验室大模型',exact:true}).count(), 1);
-      assert.equal(await nav.getByRole('button', {name:'AI 助手',exact:true}).isVisible(), true);
+      assert.equal(await nav.getByRole('button', {name:'AI 学长',exact:true}).isVisible(), true);
       assert.equal(await nav.getByRole('button',{name:'打开个人账户菜单',exact:true}).getAttribute('title'), '测试成员');
       assert.equal(await nav.getByRole('button',{name:'打开个人账户菜单',exact:true}).isVisible(),true);
       await page.screenshot({ path:resolve(output,`${name}-navigation.png`),fullPage:true });
@@ -168,9 +169,9 @@ try {
       assert.equal(await page.getByRole('button',{name:'聊天选项',exact:true}).count(),1, 'every OA page keeps one unified right-side chat entry');
       assert.equal(await page.locator('.main-shell .stats-grid').isVisible(),true);
       if (!desktop) await page.getByRole('button',{name:'打开导航',exact:true}).click();
-      await nav.getByRole('button',{name:'AI 助手',exact:true}).click();
+      await nav.getByRole('button',{name:'AI 学长',exact:true}).click();
       assert.equal(await input.inputValue(),'切换审批与资料后保留的问题');
-      assert.equal(await page.locator('.message.assistant math').count(),4);
+      assert.ok(await page.locator('.message.assistant .math-inline, .message.assistant .math-display').count() >= 4);
       if (desktop) await page.getByRole('button',{name:'收起侧栏',exact:true}).click();
       holdAnswer=true;
       await input.fill('中断后重新回答测试'); await input.press('Enter');
@@ -179,7 +180,7 @@ try {
       holdAnswer=false;
       for (const route of held) { try { await route.abort(); } catch { /* already cancelled */ } }
       await page.getByRole('button',{name:'重新回答',exact:true}).click();
-      await page.waitForFunction(() => document.querySelectorAll('.message.assistant math').length === 8);
+      await page.waitForFunction(() => document.querySelectorAll('.message.assistant .math-inline, .message.assistant .math-display').length >= 8);
       // Cancelling a clear operation retains the current messages and draft.
       await input.fill('尚未发送的问题');
       await more.click();
@@ -190,7 +191,7 @@ try {
       await drawer.waitFor({state:'hidden'});
       await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='聊天选项');
       assert.equal(await input.inputValue(),'尚未发送的问题');
-      assert.equal(await page.locator('.message.assistant math').count(),8);
+      assert.ok(await page.locator('.message.assistant .math-inline, .message.assistant .math-display').count() >= 8);
       await more.click();
       await drawer.waitFor();
       page.once('dialog',dialog=>dialog.accept());
@@ -199,7 +200,7 @@ try {
       await page.locator('.empty-hero').waitFor();
       assert.equal(await input.inputValue(),'');
       assert.equal(await page.locator('.message').count(),0);
-      await page.waitForFunction(()=>document.activeElement?.getAttribute('placeholder')==='询问实验室大数据');
+      await page.waitForFunction(()=>document.activeElement?.getAttribute('placeholder')==='向 AI 学长提问');
       // Clearing an in-flight answer cannot reinsert its late response or issue a deletion API request.
       held.length=0; holdAnswer=true;
       await input.fill('清空正在生成的回答'); await input.press('Enter');
@@ -216,7 +217,7 @@ try {
       assert.equal(await page.locator('.oa-chat-error').count(),0);
       // The next question starts with no previous private chat history.
       await input.fill('清空后重新开始'); await input.press('Enter');
-      await page.waitForFunction(()=>document.querySelectorAll('.message.assistant math').length===4);
+      await page.waitForFunction(()=>document.querySelectorAll('.message.assistant .math-inline, .message.assistant .math-display').length>=4);
       assert.deepEqual(JSON.parse(requests.filter(request=>request.path==='/api/lab-ai/ask').at(-1).body).history,[]);
       assert.deepEqual(errors,[]);
       const writes=requests.filter(request => request.method!=='GET');

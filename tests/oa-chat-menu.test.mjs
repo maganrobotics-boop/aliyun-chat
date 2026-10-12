@@ -20,7 +20,7 @@ test('every workspace header opens chat on the right and centers the current sec
 test('approval dashboard has no AI shortcut while the knowledge sidebar and admission gates remain', async () => {
   const page = await read('app/page.tsx');
   assert.doesNotMatch(page, /dashboard-ai-entry|进入 OA 内部实验室 AI/u);
-  assert.match(page, /tab: "ask", label: "AI 助手"/u);
+  assert.match(page, /tab: "ask", label: "AI 学长"/u);
   assert.match(page, /className="stats-grid"/u);
   assert.match(page, /if \(needsNda\) return/u);
   assert.match(page, /if \(!session\.registered\) return/u);
