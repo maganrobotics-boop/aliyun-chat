@@ -1,0 +1,5 @@
+--- a/chat-cloudflare/public/learning/honors.mjs
++++ b/chat-cloudflare/public/learning/honors.mjs
+@@ -9 +9 @@
+- const header=document.querySelector('.header-actions');if(header&&!document.getElementById('learning-global-nav')){const nav=el('nav',undefined,'learning-global-nav');nav.id='learning-global-nav';nav.setAttribute('aria-label','学习平台导航');const arena=link('竞技场','/arena/');arena.id='arena-entry';const honors=link('荣誉榜','/learning/honors');honors.id='honors-entry';nav.append(arena,honors);header.prepend(nav);}
++ const header=document.querySelector('.header-actions');if(header&&!document.getElementById('learning-global-nav')){const nav=el('nav',undefined,'learning-global-nav');nav.id='learning-global-nav';nav.setAttribute('aria-label','学习平台导航');const cloud=link('云机器人','https://cloud.omindos.cn/');cloud.id='cloud-robot-entry';const honors=link('荣誉榜','/learning/honors');honors.id='honors-entry';nav.append(cloud,honors);header.prepend(nav);}
