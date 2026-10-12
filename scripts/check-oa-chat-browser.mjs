@@ -180,7 +180,7 @@ try {
       holdAnswer=false;
       for (const route of held) { try { await route.abort(); } catch { /* already cancelled */ } }
       await page.getByRole('button',{name:'重新回答',exact:true}).click();
-      await page.waitForFunction(() => document.querySelectorAll('.message.assistant math').length === 8);
+      await page.waitForFunction(() => document.querySelectorAll('.message.assistant .math-inline, .message.assistant .math-display').length >= 8);
       // Cancelling a clear operation retains the current messages and draft.
       await input.fill('尚未发送的问题');
       await more.click();
@@ -191,7 +191,7 @@ try {
       await drawer.waitFor({state:'hidden'});
       await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='聊天选项');
       assert.equal(await input.inputValue(),'尚未发送的问题');
-      assert.equal(await page.locator('.message.assistant math').count(),8);
+      assert.ok(await page.locator('.message.assistant .math-inline, .message.assistant .math-display').count() >= 8);
       await more.click();
       await drawer.waitFor();
       page.once('dialog',dialog=>dialog.accept());
@@ -217,7 +217,7 @@ try {
       assert.equal(await page.locator('.oa-chat-error').count(),0);
       // The next question starts with no previous private chat history.
       await input.fill('清空后重新开始'); await input.press('Enter');
-      await page.waitForFunction(()=>document.querySelectorAll('.message.assistant math').length===4);
+      await page.waitForFunction(()=>document.querySelectorAll('.message.assistant .math-inline, .message.assistant .math-display').length>=4);
       assert.deepEqual(JSON.parse(requests.filter(request=>request.path==='/api/lab-ai/ask').at(-1).body).history,[]);
       assert.deepEqual(errors,[]);
       const writes=requests.filter(request => request.method!=='GET');

@@ -117,7 +117,7 @@ try {
       calls.push({ pathname, method: request.method(), body: request.postDataJSON?.() });
       if (pathname === "/api/newbie/dashboard") {
         await route.fulfill(signedIn ? { json: dashboard(taskStatus, displayName, agreementStatus) } : { status: 401, json: { error: "请先登录。" } });
-      } else if (pathname === "/api/visitor/login-status") {
+      } else if (pathname === "/api/visitor/status") {
         await route.fulfill({ json: { emailLoginConfigured: true } });
       } else if (pathname === "/api/visitor/request-code") {
         await route.fulfill({ json: { email: "student@stumail.sztu.edu.cn", devCode: "123456" } });
