@@ -797,7 +797,7 @@
       .oa-shared-chat .side-footer { position: static; display: block !important; margin-left: auto; }
       .oa-shared-chat .side-footer .bottom-actions { flex-direction: row; }
       .oa-shared-chat .side-footer .new-chat-bottom, .oa-shared-chat .side-footer .settings-trigger, .oa-shared-chat .side-footer .recent-chat-trigger { width: 36px; height: 36px; border-radius: 50%; padding: 0; }
-      .oa-shared-chat .recent-chat-trigger { display: grid; place-items: center; border: 1px solid #e3e5e8; background: #fff; color: #555b64; box-shadow: 0 2px 7px rgba(28,32,40,.05); cursor: pointer; }
+      .oa-shared-chat .recent-chat-trigger { display: grid !important; place-items: center; border: 1px solid #e3e5e8; background: #fff; color: #555b64; box-shadow: 0 2px 7px rgba(28,32,40,.05); cursor: pointer; }
       .oa-shared-chat .mobile-settings-trigger { display: grid; }
       .oa-shared-chat .side-footer .new-chat-bottom span { display: none; }
       .oa-shared-chat .workspace {

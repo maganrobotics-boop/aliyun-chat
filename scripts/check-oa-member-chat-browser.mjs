@@ -37,15 +37,15 @@ try {
     }else if(url.pathname==='/api/approvals')data={approvals:[]};else if(url.pathname==='/api/members')data={members:[],pendingCount:0};else if(url.pathname==='/api/knowledge')data={items:[],pendingCount:0};else if(url.pathname==='/api/people')data={people:[]};else if(url.pathname==='/api/profile')data={profile:{}};
     return route.fulfill({json:data});
    });
-   await page.goto(origin);await page.locator('.collaboration-workspace').waitFor();await page.locator('.collaboration-ai-entry').click();await page.locator('.oa-shared-chat').waitFor();if(name==='desktop')await page.getByRole('button',{name:'收起侧栏',exact:true}).click();return page;
+   await page.goto(origin);await page.locator('#oa-desktop-navigation .sidebar-nav-item').filter({hasText:'聊天'}).evaluate(button=>button.click());await page.locator('.collaboration-workspace').waitFor();await page.locator('.collaboration-ai-entry').click();await page.locator('.oa-shared-chat').waitFor();if(name==='desktop')await page.getByRole('button',{name:'收起侧栏',exact:true}).click();return page;
   };
   const alice=await open(people[0]),bob=await open(people[1]);
   try {
    assert.equal(await alice.locator('.topbar .oa-topbar-user').count(),0);
-    assert.equal(await alice.locator('.oa-topbar-secondary-title > strong').innerText(),'AI 助手');
+    assert.equal(await alice.locator('.oa-topbar-secondary-title > strong').innerText(),'AI 学长');
    await alice.getByRole('button',{name:'聊天选项'}).click();
     await alice.getByRole('button',{name:'成员乙',exact:true}).waitFor();
-    assert.equal(await alice.getByRole('button',{name:'AI 助手',exact:true}).count(),1);
+    assert.equal(await alice.getByRole('button',{name:'AI 学长',exact:true}).count(),1);
     assert.equal(await alice.getByRole('button',{name:'与成员聊天',exact:true}).count(),0);
     assert.equal(await alice.getByRole('button',{name:'转发最近回答',exact:true}).count(),0);
     assert.equal(await alice.getByRole('button',{name:'成员甲',exact:true}).count(),0,'never list the current user as a recipient');
@@ -54,10 +54,10 @@ try {
     assert.equal(await alice.locator('.oa-member-picker').count(),0,'a member name opens the conversation without another chooser');
    assert.equal(posts.length,0,'changing destination must not send anything');
    await alice.getByPlaceholder('发送消息给成员乙').fill('只属于成员乙的未发送草稿');
-    await alice.getByRole('button',{name:'聊天选项'}).click();await alice.getByRole('button',{name:'AI 助手',exact:true}).click();
+    await alice.getByRole('button',{name:'聊天选项'}).click();await alice.getByRole('button',{name:'AI 学长',exact:true}).click();
     await alice.getByRole('button',{name:'聊天选项'}).click();await alice.getByRole('button',{name:'成员乙',exact:true}).click();
    assert.equal(await alice.getByPlaceholder('发送消息给成员乙').inputValue(),'只属于成员乙的未发送草稿');
-    await alice.getByRole('button',{name:'聊天选项'}).click();await alice.getByRole('button',{name:'AI 助手',exact:true}).click();
+    await alice.getByRole('button',{name:'聊天选项'}).click();await alice.getByRole('button',{name:'AI 学长',exact:true}).click();
    await alice.getByPlaceholder('询问实验室大数据').fill('请给出完整测试结果');await alice.getByPlaceholder('询问实验室大数据').press('Enter');
     await alice.waitForFunction(() => document.querySelector('.message.assistant')?.textContent?.includes('正文完整结束'));
    await alice.getByRole('button',{name:'转发回答给成员'}).click();await alice.getByRole('button',{name:'选择 成员乙'}).click();
@@ -75,8 +75,8 @@ try {
    await alice.getByText('已收到全部正文，我来复核。',{exact:true}).waitFor({timeout:15000});
    assert.equal(apiCalls.filter(c=>c.path==='/api/lab-ai/ask').length,1,'member messages must never go through AI');
    await alice.screenshot({path:resolve(output,`${name}-two-way-chat.png`),fullPage:true});
-    await alice.getByRole('button',{name:'聊天选项'}).click();await alice.getByRole('button',{name:'AI 助手',exact:true}).click();await alice.locator('.oa-conversation-ai').waitFor({state:'visible'});await alice.locator('.oa-member-title').waitFor({state:'detached'});assert.ok((await alice.locator('.message.assistant').innerText()).includes('正文完整结束'));
-    await alice.getByRole('button',{name:'聊天选项'}).click();await alice.getByRole('button',{name:'清空聊天',exact:true}).click();await alice.getByText('实验室大模型能做什么',{exact:true}).waitFor();assert.equal(store.length,2,'clearing AI must not delete member messages');
+    await alice.getByRole('button',{name:'聊天选项'}).click();await alice.getByRole('button',{name:'AI 学长',exact:true}).click();await alice.locator('.oa-conversation-ai').waitFor({state:'visible'});await alice.locator('.oa-member-title').waitFor({state:'detached'});assert.ok((await alice.locator('.message.assistant').innerText()).includes('正文完整结束'));
+    await alice.getByRole('button',{name:'聊天选项'}).click();await alice.getByRole('button',{name:'清空聊天',exact:true}).click();await alice.getByText('先问问题，也可以让学长带你完成新手村',{exact:true}).waitFor();assert.equal(store.length,2,'clearing AI must not delete member messages');
    await alice.getByRole('button',{name:name==='desktop'?'展开侧栏':'打开导航',exact:true}).click();const nav=alice.locator(name==='desktop'?'.oa-desktop-navigation':'.mobile-sidebar');
    assert.equal(await nav.locator('.oa-sidebar-new-chat').count(),1);assert.equal(await nav.locator('.oa-sidebar-account').count(),1);
    // Wait only for the horizontal entrance animation. Never scroll the footer into view.

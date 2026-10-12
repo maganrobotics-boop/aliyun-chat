@@ -53,11 +53,12 @@ try {
     const ask = async question => { await page.getByRole('button', { name: '发送问题', exact: true }).waitFor(); const input = page.getByPlaceholder('询问实验室大数据'); await input.fill(question); await input.press('Enter'); };
     try {
       await page.goto(origin);
+      await page.locator('#oa-desktop-navigation .sidebar-nav-item').filter({hasText:'聊天'}).evaluate(button => button.click());
       await page.locator('.collaboration-workspace').waitFor();
       await page.locator('.collaboration-ai-entry').click();
       await page.waitForFunction(() => document.querySelectorAll('.oa-chat-status > .ready').length === 4);
       assert.deepEqual(await states(), ['ready', 'ready', 'ready', 'ready', 'unknown']);
-      assert.equal(await page.locator('.oa-topbar-secondary-title > strong').innerText(), 'AI 助手');
+      assert.equal(await page.locator('.oa-topbar-secondary-title > strong').innerText(), 'AI 学长');
       const legend = page.locator('.oa-chat-status-details > summary');
       await legend.click();
       assert.equal(await page.locator('.oa-chat-status-panel').isVisible(), true);
