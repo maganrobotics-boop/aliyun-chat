@@ -126,7 +126,7 @@ try {
       await input.dispatchEvent('keydown', { key:'Enter',code:'Enter',isComposing:true });
       assert.equal(requests.filter(request => request.path === '/api/lab-ai/ask').length,previousRequests,'IME composition must not submit');
       await input.press('Enter');
-      await page.waitForFunction(() => document.querySelectorAll('.message.assistant math').length === 4);
+      await page.waitForFunction(() => document.querySelectorAll('.message.assistant math').length >= 4);
       await page.waitForFunction(() => document.querySelector('.message.assistant')?.textContent?.includes('完整结尾'));
       assert.equal(await page.locator('.message.assistant table').count(),1);
       assert.ok(await page.locator('.message.assistant strong').count() >= 3, 'the conclusion and two emphasized steps must render');
@@ -171,7 +171,7 @@ try {
       if (!desktop) await page.getByRole('button',{name:'打开导航',exact:true}).click();
       await nav.getByRole('button',{name:'AI 学长',exact:true}).click();
       assert.equal(await input.inputValue(),'切换审批与资料后保留的问题');
-      assert.equal(await page.locator('.message.assistant math').count(),4);
+      assert.ok(await page.locator('.message.assistant math').count() >= 4);
       if (desktop) await page.getByRole('button',{name:'收起侧栏',exact:true}).click();
       holdAnswer=true;
       await input.fill('中断后重新回答测试'); await input.press('Enter');

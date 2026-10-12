@@ -137,7 +137,7 @@ try {
     });
 
     await page.goto(`${origin}/newbie-village`);
-    await page.getByRole("heading", { name: "从第一项任务，走到能交付。" }).waitFor();
+    await page.getByRole("heading", { name: "从基础能力，到真实机器人交付。" }).waitFor();
     assert.equal(await page.getByText("任务地图").count() > 0, true);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
 
