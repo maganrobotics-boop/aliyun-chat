@@ -1,0 +1,101 @@
+{
+  "https": [
+    {
+      "url": "https://chat.omindos.cn/learning",
+      "status": 200,
+      "bytes": 15693
+    },
+    {
+      "url": "https://chat.omindos.cn/learning/app.js?v=20261005-smallwheel-v1a",
+      "status": 200,
+      "bytes": 233819,
+      "source_match_after_existing_gateway_transforms": true
+    },
+    {
+      "url": "https://chat.omindos.cn/learning/course-progression.mjs",
+      "status": 200,
+      "bytes": 2952,
+      "source_match_after_existing_gateway_transforms": true
+    },
+    {
+      "url": "https://chat.omindos.cn/learning/runner.html",
+      "status": 200,
+      "bytes": 365,
+      "source_match_after_existing_gateway_transforms": true
+    },
+    {
+      "url": "https://chat.omindos.cn/learning/runner.js",
+      "status": 200,
+      "bytes": 5224,
+      "source_match_after_existing_gateway_transforms": true
+    },
+    {
+      "url": "https://chat.omindos.cn/learning/review-status.mjs",
+      "status": 200,
+      "bytes": 1395,
+      "source_match_after_existing_gateway_transforms": true
+    },
+    {
+      "url": "https://omindos.cn/learning",
+      "status": 200,
+      "bytes": 15693
+    },
+    {
+      "url": "https://omindos.cn/learning/app.js?v=20261005-smallwheel-v1a",
+      "status": 200,
+      "bytes": 233924,
+      "source_match_after_existing_gateway_transforms": true
+    },
+    {
+      "url": "https://omindos.cn/learning/course-progression.mjs",
+      "status": 200,
+      "bytes": 2952,
+      "source_match_after_existing_gateway_transforms": true
+    },
+    {
+      "url": "https://omindos.cn/learning/runner.html",
+      "status": 200,
+      "bytes": 375,
+      "source_match_after_existing_gateway_transforms": true
+    },
+    {
+      "url": "https://omindos.cn/learning/runner.js",
+      "status": 200,
+      "bytes": 5224,
+      "source_match_after_existing_gateway_transforms": true
+    },
+    {
+      "url": "https://omindos.cn/learning/review-status.mjs",
+      "status": 200,
+      "bytes": 1395,
+      "source_match_after_existing_gateway_transforms": true
+    }
+  ],
+  "data": {
+    "learning_submissions": {
+      "before": 98,
+      "after": 98,
+      "all_existing_records_unchanged": true
+    },
+    "learning_course_drafts": {
+      "before": 37,
+      "after": 37,
+      "all_existing_records_unchanged": true
+    },
+    "learning_graduation_attempts": {
+      "before": 14,
+      "after": 14,
+      "all_existing_records_unchanged": true
+    },
+    "learning_patrol_attempts": {
+      "before": 5,
+      "after": 5,
+      "all_existing_records_unchanged": true
+    },
+    "learning_access_grants": {
+      "before": 1,
+      "after": 1,
+      "all_existing_records_unchanged": true
+    }
+  }
+}

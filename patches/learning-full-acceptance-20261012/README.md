@@ -1,6 +1,6 @@
 # Full-course acceptance and targeted fixes - 2026-10-12
 
-Based on the deployed `chat-learning-runtime-feedback-20261012-v1` release from PR #4. This patch is **not deployed** and must not be merged into an obsolete whole-site deployment. The earlier runtime patch is retained, not reimplemented.
+Based on the deployed `chat-learning-runtime-feedback-20261012-v1` release from PR #4. **PR #5 was merged and this targeted patch deployed on 2026-10-12 at 08:10 Asia/Shanghai**, following the user's explicit merge/deploy instruction at 08:05. Release: `chat-learning-full-acceptance-20261012-v1`. See [RELEASE.md](RELEASE.md) for production verification and rollback. The earlier runtime patch is retained, not reimplemented; the obsolete whole-site deployment remains paused.
 
 ## Reproduced defects
 
@@ -35,11 +35,11 @@ The legacy aggregate `learning-*.test.mjs` suite had 15 passes and three failure
 
 - Real mobile devices/mobile viewport, touch keyboard, and mobile browsers.
 - Controlled weak-network/offline recovery in an actual browser, including browser storage/cache behavior.
-- Candidate browser E2E and production revalidation after an authorized deployment.
+- Full browser E2E for ordinary-student progression and lost-response/reload retry. Targeted post-deployment desktop checks for dataset cancellation, practice-section deduplication, Python execution, and saved histories are recorded in RELEASE.md; these do not replace mobile or controlled browser-network acceptance.
 - Fresh full ROS2/Git/physical-hardware experiments in this run; prior evidence is identified separately.
 - Real AI review content quality and the pending project-six/mower reviews (state inspected only).
 
-Thus **the complete production course cannot be signed off as fully usable yet**.
+Thus **the complete production course cannot be signed off as fully usable yet**, even though the four targeted fixes are deployed.
 
 ## Apply and reproduce
 
@@ -56,6 +56,6 @@ Node 22.13+ required. The 15 synthetic Python solutions in `fixtures/python/` we
 
 ## Handoff / publishing status
 
-The initial GitHub push was stopped by automatic approval review pending explicit authorization. On 2026-10-12 at 07:54 Asia/Shanghai, the user explicitly authorized pushing this patch and its test evidence to the original repository and creating a draft PR, with no deployment. That authorization covers review publication only; merging, deployment, service restarts, and production data changes remain outside this step.
+The initial GitHub push was stopped by automatic approval review pending explicit authorization. On 2026-10-12 at 07:54 Asia/Shanghai, the user authorized pushing this patch and its test evidence and creating a draft PR, initially without deployment. At 08:05 the user explicitly requested "合并部署", authorizing merge and targeted deployment. PR #5 was merged into its existing PR #4 baseline branch, and the production copy was released after all 67 tests passed under the production service account.
 
-The review branch is based on `codex/learning-runtime-feedback-20261012` at `3527691f2cf9c3e38764e99ea4844b504f06fa58`, the already-deployed PR #4 patch record. Target the draft PR at that branch so reviewers see only this incremental acceptance patch. Do not merge the old repository into production or dispatch deployment workflows. The four evidence logs retain the reproduced baseline failures and the final 67-test pass; existing course and teacher records are unchanged.
+The review branch was based on `codex/learning-runtime-feedback-20261012` at `3527691f2cf9c3e38764e99ea4844b504f06fa58`, the already-deployed PR #4 patch record. Merge commit: `930816491bd5008974d0288ca22baaa217551d3e`. The main branch and whole-site deployment workflow were not used. Evidence retains baseline failures, local and server 67-test passes, and post-deployment resource/data checks. Existing course and teacher records are unchanged.
