@@ -171,9 +171,9 @@ try {
     assert.equal(calls.find((call) => call.pathname === "/api/newbie/profile")?.body.displayName, "小深");
 
     await page.locator('[data-view="courses"]').first().click();
-    await page.locator(".task-card").first().getByRole("button", { name: "查看任务与验收要求" }).click();
+    await page.locator(".task-card").first().getByRole("button", { name: "查看课程与任务" }).click();
     await page.getByRole("button", { name: "开始任务" }).click();
-    await page.locator(".task-card").first().getByRole("button", { name: "查看任务与验收要求" }).click();
+    await page.locator(".task-card").first().getByRole("button", { name: "查看课程与任务" }).click();
     await page.locator(".task-evidence").fill("个人主页已经完成，准备开始下一关。");
     await page.getByRole("button", { name: "正式提交" }).click();
     await page.waitForFunction(() => !document.querySelectorAll(".task-card")[1]?.querySelector("button")?.disabled);

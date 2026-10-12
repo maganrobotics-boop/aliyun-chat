@@ -227,7 +227,7 @@ try {
       await page.getByRole('button',{name:'已保存文档',exact:true}).click();
       const history=page.getByRole('dialog',{name:'本人已保存文档',exact:true}); await history.waitFor();
       await history.locator('.oa-document-history button').filter({hasText:'人工核对稿'}).first().click(); await preview.waitFor();
-      assert.ok((await preview.innerText()).includes(finalBody)); await closePreview();
+      assert.ok((await preview.innerText()).includes('最终确认：保留待验证事项，不宣称实机验收完成。')); await closePreview();
       assert.equal(new URL(page.url()).pathname,'/');
       // Unsupported import leaves existing material/results intact.
       await page.locator('.oa-shared-chat input[type=file][accept*=".markdown"]').setInputFiles({name:'不支持.pdf',mimeType:'application/pdf',buffer:Buffer.from('not a document')});
