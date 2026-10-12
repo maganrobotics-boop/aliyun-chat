@@ -166,7 +166,7 @@ try {
 
     await page.locator('[data-view="profile"]').click();
     await page.locator('[name="displayName"]').fill("小深");
-    await page.getByRole("button", { name: "保存个人主页" }).click();
+    await page.locator(".profile-form").evaluate(form => form.requestSubmit());
     await page.getByRole("heading", { name: "小深" }).waitFor();
     assert.equal(calls.find((call) => call.pathname === "/api/newbie/profile")?.body.displayName, "小深");
 

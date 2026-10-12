@@ -226,7 +226,7 @@ try {
       await page.locator('.collaboration-ai-entry').click(); await page.locator('.empty-hero').waitFor();
       await page.getByRole('button',{name:'已保存文档',exact:true}).click();
       const history=page.getByRole('dialog',{name:'本人已保存文档',exact:true}); await history.waitFor();
-      await history.locator('.oa-document-history button').first().click(); await preview.waitFor();
+      await history.locator('.oa-document-history button').filter({hasText:'人工核对稿'}).first().click(); await preview.waitFor();
       assert.ok((await preview.innerText()).includes(finalBody)); await closePreview();
       assert.equal(new URL(page.url()).pathname,'/');
       // Unsupported import leaves existing material/results intact.
