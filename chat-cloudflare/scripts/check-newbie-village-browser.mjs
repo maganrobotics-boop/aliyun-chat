@@ -149,7 +149,7 @@ try {
     await email.fill("student@stumail.sztu.edu.cn");
     await page.getByRole("button", { name: "发送验证码" }).click();
     await page.locator(".code-input").fill("123456");
-    await page.getByRole("button", { name: "验证并登录" }).click();
+    await page.locator(".code-input").press("Enter");
     await page.getByRole("button", { name: "查看协议" }).click();
     await page.getByRole("heading", { name: "保存与提交前，完成协议归档。" }).waitFor();
     await page.screenshot({ path: resolve(output, `newbie-agreement-${name}.png`), fullPage: true, animations: "disabled" });
