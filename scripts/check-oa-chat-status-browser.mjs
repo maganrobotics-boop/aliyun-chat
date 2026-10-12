@@ -50,7 +50,7 @@ try {
       return route.fulfill({ json: data });
     });
     const states = () => page.locator('.oa-chat-status > span').evaluateAll(elements => elements.map(el => el.className));
-    const ask = async question => { await page.getByRole('button', { name: '发送问题', exact: true }).waitFor(); const input = page.getByPlaceholder('询问实验室大数据'); await input.fill(question); await input.press('Enter'); };
+    const ask = async question => { await page.getByRole('button', { name: '发送问题', exact: true }).waitFor(); const input = page.getByPlaceholder('向 AI 学长提问'); await input.fill(question); await input.press('Enter'); };
     try {
       await page.goto(origin);
       await page.locator('#oa-desktop-navigation .sidebar-nav-item').filter({hasText:'聊天'}).evaluate(button => button.click());

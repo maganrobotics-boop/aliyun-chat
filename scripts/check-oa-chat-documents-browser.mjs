@@ -102,7 +102,7 @@ try {
       await page.locator('.oa-shared-chat input[type=file][accept*=".markdown"]').setInputFiles({name,mimeType:'text/plain',buffer:Buffer.from(text)});
       await page.getByRole('article',{name:`已导入 ${name}`,exact:true}).waitFor();
     };
-    const input = page.getByPlaceholder('询问实验室大数据');
+    const input = page.getByPlaceholder('向 AI 学长提问');
     const send = async text => { await input.fill(text); await input.press('Enter'); };
     const preview = page.getByRole('dialog',{name:'文档预览',exact:true});
     const closePreview = async () => { await preview.waitFor(); await preview.getByRole('button',{name:'返回聊天',exact:true}).click(); await preview.waitFor({state:'hidden'}); };

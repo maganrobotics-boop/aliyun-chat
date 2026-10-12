@@ -120,7 +120,7 @@ try {
       await drawer.waitFor({state:'hidden'});
       assert.equal(await more.evaluate(element=>element===document.activeElement),true);
       await page.screenshot({ path:resolve(output,`${name}-welcome.png`),fullPage:true });
-      const input = page.getByPlaceholder('询问实验室大数据');
+      const input = page.getByPlaceholder('向 AI 学长提问');
       await input.fill('请解释机器人运动模型和矩阵');
       const previousRequests = requests.filter(request => request.path === '/api/lab-ai/ask').length;
       await input.dispatchEvent('keydown', { key:'Enter',code:'Enter',isComposing:true });
@@ -200,7 +200,7 @@ try {
       await page.locator('.empty-hero').waitFor();
       assert.equal(await input.inputValue(),'');
       assert.equal(await page.locator('.message').count(),0);
-      await page.waitForFunction(()=>document.activeElement?.getAttribute('placeholder')==='询问实验室大数据');
+      await page.waitForFunction(()=>document.activeElement?.getAttribute('placeholder')==='向 AI 学长提问');
       // Clearing an in-flight answer cannot reinsert its late response or issue a deletion API request.
       held.length=0; holdAnswer=true;
       await input.fill('清空正在生成的回答'); await input.press('Enter');
