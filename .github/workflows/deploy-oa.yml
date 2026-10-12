@@ -2,6 +2,23 @@ name: Check OA and release production manually
 
 on:
   workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Confirm the exact production OA worker name
+        required: true
+        type: string
+      enable_ai_workbench:
+        description: Enable the reviewed OA AI workbench
+        default: false
+        type: boolean
+      enable_meeting_bot:
+        description: Enable the reviewed Feishu meeting bot
+        default: false
+        type: boolean
+      enable_feishu_webmail:
+        description: Enable the reviewed Feishu webmail entry
+        default: false
+        type: boolean
 permissions:
   contents: read
 

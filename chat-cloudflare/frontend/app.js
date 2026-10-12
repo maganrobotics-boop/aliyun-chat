@@ -481,7 +481,7 @@ function appShell() {
   return `
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div class="brand-copy"><strong class="brand-title">机器人自主移动与操作实验室</strong><span class="brand-subtitle">OriginMind × ARTS Robotics</span></div></div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div class="brand-copy"><strong class="brand-title">AI 学姐</strong><span class="brand-subtitle">机器人自主移动与操作实验室</span></div></div>
       <div class="sidebar-label">功能</div>
       <div class="nav-list">
         <a class="nav-item village-nav-item" href="/newbie-village">${icons.chart}<span>新手村</span></a>
@@ -494,7 +494,7 @@ function appShell() {
       <button class="collapse-handle" type="button" aria-label="收起侧边栏">${icons.chevron}</button>
       <div class="side-footer"><div class="bottom-actions"><button class="new-chat-bottom" type="button">${icons.plus}<span>聊天</span></button><button class="recent-chat-trigger" type="button" aria-label="打开最近聊天">${icons.chat}</button><button class="settings-trigger mobile-settings-trigger" type="button" aria-label="新手村">${icons.gear}</button></div></div>
     </aside>
-    <main class="workspace"><header class="topbar"><div class="topbar-title"><span class="lab-name">机器人自主移动与操作实验室</span><span class="desktop-lab-brand">OriginMind × ARTS Robotics</span></div><div class="topbar-actions"><span class="guest-badge">正在确认身份…</span><button class="settings-trigger desktop-settings-trigger" type="button" aria-label="新手村">${icons.gear}</button></div></header>
+    <main class="workspace"><header class="topbar"><div class="topbar-title"><span class="lab-name">AI 学姐</span><span class="desktop-lab-brand">OriginMind × ARTS Robotics</span></div><div class="topbar-actions"><span class="guest-badge">正在确认身份…</span><button class="settings-trigger desktop-settings-trigger" type="button" aria-label="新手村">${icons.gear}</button></div></header>
       <section class="chat-surface"><button class="student-login-trigger login-guide" type="button" hidden><span class="login-guide-icon">${icons.login}</span><span class="login-guide-copy"><strong>深技大师生登录</strong></span></button><div class="empty-state"><div class="entry-card"><h1 class="hero-title">想了解实验室的什么？</h1><p class="hero-subtitle">从已审核的实验室公开知识中检索并回答。</p></div></div>
         <div class="conversation" aria-live="polite"><div class="message-list"></div></div>
         <div class="composer-wrap"><div class="composer-glow"></div><form class="composer" aria-label="发送消息"><div class="composer-inner"><div class="input-panel"><textarea id="question" class="prompt-input" rows="2" maxlength="4000" aria-label="你的问题" placeholder="输入想了解的实验室问题"></textarea><div class="attachment-chip">${icons.paperclip}<span></span></div></div><div class="composer-footer"><div class="input-tools"><input class="file-input" type="file" hidden><button class="icon-button attach-button" type="button" aria-label="添加附件">${icons.paperclip}</button><button class="icon-button voice-button" type="button" disabled aria-label="语音输入暂未启用">${icons.voice}</button></div><div class="footer-actions"><button class="model-pill" type="button">${icons.cube}<span>文本模型</span></button><button class="send-button" type="submit" aria-label="发送" disabled>${icons.send}</button></div></div></div></form></div>
@@ -1216,9 +1216,9 @@ function resetChat() {
 
 function loadHistory(key) {
   const examples = {
-    overview: [["user", "实验室主要研究什么？"], ["assistant", "我会从已审核的实验室公开知识中检索研究方向、项目与成果，并给出结构化回答。"]],
-    robots: [["user", "实验室现有的机器人平台包括哪些？"], ["assistant", "接入公开知识库后，我会按机器人平台、核心能力、应用场景和资料来源整理回答。"]],
-    cooperation: [["user", "如何与实验室开展科研合作？"], ["assistant", "我会根据实验室公开信息说明合作方向、联系渠道和申请要求。"]],
+    overview: [["user", "实验室主要研究什么？"], ["assistant", "实验室围绕机器人自主移动与智能操作开展研究，重点包括定位与建图、自主导航、机器人操作，以及把感知、规划、执行和异常恢复连接成完整任务闭环。具体项目、成果与当前状态以本次检索到的已审核公开资料为准。"]],
+    robots: [["user", "实验室现有的机器人平台包括哪些？"], ["assistant", "目前公开介绍覆盖轮式、四足、人形和移动双臂等机器人平台，用于导航、巡检、语义理解与协同操作等研究和教学。具体型号、配置、运行状态和性能参数以本次检索到的已审核公开资料为准。"]],
+    cooperation: [["user", "如何与实验室开展科研合作？"], ["assistant", "可以围绕自主导航、具身智能、机器人操作和真实场景验证交流合作。合作资格、申请材料、时间节点和审批结果必须以已审核的公开制度或负责人确认信息为准；当前资料未明确的内容，我不会自行补充为正式要求。"]],
   };
   const existing = conversations.find((conversation) => conversation.id === key);
   if (existing) {

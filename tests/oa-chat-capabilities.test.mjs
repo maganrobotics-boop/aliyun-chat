@@ -143,7 +143,7 @@ test('actual handler starts meeting mode from a nine-digit number without sendin
 });
 test('five capabilities stay outside the timeline conditional and remain at the composer', () => {
   assert.doesNotMatch(panel, /!timeline\.length\s*&&\s*<div className="oa-chat-examples"/u);
-  assert.match(panel, /className="oa-chat-examples" role="group" aria-label="AI 助手五项功能"/u);
+  assert.match(panel, /className="oa-chat-examples" role="group" aria-label="AI 学长五项功能"/u);
   assert.match(panel, /title="@会议模式919700881"/u);
   assert.ok(panel.indexOf('className="oa-chat-examples"') > panel.indexOf('className="composer-area oa-chat-composer-area"'));
   assert.match(panel, /title=\{`@\$\{hint\.label\}`\} disabled=\{working\}/u);

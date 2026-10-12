@@ -54,7 +54,7 @@ test("requires the exact second confirmation before publishing knowledge", async
   assert.match(source, /publicConfirmation === PUBLIC_KNOWLEDGE_CONFIRMATION/u);
   assert.match(source, /confirmation !== PUBLIC_KNOWLEDGE_CONFIRMATION/u);
   assert.doesNotMatch(source, /confirmation\.trim\(\)\s*!==\s*PUBLIC_KNOWLEDGE_CONFIRMATION/u);
-  assert.match(source, /设为公开后，该知识仍可在 OA 内检索，并将同时供 chat\.omindos\.ai 对外检索/u);
+  assert.match(source, /设为公开后，该知识仍可在 OA 内检索，并将同时供 chat\.omindos\.cn 的 AI 学姐对外检索/u);
 });
 
 test("shows the public-data anonymization rule during submission and review", async () => {
@@ -74,14 +74,14 @@ test("explains the internal OA and public ARTS Robotics assistant split", async 
     readFile(path.join(root, "app/page.tsx"), "utf8"),
   ]);
 
-  assert.match(knowledgeSource, /对内：在 OA 里面问/u);
-  assert.match(knowledgeSource, /ARTS Robotics AI assistant/u);
-  assert.match(knowledgeSource, /https:\/\/chat\.omindos\.ai/u);
+  assert.match(knowledgeSource, /对内：由 AI 学长回答/u);
+  assert.match(knowledgeSource, /对外：供 AI 学姐使用/u);
+  assert.match(knowledgeSource, /https:\/\/chat\.omindos\.cn/u);
   assert.match(guideSource, /对外公开必须再次输入指定确认文字/u);
   assert.match(guideSource, /公众无需 OA 登录/u);
   assert.match(guideSource, /OA 管理员可以批准本人提交的知识；项目负责人仍需回避自己的投稿/u);
-  assert.match(pageSource, /<h1>进入实验室大模型<\/h1>/u);
-  assert.match(pageSource, /游客可以试看公开问答；实习学生请使用飞书登录/u);
+  assert.match(pageSource, /<h1>登录联合研发 OA<\/h1>/u);
+  assert.match(pageSource, /游客试看公开问答/u);
 });
 
 test("lets authorized reviewers reclassify active knowledge with the same public confirmation guard", async () => {
