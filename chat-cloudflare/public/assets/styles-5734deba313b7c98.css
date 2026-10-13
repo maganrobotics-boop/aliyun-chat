@@ -958,6 +958,8 @@
 .answer-content th { font-weight: 650; background: #f3f7f8; }
 .answer-content input[type="checkbox"] { margin-right: .5em; }
 
+.grading-entry { display:inline-flex; align-items:center; min-height:44px; padding:0 10px; color:#245bdb; font-size:14px; white-space:nowrap; text-decoration:none; }
+
 /* Compact, left-aligned response tools. Keep the existing answer/math layout. */
 .message.assistant .message-actions{display:flex;justify-content:flex-start;align-items:center;gap:4px;flex-wrap:wrap;margin-top:12px;inline-size:100%;padding:0;}
 .message-action-button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 40px;width:40px;height:40px;min-width:40px;min-height:40px;padding:8px;border:0;border-radius:9px;background:transparent;color:#72767e;cursor:pointer;}

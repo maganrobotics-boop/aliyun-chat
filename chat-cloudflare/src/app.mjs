@@ -1,3 +1,4 @@
+import { handleExamGrading } from './exam-grading.mjs';
 import { shouldUseStaticTaGuide } from "./ta-guide-intent.mjs";
 import { buildGeneralChatMessages, buildGroundedChatMessages, boundedUserMessages } from './grounded-prompt.mjs';
 import { handleOaChatBridge } from './oa-chat-bridge.mjs';
@@ -1826,6 +1827,10 @@ async function api(context) {
     if (method === "POST" || method === "PATCH") {
       if (!(publicApiPath && publicWriteAllowed(context))) sameOrigin(context);
     }
+    if (path.startsWith("grading/")) return await handleExamGrading(context, {
+      currentVisitor, ownerEmail, getModelConfig, modelProvider, json, limit,
+      readBytes, readJson, documentExtractionBudget, globalBudget, modelCall, workersAiCall,
+    });
     if (path === "shares" && method === "POST") {
       await limit(context, "share", 20, 3600);
       const input = await readJson(request, 32_000);

@@ -33,6 +33,9 @@ const TOPIC_TRAILING_REDIRECTS = new Map(
 );
 const DIRECT_ASSET_PATHS = new Set([
   "/7cdc950be159a53da5ee4b8584de9d71.txt",
+  "/grading.html",
+  "/grading.js",
+  "/grading.css",
   "/orientation.html",
   "/robotics-course.html",
   "/newbie-village.html",
@@ -104,6 +107,7 @@ function assetRequest(request, pathname) {
 }
 
 function assetCacheControl(pathname) {
+  if (pathname.startsWith("/grading.")) return "no-store";
   if (pathname === "/service-worker.js") {
     return "no-cache, no-store, must-revalidate";
   }
@@ -135,6 +139,11 @@ export async function routeStaticRequest(request, env) {
   if (workspaceHome) {
     if (!SAFE_METHODS.has(request.method)) return methodNotAllowed();
     return fetchAsset(request, env, "/newbie-village.html", "no-store");
+  }
+
+  if (url.pathname === "/grading" || url.pathname === "/grading/") {
+    if (!SAFE_METHODS.has(request.method)) return methodNotAllowed();
+    return fetchAsset(request, env, "/grading.html", "no-store");
   }
 
   if (kind === RouteKind.DYNAMIC) return null;

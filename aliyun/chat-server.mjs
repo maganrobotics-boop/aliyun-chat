@@ -1,3 +1,4 @@
+import { localDocumentAi } from './local-document-ai.mjs';
 import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import http from "node:http";
@@ -87,6 +88,7 @@ const env = new Proxy({
   ...process.env,
   APP_ORIGIN: appOrigin,
   DB: database,
+  DOCUMENT_AI: localDocumentAi,
   ASSETS: assets,
   OA_SERVICE: oaService,
 }, {

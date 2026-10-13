@@ -957,3 +957,5 @@
 .answer-content th, .answer-content td { border: 1px solid #d8e3e8; padding: .5em .75em; vertical-align: top; }
 .answer-content th { font-weight: 650; background: #f3f7f8; }
 .answer-content input[type="checkbox"] { margin-right: .5em; }
+
+.grading-entry { display:inline-flex; align-items:center; min-height:44px; padding:0 10px; color:#245bdb; font-size:14px; white-space:nowrap; text-decoration:none; }
