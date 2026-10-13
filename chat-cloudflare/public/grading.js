@@ -77,7 +77,7 @@ $('demo').addEventListener('click', () => {
   if (($('paper').value || $('rubric').value) && !confirm('示例将替换当前试卷与答案，继续吗？')) return;
   $('title').value = 'ROS 基础练习（示例）'; $('question-count').value = '2'; $('total-score').value = '10';
   $('paper').value = '第 1 题（5 分）：ROS 2 中发布消息的一方称为什么？学生作答：发布者。\n第 2 题（5 分）：匀速直线运动速度 2 m/s，运动 3 s，位移是多少？学生作答：5 m。';
-  $('rubric').value = '第 1 题（5 分）：发布者或 publisher 得 5 分，其他答案 0 分。\n第 2 题（5 分）：参考答案为 6 m；列出 s=v×t 得 2 分，代入与计算正确得 2 分，正确单位得 1 分。只写答案时，正确结果 4 分，单位 1 分。';
+  $('rubric').value = '第 1 题（5 分）：发布者或 publisher 得 5 分，其他答案 0 分。\n第 2 题（5 分）：参考答案为 6 m；列出 s=v×t 得 2 分，代入与计算正确得 2 分，正确单位得 1 分。只写最终答案时，数值正确得 4 分；正确单位 m 独立得 1 分，即使数值错误也给单位分。未展示计算过程时，不推测运算过程。';
   invalidate(); status('示例已填入。请核对内容后勾选确认，再开始批改。');
 });
 $('clear').addEventListener('click', () => {
