@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>批改试卷 · AI 学姐</title><link rel="stylesheet" href="/grading.css"><script src="/grading.js" type="module"></script></head>
+<body>
+<header><a href="/?ta=1">← 返回 Chat</a><span>ARTS Robotics · AI 学姐</span></header>
+<main>
+<div class="intro"><span class="eyebrow">学习工具</span><h1>批改试卷</h1><p>核对作答，按标准评分，让每一道错题都有清楚的反馈。</p></div>
+<div id="account" class="notice" role="status">正在检查登录与服务状态…</div>
+<details id="login-panel" hidden><summary>登录 Chat</summary><form id="login-form"><label>校内邮箱<input id="email" type="email" autocomplete="email" placeholder="姓名对应的 @sztu.edu.cn 或 @stumail.sztu.edu.cn 邮箱" required></label><div class="actions"><button id="request-code" type="button">发送验证码</button><label>验证码<input id="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label><button type="submit">验证并登录</button></div><p id="login-status" role="status"></p><a href="/manage" target="_blank" rel="noopener">管理员登录</a><button id="refresh-session" type="button">刷新登录状态</button></form></details>
+<form id="grading-form">
+<fieldset id="editor">
+<div class="meta"><label>试卷名称<input id="title" maxlength="100" value="试卷批改" required></label><label>本次题数<input id="question-count" type="number" min="1" max="20" step="1" placeholder="1–20" required></label><label>本次满分<input id="total-score" type="number" min="0.01" max="1000" step="0.01" value="100" required></label></div>
+<p class="hint">按评分题逐项计数，小题单独评分时单独计数。每次最多 20 题，长试卷请分段提交，并填写该部分的题数与满分。</p>
+<div class="materials">
+<section class="card"><div class="step">01 · 试卷与作答</div><h2>上传，或直接粘贴</h2><label class="upload">添加试卷文件<input id="paper-files" type="file" accept=".txt,.md,.pdf,.jpg,.jpeg,.png,.webp" multiple></label><label for="paper">题目与学生作答</label><textarea id="paper" rows="15" maxlength="20000" placeholder="保留原题号和完整题目，逐题标明学生作答。多页文件请按页序选择，识别后在此核对、修改。" required minlength="10"></textarea><p class="hint">TXT / MD、PDF、JPG / PNG / WebP；每个文件不超过 10 MB，图片不超过 8 MB。</p></section>
+<section class="card"><div class="step">02 · 批改依据</div><h2>答案与评分标准</h2><label class="upload">添加答案文件<input id="rubric-files" type="file" accept=".txt,.md,.pdf,.jpg,.jpeg,.png,.webp" multiple></label><label for="rubric">逐题参考答案与分值</label><textarea id="rubric" rows="15" maxlength="12000" placeholder="例如：第 1 题（5 分），答案 B；第 2 题（10 分），列对公式 3 分、代入正确 3 分、结果与单位正确 4 分。" required minlength="10"></textarea><p class="hint">请给出各题分值、步骤分与允许的等价答案；缺少依据的题目将待复核。</p></section>
+</div>
+<p id="parser-notice" class="notice">PDF 读取文字层；扫描 PDF 请先转成图片。手写、公式和图形可能识别不全，请对照原卷补齐。</p>
+<p class="hint">文件与批改结果不写入知识库或课程成绩，不在此页面自动保存。开始批改后，核对后的文字会交给 Chat 已配置的 AI 服务处理。</p>
+<label class="confirm"><input id="confirmed" type="checkbox" required><span>我已对照原卷核对题目、作答、参考答案与分值，确认本次题数和满分正确。</span></label>
+<div class="actions"><button id="grade" class="primary" type="submit" disabled>开始批改</button><button id="demo" type="button">填入两题示例</button><button id="clear" type="button">清空本次内容</button></div>
+</fieldset>
+</form>
+<p id="status" role="status" aria-live="polite"></p>
+<section id="result" hidden tabindex="-1"><div class="result-head"><div><span class="eyebrow">批改结果 · 教师待复核</span><h2 id="result-title"></h2></div><div class="actions"><button id="export-report" type="button">导出报告</button><button id="export-csv" type="button">导出明细 CSV</button><button id="print" type="button">打印 / PDF</button></div></div><div id="score" class="score"></div><p id="summary"></p><p id="result-notice" class="notice"></p><div id="questions"></div></section>
+</main>
+<footer>AI 评分仅供参考，正式成绩由教师复核确认。</footer>
+</body></html>
