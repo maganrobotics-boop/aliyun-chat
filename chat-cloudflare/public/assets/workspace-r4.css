@@ -54,8 +54,8 @@ body:has(dialog.workspace-fullscreen-page[open]) .workspace-bottom-nav { display
 /* The original Chat shell had an unfinished navigation row. */
 .chat-assistant-view .chat-primary-navigation { display: none !important; }
 
-/* Assistant header: laboratory title, grading entry, and new-chat control. */
-.chat-assistant-view .topbar .desktop-lab-brand,.chat-assistant-view .topbar-actions>:not(.new-chat-bottom):not(.grading-entry),.chat-assistant-view .om-orientation-link,.chat-assistant-view .sidebar .om-orientation-link{display:none!important}
+/* Assistant header: laboratory title, account menu, and new-chat control. */
+.chat-assistant-view .topbar .desktop-lab-brand,.chat-assistant-view .topbar-actions>:not(.new-chat-bottom):not(.settings-trigger),.chat-assistant-view .om-orientation-link,.chat-assistant-view .sidebar .om-orientation-link{display:none!important}
 .chat-assistant-view .topbar{min-height:58px;gap:12px}.chat-assistant-view .topbar-title{min-width:0}.chat-assistant-view .topbar .lab-name{display:block!important;font-size:17px!important;line-height:1.4;white-space:normal}
 .chat-assistant-view .topbar-actions>.new-chat-bottom{display:flex!important;position:static!important;inset:auto!important;margin:0!important;width:40px!important;height:40px!important;min-width:40px;border:1px solid #e0e7ed;border-radius:11px;padding:8px!important;justify-content:center;align-items:center;background:#fff}
 .chat-assistant-view .topbar-actions>.new-chat-bottom span{display:none!important}.chat-assistant-view .topbar-actions>.new-chat-bottom svg{width:23px;height:23px}
@@ -63,7 +63,7 @@ body:has(dialog.workspace-fullscreen-page[open]) .workspace-bottom-nav { display
 
 .chat-assistant-view .topbar-actions>.new-chat-bottom{color:#245bdb!important}.chat-assistant-view .lab-name:after,.chat-assistant-view .om-orientation-nav{display:none!important}
 
-@media(max-width:960px){body.chat-assistant-view .sidebar,body.chat-assistant-view .collapse-handle{display:none!important}body.chat-assistant-view #app{grid-template-columns:minmax(0,1fr)!important}body.chat-assistant-view .workspace{width:100%!important;max-width:100%!important;margin-left:0!important}body.chat-assistant-view .topbar-actions>:not(.new-chat-bottom):not(.grading-entry){display:none!important}}
+@media(max-width:960px){body.chat-assistant-view .sidebar,body.chat-assistant-view .collapse-handle{display:none!important}body.chat-assistant-view #app{grid-template-columns:minmax(0,1fr)!important}body.chat-assistant-view .workspace{width:100%!important;max-width:100%!important;margin-left:0!important}body.chat-assistant-view .topbar-actions>:not(.new-chat-bottom):not(.settings-trigger){display:none!important}}
 
 @media(max-width:960px){body.chat-assistant-view .student-login-trigger,body.chat-assistant-view .om-orientation-card,body.chat-assistant-view .om-orientation-link,body.chat-assistant-view .om-orientation-nav{display:none!important}}
 

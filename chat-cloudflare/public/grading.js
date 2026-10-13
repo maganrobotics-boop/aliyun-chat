@@ -1,9 +1,9 @@
 const $ = id => document.getElementById(id);
-let service = { signedIn: false, modelConfigured: false }, busy = false, result = null;
+let service = { signedIn: false, canGrade: false, modelConfigured: false }, busy = false, result = null;
 let sourceRevision = 0;
 function status(message, error = false) { $('status').textContent = message; $('status').className = error ? 'error' : ''; }
-function updateActions() { $('grade').disabled = busy || !service.signedIn || !service.modelConfigured; }
-function setBusy(value) { busy = value; $('editor').disabled = value; updateActions(); }
+function updateActions() { $('grade').disabled = busy || !service.canGrade || !service.modelConfigured; $('editor').disabled = busy || !service.canGrade; $('grading-form').hidden = !service.canGrade; if (!service.canGrade) { result = null; $('result').hidden = true; } }
+function setBusy(value) { busy = value; updateActions(); }
 function invalidate() { sourceRevision++; $('confirmed').checked = false; result = null; $('result').hidden = true; }
 async function api(path, options = {}) {
   const controller = new AbortController();
@@ -11,7 +11,10 @@ async function api(path, options = {}) {
   try {
     const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...options, signal: controller.signal });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `请求失败（${response.status}），请稍后重试。`);
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) { service.canGrade = false; updateActions(); }
+      throw new Error(data.error || `请求失败（${response.status}），请稍后重试。`);
+    }
     return data;
   } catch (error) {
     if (error.name === 'AbortError') throw new Error('请求超时，未生成新成绩。内容仍保留，请分段重试。');
@@ -21,16 +24,17 @@ async function api(path, options = {}) {
 async function checkSession() {
   try {
     service = await api('/api/grading/status');
-    $('account').textContent = !service.signedIn ? '请先登录 Chat，再上传或批改。已有课程登录可直接使用。' : !service.modelConfigured ? '已登录，AI 服务尚未配置，请联系管理员。' : '已登录 · 可上传试卷并开始批改';
-    $('login-panel').hidden = service.signedIn;
-    if (!service.signedIn) $('login-panel').open = true;
+    $('account').textContent = !service.canGrade ? '试卷批改仅限 @sztu.edu.cn 教师邮箱。请使用教师邮箱登录。' : !service.modelConfigured ? '已登录，AI 服务尚未配置，请联系管理员。' : '教师已登录 · 可上传试卷并开始批改';
+    $('login-panel').hidden = service.canGrade === true;
+    if (!service.canGrade) $('login-panel').open = true;
     if (service.notice) $('parser-notice').textContent = `${service.notice} 请逐题核对，补齐手写、公式和图形信息。`;
-  } catch (error) { service = { signedIn: false, modelConfigured: false }; $('account').textContent = error.message; $('login-panel').hidden = false; }
+  } catch (error) { service = { signedIn: false, canGrade: false, modelConfigured: false }; $('account').textContent = error.message; $('login-panel').hidden = false; }
   updateActions();
 }
 const jsonOptions = body => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 $('request-code').addEventListener('click', async () => {
   if (!$('email').reportValidity()) return;
+  if (!/^[^\s@]+@sztu\.edu\.cn$/i.test($('email').value.trim())) { $('login-status').textContent = '请使用 @sztu.edu.cn 教师邮箱。'; return; }
   $('request-code').disabled = true;
   try { await api('/api/visitor/request-code', jsonOptions({ email: $('email').value })); $('login-status').textContent = '验证码已发送，请检查邮箱。'; }
   catch (error) { $('login-status').textContent = error.message; }
@@ -47,7 +51,7 @@ const mime = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg
 async function importFiles(target, picker) {
   const files = [...picker.files]; picker.value = '';
   if (!files.length || busy) return;
-  if (!service.signedIn) { status('请先登录 Chat。', true); return; }
+  if (!service.canGrade) { status('请先使用 @sztu.edu.cn 教师邮箱登录。', true); return; }
   if (files.length > 20) { status('一次最多选择 20 个文件。', true); return; }
   setBusy(true); let imported = 0;
   try {
@@ -100,7 +104,7 @@ function render(value) {
   $('result').hidden = false; $('result').focus();
 }
 $('grading-form').addEventListener('submit', async event => {
-  event.preventDefault(); if (busy || !service.signedIn || !service.modelConfigured) return;
+  event.preventDefault(); if (busy || !service.canGrade || !service.modelConfigured) return;
   const revision = sourceRevision;
   result = null; $('result').hidden = true; setBusy(true); status('正在按评分标准逐题批改，通常需要数十秒…');
   try {

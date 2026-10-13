@@ -29,10 +29,10 @@ try {
   for(const [name,width,height] of [['desktop',1280,900],['mobile',390,844],['small-mobile',360,780]]){
     const context=await browser.newContext({viewport:{width,height},serviceWorkers:'block',acceptDownloads:true});
     const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
-    let signedIn=true,mode='normal',calls=0;
+    let signedIn=true,canGrade=true,mode='normal',calls=0;
     await page.route('**/api/**',async route=>{
       const path=new URL(route.request().url()).pathname;
-      if(path==='/api/grading/status')return route.fulfill({json:{signedIn,modelConfigured:true,formats:['pdf','png','jpg','jpeg','webp'],notice:'PDF 读取文字层，扫描 PDF 请先转图片。'}});
+      if(path==='/api/grading/status')return route.fulfill({json:{signedIn,canGrade:signedIn&&canGrade,modelConfigured:true,formats:['pdf','png','jpg','jpeg','webp'],notice:'PDF 读取文字层，扫描 PDF 请先转图片。'}});
       if(path==='/api/grading/extract')return route.fulfill({json:{text:'第3题：3+3=? 学生作答：6。'}});
       if(path==='/api/grading/grade'){
         calls++;assert.equal(route.request().postDataJSON().confirmed,true);
@@ -42,7 +42,7 @@ try {
         if(mode==='hostile'){r.questions[0].studentAnswer='<img src=x onerror="window.pwned=1">';r.questions[0].label='=HYPERLINK("https://invalid.example")';}
         return route.fulfill({json:r});
       }
-      if(path==='/api/visitor/status')return route.fulfill({json:{signedIn:true,user:{role:'student',roleLabel:'学生'}}});
+      if(path==='/api/visitor/status')return route.fulfill({json:{signedIn,user:signedIn?{email:canGrade?'teacher@sztu.edu.cn':'student@stumail.sztu.edu.cn',role:canGrade?'staff':'student',roleLabel:canGrade?'教师':'学生'}:null}});
       if(path==='/api/status')return route.fulfill({json:{systemReady:true,modelReady:true,knowledgeReady:true,retrievalReady:true}});
       return route.fulfill({json:{suggestions:[],courses:[]}});
     });
@@ -61,8 +61,14 @@ try {
     mode='hostile';await page.locator('#grade').click();await page.locator('#result:not([hidden])').waitFor();assert.equal(await page.evaluate(()=>window.pwned),undefined);assert.equal(await page.locator('#questions img').count(),0);
     const csvDownload=page.waitForEvent('download');await page.locator('#export-csv').click();const csv=await csvDownload;assert.match(await readFile(await csv.path(),'utf8'),/'=HYPERLINK/);
     signedIn=false;await page.reload();await page.locator('#login-panel:not([hidden])').waitFor();assert.equal(await page.locator('#grade').isDisabled(),true);
-    // The assistant's existing workspace CSS must not hide the new entry.
-    await page.goto(origin+'/?ta=1');await page.locator('.grading-entry').waitFor({state:'visible'});assert.equal(await page.locator('.grading-entry').getAttribute('href'),'/grading');
+    assert.equal(await page.locator('#grading-form').isVisible(),false);
+    // A server-verified teacher sees grading only after opening My; student/guest do not.
+    signedIn=true;canGrade=true;await page.goto(origin+'/?ta=1');await page.getByRole('button',{name:'我的',exact:true}).first().click();await page.getByRole('button',{name:'试卷批改',exact:true}).waitFor();
+    assert.equal(await page.locator('.topbar .grading-entry').count(),0);assert.match(await page.title(),/AI 助教/);
+    canGrade=false;await page.reload();const gateResponse=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/grading/status');await page.getByRole('button',{name:'我的',exact:true}).first().click();await gateResponse;assert.equal(await page.getByRole('button',{name:'试卷批改',exact:true}).count(),0);
+    await page.goto(origin+'/grading');await page.locator('#login-panel:not([hidden])').waitFor();assert.equal(await page.locator('#grading-form').isVisible(),false);assert.equal(await page.locator('#grade').isDisabled(),true);
+    await page.locator('#email').fill('student@stumail.sztu.edu.cn');await page.locator('#request-code').click();assert.match(await page.locator('#login-status').innerText(),/教师邮箱/);
+
     assert.deepEqual(errors,[]);results.push({name,width,height,passed:true});await context.close();
   }
   console.log(JSON.stringify({apiMode:'synthetic',results,checks:['confirmation','grading','exports','stale result invalidation','file import','pending totals','error recovery','XSS','CSV formula escaping','guest guard','chat entry visibility','responsive overflow']},null,2));

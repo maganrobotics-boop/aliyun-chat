@@ -47,9 +47,10 @@ test('fractional marks sum precisely',()=>{
 async function fixture(t, overrides={}) {
   const DB=new D1DatabaseAdapter();t.after(()=>DB.close());
   const token='a'.repeat(64);await DB.prepare('INSERT INTO sessions(hash,expires) VALUES (?,?)').bind(await sha256Hex(token),Date.now()+60000).run();
+  await DB.prepare('INSERT INTO visitor_sessions(hash,email,role,created_at,expires_at) VALUES (?,?,?,?,?)').bind(await sha256Hex(token),'teacher@sztu.edu.cn','staff',Date.now(),Date.now()+60000).run();
   let modelCalls=0,parserCalls=0;
   const env={DB,APP_ORIGIN:origin,ADMIN_EMAIL:'owner@example.test',APP_ENCRYPTION_KEY:'e'.repeat(48),RATE_LIMIT_HMAC_KEY:'r'.repeat(48),AI:{run:async()=>{modelCalls++;return {response:serialize()};}},DOCUMENT_AI:{extractValidatedDocument:async()=>{parserCalls++;return {text:'第1题：1+1=? 学生作答：2。'};}},...overrides};
-  const send=(path,body=input,options={})=>handleRequest(new Request(origin+path,{method:options.method||'POST',headers:{'Content-Type':options.type||'application/json',Origin:options.origin||origin,Cookie:options.guest?'':`__Host-ma-session=${token}`,'X-File-Name':encodeURIComponent(options.fileName||'exam.pdf'),'CF-Connecting-IP':'203.0.113.99'},body:options.method==='GET'?undefined:options.raw||JSON.stringify(body)}),env,{});
+  const send=(path,body=input,options={})=>handleRequest(new Request(origin+path,{method:options.method||'POST',headers:{'Content-Type':options.type||'application/json',Origin:options.origin||origin,Cookie:options.guest?'':options.adminOnly?`__Host-ma-session=${token}`:`__Host-om-chat-session=${token}`,'X-File-Name':encodeURIComponent(options.fileName||'exam.pdf'),'CF-Connecting-IP':'203.0.113.99'},body:options.method==='GET'?undefined:options.raw||JSON.stringify(body)}),env,{});
   return {env,send,calls:()=>({modelCalls,parserCalls}),token};
 }
 test('worker rejects unauthenticated and cross-origin uploads/grading before model or parser',async t=>{
@@ -60,9 +61,9 @@ test('worker rejects unauthenticated and cross-origin uploads/grading before mod
   }
   assert.deepEqual(f.calls(),{modelCalls:0,parserCalls:0});
 });
-test('signed-in campus visitor can grade without admin privileges',async t=>{
-  const f=await fixture(t);await f.env.DB.prepare('DELETE FROM sessions').run();
-  await f.env.DB.prepare('INSERT INTO visitor_sessions(hash,email,role,created_at,expires_at) VALUES (?,?,?,?,?)').bind(await sha256Hex(f.token),'student@stumail.sztu.edu.cn','student',Date.now(),Date.now()+60000).run();
+test('verified teacher can grade without admin privileges',async t=>{
+  const f=await fixture(t);await f.env.DB.prepare('DELETE FROM sessions').run();await f.env.DB.prepare('DELETE FROM visitor_sessions').run();
+  await f.env.DB.prepare('INSERT INTO visitor_sessions(hash,email,role,created_at,expires_at) VALUES (?,?,?,?,?)').bind(await sha256Hex(f.token),'teacher@sztu.edu.cn','staff',Date.now(),Date.now()+60000).run();
   const res=await handleRequest(new Request(origin+'/api/grading/grade',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Cookie:`__Host-om-chat-session=${f.token}`},body:JSON.stringify(input)}),f.env,{});
   assert.equal(res.status,200);assert.equal((await res.json()).suggestedScore,5);
 });
@@ -95,7 +96,7 @@ test('rate limit blocks thirteenth grading request',async t=>{
 });
 test('model unavailable fails explicitly; status exposes no secrets',async t=>{
   const f=await fixture(t,{AI:undefined});assert.equal((await f.send('/api/grading/grade')).status,503);
-  const res=await f.send('/api/grading/status',null,{method:'GET',guest:true});const data=await res.json();assert.equal(data.signedIn,false);assert.equal(data.modelConfigured,false);assert.equal(data.limits.questions,20);
+  const res=await f.send('/api/grading/status',null,{method:'GET',guest:true});const data=await res.json();assert.equal(data.signedIn,false);assert.equal(data.canGrade,false);assert.equal(data.modelConfigured,undefined);assert.equal(data.limits,undefined);const teacher=await (await f.send('/api/grading/status',null,{method:'GET'})).json();assert.equal(teacher.canGrade,true);assert.equal(teacher.modelConfigured,false);
   assert.equal((await f.send('/api/grading/unknown')).status,404);
 });
 test('grading page and scripts are same-origin, no-store, and reject writes',async()=>{
@@ -104,4 +105,21 @@ test('grading page and scripts are same-origin, no-store, and reject writes',asy
     const res=await routeStaticRequest(new Request(origin+path),env);assert.equal(res.status,200);assert.equal(res.headers.get('cache-control'),'no-store');assert.match(res.headers.get('content-security-policy'),/script-src 'self'/);
     assert.equal((await routeStaticRequest(new Request(origin+path,{method:'POST'}),env)).status,405);
   }
+});
+
+test('students, other domains, spoofed teacher roles and admin-only sessions cannot extract or grade',async t=>{
+  const f=await fixture(t);
+  for(const [email,role] of [['student@stumail.sztu.edu.cn','student'],['student@stumail.sztu.edu.cn','staff'],['teacher@sztu.edu.cn.evil.test','staff'],['teacher@dept.sztu.edu.cn','staff'],['teacher@other.test','staff'],['teacher@sztu.edu.cn','student']]) {
+    await f.env.DB.prepare('UPDATE visitor_sessions SET email=?,role=?').bind(email,role).run();
+    const status=await (await f.send('/api/grading/status',null,{method:'GET'})).json();assert.equal(status.signedIn,true);assert.equal(status.canGrade,false);
+    for(const path of ['/api/grading/extract','/api/grading/grade']) assert.equal((await f.send(path)).status,403,email);
+  }
+  for(const path of ['/api/grading/extract','/api/grading/grade']) assert.equal((await f.send(path,input,{adminOnly:true})).status,401);
+  assert.deepEqual(f.calls(),{modelCalls:0,parserCalls:0});
+});
+test('expired teacher sessions lose both visibility and tool access',async t=>{
+  const f=await fixture(t);await f.env.DB.prepare('UPDATE visitor_sessions SET expires_at=?').bind(Date.now()-1000).run();
+  const status=await (await f.send('/api/grading/status',null,{method:'GET'})).json();assert.equal(status.signedIn,false);assert.equal(status.canGrade,false);
+  for(const path of ['/api/grading/extract','/api/grading/grade'])assert.equal((await f.send(path)).status,401);
+  assert.deepEqual(f.calls(),{modelCalls:0,parserCalls:0});
 });

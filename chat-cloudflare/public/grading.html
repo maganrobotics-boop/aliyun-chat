@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>批改试卷 · AI 学姐</title><link rel="stylesheet" href="/grading.css"><script src="/grading.js" type="module"></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>批改试卷 · AI 助教</title><link rel="stylesheet" href="/grading.css"><script src="/grading.js" type="module"></script></head>
 <body>
-<header><a href="/?ta=1">← 返回 Chat</a><span>ARTS Robotics · AI 学姐</span></header>
+<header><a href="/?ta=1">← 返回 Chat</a><span>ARTS Robotics · AI 助教</span></header>
 <main>
 <div class="intro"><span class="eyebrow">学习工具</span><h1>批改试卷</h1><p>核对作答，按标准评分，让每一道错题都有清楚的反馈。</p></div>
 <div id="account" class="notice" role="status">正在检查登录与服务状态…</div>
-<details id="login-panel" hidden><summary>登录 Chat</summary><form id="login-form"><label>校内邮箱<input id="email" type="email" autocomplete="email" placeholder="姓名对应的 @sztu.edu.cn 或 @stumail.sztu.edu.cn 邮箱" required></label><div class="actions"><button id="request-code" type="button">发送验证码</button><label>验证码<input id="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label><button type="submit">验证并登录</button></div><p id="login-status" role="status"></p><a href="/manage" target="_blank" rel="noopener">管理员登录</a><button id="refresh-session" type="button">刷新登录状态</button></form></details>
-<form id="grading-form">
-<fieldset id="editor">
+<details id="login-panel" hidden><summary>教师邮箱登录</summary><form id="login-form"><label>教师邮箱<input id="email" type="email" autocomplete="email" placeholder="教师姓名对应的 @sztu.edu.cn 邮箱" required></label><div class="actions"><button id="request-code" type="button">发送验证码</button><label>验证码<input id="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label><button type="submit">验证并登录</button></div><p id="login-status" role="status"></p><button id="refresh-session" type="button">刷新登录状态</button></form></details>
+<form id="grading-form" hidden>
+<fieldset id="editor" disabled>
 <div class="meta"><label>试卷名称<input id="title" maxlength="100" value="试卷批改" required></label><label>本次题数<input id="question-count" type="number" min="1" max="20" step="1" placeholder="1–20" required></label><label>本次满分<input id="total-score" type="number" min="0.01" max="1000" step="0.01" value="100" required></label></div>
 <p class="hint">按评分题逐项计数，小题单独评分时单独计数。每次最多 20 题，长试卷请分段提交，并填写该部分的题数与满分。</p>
 <div class="materials">

@@ -2,6 +2,7 @@ import { PublicError } from './errors.mjs';
 import { extractDocument, validateDocumentUpload, MAX_DOCUMENT_UPLOAD_BYTES } from './document-extraction.mjs';
 
 export const GRADING_LIMITS = Object.freeze({ paper: 20000, rubric: 12000, questions: 20 });
+export const isGradingTeacher = user => user?.role === 'staff' && typeof user.email === 'string' && /^[^\s@]+@sztu\.edu\.cn$/i.test(user.email);
 const fail = (message, status = 400) => { throw new PublicError(message, status); };
 const money = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1000 && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7;
 const sum = values => Math.round(values.reduce((a, b) => a + b, 0) * 100) / 100;
@@ -70,17 +71,20 @@ export async function handleExamGrading(context, deps) {
   const path = new URL(request.url).pathname;
   if (!['/api/grading/status', '/api/grading/extract', '/api/grading/grade'].includes(path)) fail('没有找到此接口。', 404);
   if (request.method !== (path.endsWith('/status') ? 'GET' : 'POST')) fail('请求方法不正确。', 405);
-  const user = await deps.currentVisitor(context) || (await deps.ownerEmail(context) ? { role: 'admin' } : null);
+  const user = await deps.currentVisitor(context);
+  const canGrade = isGradingTeacher(user);
   if (path.endsWith('/status')) {
+    if (!canGrade) return deps.json({ signedIn: Boolean(user), canGrade: false, reason: '试卷批改仅限使用 @sztu.edu.cn 教师邮箱登录后使用。' });
     const config = await deps.getModelConfig(context);
     const parser = env.DOCUMENT_AI || env.AI;
     const capabilities = typeof parser?.getDocumentCapabilities === 'function' ? await parser.getDocumentCapabilities() : {
       formats: typeof parser?.toMarkdown === 'function' ? ['pdf', 'png', 'jpg', 'jpeg', 'webp'] : [],
       pdfScansSupported: false, notice: '请核对提取文字；图片、手写和公式识别可能不完整。',
     };
-    return deps.json({ signedIn: Boolean(user), modelConfigured: Boolean(deps.modelProvider(context, config).provider), limits: GRADING_LIMITS, ...capabilities });
+    return deps.json({ signedIn: true, canGrade: true, modelConfigured: Boolean(deps.modelProvider(context, config).provider), limits: GRADING_LIMITS, ...capabilities });
   }
-  if (!user) fail('请先登录 Chat，再上传或批改试卷。', 401);
+  if (!user) fail('请先使用 @sztu.edu.cn 教师邮箱登录 AI 助教。', 401);
+  if (!canGrade) fail('试卷批改仅限 @sztu.edu.cn 教师邮箱使用。', 403);
   // Called behind the application's same-origin POST guard.
   if (path.endsWith('/extract')) {
     await deps.limit(context, 'grading-extract', 30);

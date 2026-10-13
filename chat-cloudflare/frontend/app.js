@@ -481,7 +481,7 @@ function appShell() {
   return `
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div class="brand-copy"><strong class="brand-title">AI 学姐</strong><span class="brand-subtitle">机器人自主移动与操作实验室</span></div></div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><div class="brand-copy"><strong class="brand-title">AI 助教</strong><span class="brand-subtitle">机器人自主移动与操作实验室</span></div></div>
       <div class="sidebar-label">功能</div>
       <div class="nav-list">
         <a class="nav-item village-nav-item" href="/newbie-village">${icons.chart}<span>新手村</span></a>
@@ -494,7 +494,7 @@ function appShell() {
       <button class="collapse-handle" type="button" aria-label="收起侧边栏">${icons.chevron}</button>
       <div class="side-footer"><div class="bottom-actions"><button class="new-chat-bottom" type="button">${icons.plus}<span>聊天</span></button><button class="recent-chat-trigger" type="button" aria-label="打开最近聊天">${icons.chat}</button><button class="settings-trigger mobile-settings-trigger" type="button" aria-label="新手村">${icons.gear}</button></div></div>
     </aside>
-    <main class="workspace"><header class="topbar"><div class="topbar-title"><span class="lab-name">AI 学姐</span><span class="desktop-lab-brand">OriginMind × ARTS Robotics</span></div><div class="topbar-actions"><a class="grading-entry" href="/grading">批改试卷</a><span class="guest-badge">正在确认身份…</span><button class="settings-trigger desktop-settings-trigger" type="button" aria-label="新手村">${icons.gear}</button></div></header>
+    <main class="workspace"><header class="topbar"><div class="topbar-title"><span class="lab-name">AI 助教</span><span class="desktop-lab-brand">OriginMind × ARTS Robotics</span></div><div class="topbar-actions"><span class="guest-badge">正在确认身份…</span><button class="settings-trigger desktop-settings-trigger" type="button" aria-label="新手村">${icons.gear}</button></div></header>
       <section class="chat-surface"><button class="student-login-trigger login-guide" type="button" hidden><span class="login-guide-icon">${icons.login}</span><span class="login-guide-copy"><strong>深技大师生登录</strong></span></button><div class="empty-state"><div class="entry-card"><h1 class="hero-title">想了解实验室的什么？</h1><p class="hero-subtitle">从已审核的实验室公开知识中检索并回答。</p></div></div>
         <div class="conversation" aria-live="polite"><div class="message-list"></div></div>
         <div class="composer-wrap"><div class="composer-glow"></div><form class="composer" aria-label="发送消息"><div class="composer-inner"><div class="input-panel"><textarea id="question" class="prompt-input" rows="2" maxlength="4000" aria-label="你的问题" placeholder="输入想了解的实验室问题"></textarea><div class="attachment-chip">${icons.paperclip}<span></span></div></div><div class="composer-footer"><div class="input-tools"><input class="file-input" type="file" hidden><button class="icon-button attach-button" type="button" aria-label="添加附件">${icons.paperclip}</button><button class="icon-button voice-button" type="button" disabled aria-label="语音输入暂未启用">${icons.voice}</button></div><div class="footer-actions"><button class="model-pill" type="button">${icons.cube}<span>文本模型</span></button><button class="send-button" type="submit" aria-label="发送" disabled>${icons.send}</button></div></div></div></form></div>
@@ -664,6 +664,7 @@ function updateVisitorUi(user) {
     guestBadge.classList.remove("signed-in");
   }
   updateLoginGuide();
+  document.querySelectorAll(".settings-trigger").forEach(button => { button.textContent = visitorUser ? "我的" : "登录"; button.setAttribute("aria-label", visitorUser ? "我的" : "登录"); });
 }
 
 function updateLoginGuide() {
@@ -1291,7 +1292,49 @@ document.querySelector(".recent-chat-trigger").addEventListener("click", () => {
 document.querySelector(".recent-drawer-close").addEventListener("click", () => recentDrawer.close());
 document.querySelector(".collapse-handle").addEventListener("click", () => body.classList.toggle("sidebar-collapsed"));
 document.querySelector(".model-pill").addEventListener("click", () => showToast(`当前使用${MODE_COPY[currentMode][3]}`));
-document.querySelectorAll(".settings-trigger").forEach((button) => button.addEventListener("click", () => window.location.assign("/newbie-village")));
+function accountKey() { return "om.assistant.preferences." + (visitorUser?.email || "guest"); }
+function accountPrefs() { try { return JSON.parse(localStorage.getItem(accountKey()) || "{}"); } catch { return {}; } }
+function accountNickname() { return accountPrefs().nickname || visitorUser?.nickname || visitorUser?.name || visitorUser?.email?.split("@")[0] || "已登录"; }
+const accountPanel = document.createElement("section");
+accountPanel.className = "assistant-account-panel";
+accountPanel.hidden = true;
+accountPanel.setAttribute("role", "dialog");
+document.body.append(accountPanel);
+function closeAccountPanel() { accountPanel.hidden = true; document.querySelectorAll(".settings-trigger").forEach(b => b.setAttribute("aria-expanded", "false")); }
+let gradingMenuRevision = 0;
+async function accountMenu() {
+  closeAuthDialog(); accountPanel.replaceChildren(); accountPanel.hidden = false;
+  accountPanel.setAttribute("aria-label", "我的");
+  const revision = ++gradingMenuRevision;
+  for (const [label, action] of [["个性化", () => accountPreferences(true)], ["设置", () => accountPreferences(false)], ["退出登录", async () => {
+    try { const response = await fetch(apiUrl("/api/visitor/logout"), { method: "POST", credentials: "same-origin" }); if (!response.ok) throw new Error("退出失败，请重试"); updateVisitorUi(null); closeAccountPanel(); showToast("已退出登录"); } catch (error) { showToast(error.message); }
+  }]]) { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.addEventListener("click", action); accountPanel.append(button); }
+  try {
+    const response = await fetch(apiUrl("/api/grading/status"), { credentials: "same-origin", cache: "no-store" });
+    const access = await response.json();
+    if (response.ok && access.canGrade === true && revision === gradingMenuRevision && !accountPanel.hidden && accountPanel.getAttribute("aria-label") === "我的") {
+      const button = document.createElement("button"); button.type = "button"; button.className = "teacher-grading-entry"; button.textContent = "试卷批改";
+      button.addEventListener("click", () => window.location.assign("/grading")); accountPanel.prepend(button);
+    }
+  } catch { /* The teacher-only tool stays hidden if authorization cannot be checked. */ }
+}
+function applyAccountPreferences() { const p = accountPrefs(); document.documentElement.dataset.assistantTheme = p.theme || "light"; document.documentElement.classList.toggle("assistant-large-text", Boolean(p.largeText)); }
+function accountPreferences(personal) {
+  accountPanel.replaceChildren(); accountPanel.setAttribute("aria-label", personal ? "个性化" : "设置");
+  const heading = document.createElement("strong"); heading.textContent = personal ? "个性化" : "设置"; accountPanel.append(heading);
+  const label = document.createElement("label"); label.textContent = personal ? "昵称" : "显示主题";
+  const input = document.createElement(personal ? "input" : "select"); const prefs = accountPrefs();
+  if (personal) { input.value = accountNickname(); input.maxLength = 30; } else { for (const [value, text] of [["light", "浅色"], ["dark", "深色"]]) { const option = document.createElement("option"); option.value = value; option.textContent = text; input.append(option); } input.value = prefs.theme || "light"; }
+  label.append(input); accountPanel.append(label);
+  const note = document.createElement("small"); note.textContent = "偏好保存在当前浏览器。"; accountPanel.append(note);
+  const save = document.createElement("button"); save.type = "button"; save.textContent = "保存";
+  save.addEventListener("click", () => { try { if (personal) prefs.nickname = input.value.trim().slice(0,30) || visitorUser?.email?.split("@")[0]; else prefs.theme = input.value; localStorage.setItem(accountKey(), JSON.stringify(prefs)); updateVisitorUi(visitorUser); applyAccountPreferences(); accountMenu(); } catch { showToast("无法保存，请检查浏览器存储设置"); } }); accountPanel.append(save);
+  const back = document.createElement("button"); back.type = "button"; back.textContent = "返回"; back.addEventListener("click", accountMenu); accountPanel.append(back); input.focus();
+}
+document.querySelectorAll(".settings-trigger").forEach(button => { button.textContent = "登录"; button.setAttribute("aria-label", "登录"); button.setAttribute("aria-haspopup", "dialog"); button.addEventListener("click", event => { event.stopPropagation(); if (!visitorUser) { closeAccountPanel(); openAuthDialog(); } else if (!accountPanel.hidden) closeAccountPanel(); else { accountMenu(); button.setAttribute("aria-expanded", "true"); } }); });
+document.addEventListener("click", event => { if (!event.composedPath().includes(accountPanel) && !event.target.closest(".settings-trigger")) closeAccountPanel(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape") closeAccountPanel(); });
+applyAccountPreferences();
 document.querySelectorAll(".student-login-trigger").forEach((button) => button.addEventListener("click", openAuthDialog));
 campusCodeButton.addEventListener("click", () => void requestCampusCode());
 campusLoginForm.addEventListener("submit", (event) => void verifyCampusCode(event));
