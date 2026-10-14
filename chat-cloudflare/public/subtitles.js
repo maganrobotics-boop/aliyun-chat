@@ -147,9 +147,9 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && act
 window.addEventListener('pagehide', () => { if (active) { const s = active; s.stream?.getTracks().forEach(t => t.stop()); void fetch(api(`sessions/${s.id}/finish`), { method: 'POST', keepalive: true, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' }); } });
 try {
   const status = await (await request('status')).json(); available = status.available; canRecord = status.canRecord;
-  if (!status.signedIn) { ui.status.textContent = '请先登录'; note('请返回 AI 助教登录，然后打开“我的 → 实时字幕”。'); }
-  else if (!available) { ui.status.textContent = '服务尚未启用'; note('实时翻译接口正在准备，请稍后再试。'); }
+  if (!available) { ui.status.textContent = '服务尚未启用'; note('实时翻译接口正在准备，请稍后再试。'); }
   else { ui.status.textContent = '准备就绪'; if (!status.canRecord) { ui.save.checked = false; note('录音存储尚未连接，本次可仅使用字幕。'); } }
-  if (status.signedIn) void refreshRecordings();
+  if (status.guestAccess) $('recording-help').textContent = '免登录使用。录音通过此浏览器保存访问权限，30 天内再次访问会续期；清除浏览器数据或换浏览器后无法找回，请及时下载。';
+  if (available) void refreshRecordings();
 } catch (e) { ui.status.textContent = '连接失败'; note(e.message, true); }
 controls();

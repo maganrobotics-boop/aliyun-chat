@@ -8,6 +8,7 @@ import { createSubtitleService, realtimeUrl, sessionConfig } from '../../aliyun/
 import { createRecordingStore, wav } from '../../aliyun/live-subtitles/recordings.mjs';
 import { handleLiveSubtitles } from '../src/live-subtitles.mjs';
 import { routeStaticRequest } from '../src/static-router.mjs';
+import { encryptSecret } from '../src/crypto.mjs';
 
 class Socket extends EventEmitter {
   static sockets = [];
@@ -148,18 +149,51 @@ test('OSS failure is visible without claiming a completed recording', async t =>
   assert.equal(wav(Buffer.alloc(2)).readUInt32LE(40), 2);
 });
 
-test('routes require login and dedicated speech credentials, and enforce binary size/type', async () => {
-  let owner = null, starts = 0; const env = { LIVE_SUBTITLES: { canRecord: true, start: async () => { starts++; return { id: 'test' }; } } };
+test('routes require a browser credential or account and dedicated speech setup', async () => {
+  let owner = null, starts = 0; const env = { APP_ENCRYPTION_KEY: 'synthetic-key-'.repeat(4), LIVE_SUBTITLES: { canRecord: true, start: async () => { starts++; return { id: 'test' }; } } };
   const deps = { currentVisitor: async () => owner && ({ email: owner }), json: (v, status = 200) => Response.json(v, { status }),
     limit: async () => {}, readJson: r => r.json(), readBytes: r => r.arrayBuffer() };
   const call = (path, init) => handleLiveSubtitles({ request: new Request('https://chat.omindos.cn/api/subtitles/' + path, init), env }, deps);
   assert.equal((await (await call('status')).json()).available, false);
-  await assert.rejects(call('sessions', { method: 'POST', body: '{}' }), { status: 401 }); owner = 'a';
+  await assert.rejects(call('sessions', { method: 'POST', body: '{}' }), { status: 403 }); owner = 'a';
   await assert.rejects(call('sessions', { method: 'POST', body: '{}' }), { status: 503 });
   env.CHAT_SUBTITLES_API_KEY = 'fake'; env.CHAT_SUBTITLES_BASE_URL = config.baseUrl;
   assert.equal((await (await call('status')).json()).available, true);
   assert.equal((await call('sessions', { method: 'POST', body: JSON.stringify(options) })).status, 201); assert.equal(starts, 1);
   await assert.rejects(call('sessions/12345678-1234-1234-1234-123456789012/audio?seq=1', { method: 'POST', body: '{}' }), { status: 415 });
+});
+
+test('guest browsers can translate and retain recordings without exposing another browser', async t => {
+  const db = new DatabaseSync(':memory:'); const store = createRecordingStore({ db, oss: memoryOSS() });
+  const svc = createSubtitleService({ WebSocket: Socket, recordings: store });
+  t.after(async () => { await svc.close(); db.close(); });
+  const env = { APP_ENCRYPTION_KEY: 'synthetic-browser-key-'.repeat(3), LIVE_SUBTITLES: svc,
+    CHAT_SUBTITLES_API_KEY: config.apiKey, CHAT_SUBTITLES_BASE_URL: config.baseUrl };
+  const limits = [];
+  const deps = { currentVisitor: async () => null, json: (v, status = 200, headers = {}) => Response.json(v, { status, headers }),
+    limit: async (_, bucket, maximum) => limits.push([bucket, maximum]), readJson: r => r.json(), readBytes: async r => Buffer.from(await r.arrayBuffer()) };
+  const call = (path, cookie = '', init = {}) => handleLiveSubtitles({ env,
+    request: new Request('https://chat.omindos.cn/api/subtitles/' + path, { ...init, headers: { cookie, ...init.headers } }) }, deps);
+  const a = await call('status'), b = await call('status');
+  assert.deepEqual(await a.clone().json(), { signedIn: false, guestAccess: true, available: true, canRecord: true });
+  const cookieA = a.headers.get('set-cookie').split(';')[0], cookieB = b.headers.get('set-cookie').split(';')[0];
+  assert.notEqual(cookieA, cookieB); assert.match(a.headers.get('set-cookie'), /Secure; HttpOnly; SameSite=Strict/);
+  assert.equal(a.headers.get('cache-control'), 'no-store');
+  const started = await (await call('sessions', cookieA, { method: 'POST', body: JSON.stringify({ ...options, saveRecording: true }) })).json();
+  const socket = Socket.sockets.at(-1);
+  await call(`sessions/${started.id}/audio?seq=1`, cookieA, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: Buffer.alloc(3200) });
+  await assert.rejects(call(`sessions/${started.id}/finish`, cookieB, { method: 'POST' }), { status: 404 });
+  const renewal = await call('status', cookieA), renewedCookie = renewal.headers.get('set-cookie').split(';')[0];
+  const stream = call(`sessions/${started.id}/events`, renewedCookie).then(r => r.text());
+  await call(`sessions/${started.id}/finish`, renewedCookie, { method: 'POST' }); socket.event({ type: 'session.finished' }); await stream;
+  assert.equal((await (await call('recordings', renewedCookie)).json()).recordings[0].status, 'saved');
+  assert.deepEqual((await (await call('recordings', cookieB)).json()).recordings, []);
+  await assert.rejects(call(`recordings/${started.id}/0`, cookieB), { status: 404 });
+  assert.equal((await (await call(`recordings/${started.id}/0`, renewedCookie)).arrayBuffer()).byteLength, 3244);
+  await assert.rejects(call('recordings', cookieA + 'tampered'), { status: 403 });
+  const expired = await encryptSecret(JSON.stringify({ purpose: 'subtitle-browser-v1', id: 'a'.repeat(64), expires: Date.now() - 1 }), env.APP_ENCRYPTION_KEY);
+  await assert.rejects(call('recordings', 'om_subtitle_guest=' + expired), { status: 403 });
+  assert.ok(limits.some(([bucket, maximum]) => bucket === 'subtitle-start' && maximum === 12));
 });
 
 test('only subtitle HTML enables microphone; removed grading URLs return gone', async () => {

@@ -1,20 +1,24 @@
 import { PublicError } from './errors.mjs';
 import { resolveSubtitleProvider } from './subtitle-provider-config.mjs';
+import { subtitleIdentity } from './subtitle-identity.mjs';
 
 export async function handleLiveSubtitles(context, deps) {
   const { request, env } = context, url = new URL(request.url);
   const visitor = await deps.currentVisitor(context);
-  const owner = visitor?.email;
+  const isStatus = url.pathname === '/api/subtitles/status' && request.method === 'GET';
+  const identity = await subtitleIdentity(context, visitor, isStatus);
+  const owner = identity?.owner;
   const service = env.LIVE_SUBTITLES;
-  if (url.pathname === '/api/subtitles/status' && request.method === 'GET') {
+  if (isStatus) {
     let configured = false;
     if (owner && service) {
       try { const config = await resolveSubtitleProvider(env); configured = Boolean(config.apiKey && config.baseUrl && !service.configurationError?.(config)); }
       catch { /* Saved recordings must remain readable if speech credentials fail. */ }
     }
-    return deps.json({ signedIn: Boolean(owner), available: Boolean(owner && service && configured), canRecord: Boolean(owner && service?.canRecord) });
+    return deps.json({ signedIn: Boolean(visitor?.email), guestAccess: Boolean(identity?.guest), available: Boolean(owner && service && configured), canRecord: Boolean(owner && service?.canRecord) }, 200,
+      { 'Cache-Control': 'no-store', ...(identity.cookie ? { 'Set-Cookie': identity.cookie } : {}) });
   }
-  if (!owner) throw new PublicError('请先在 AI 助教登录，再使用实时字幕。', 401);
+  if (!owner) throw new PublicError('浏览器会话已失效，请刷新字幕页面后重试，并允许此网站使用 Cookie。', 403);
   if (!service) throw new PublicError('实时字幕尚未启用。', 503);
   try {
     const path = url.pathname.slice('/api/subtitles/'.length);

@@ -19,7 +19,7 @@ const server = http.createServer(async (req, res) => {
       if (route.endsWith('/events')) { stream = res; res.writeHead(200, { 'Content-Type': 'application/x-ndjson' }); event({ type: 'ready' }); return; }
       const chunks = []; for await (const chunk of req) chunks.push(chunk); const body = Buffer.concat(chunks);
       let value = {}, status = 200;
-      if (route === 'status') value = { signedIn, available: signedIn && available, canRecord: signedIn };
+      if (route === 'status') value = { signedIn, guestAccess: !signedIn, available, canRecord: true };
       else if (route === 'sessions') { options = JSON.parse(body); if (refusal) { value = { error: '实时翻译服务连接失败，请联系管理员核对模型权限。' }; status = 502; } else { seq = 0; value = { id: sessionId, sampleRate: 16000 }; } }
       else if (route.endsWith('/audio')) { assert.equal(req.headers['content-type'], 'application/octet-stream'); audioBytes += body.length; value = { accepted: Number(url.searchParams.get('seq')) };
         event({ type: 'caption', key: 'source:one', side: 'source', text: '本日はご参加いただき、ありがとうございます。', final: true });
@@ -36,7 +36,10 @@ const server = http.createServer(async (req, res) => {
   } catch (error) { res.writeHead(500); res.end(error.message); }
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const browser = await chromium.launch({ headless: true, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--no-sandbox'] });
+const portable = process.env.CHROMIUM_MODULE ? (await import(pathToFileURL(process.env.CHROMIUM_MODULE).href)).default : null;
+const browser = await chromium.launch({ headless: true,
+  ...(portable ? { executablePath: process.env.CHROMIUM_EXECUTABLE || await portable.executablePath() } : {}),
+  args: [...(portable?.args || []), '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--no-sandbox'] });
 const context = await browser.newContext({ viewport: { width: 1366, height: 1000 }, permissions: ['microphone'] });
 const page = await context.newPage(), errors = []; page.on('pageerror', e => errors.push(e.message));
 try {
@@ -57,7 +60,10 @@ try {
   if (process.env.SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'subtitles-mobile.png'), fullPage: true });
   refusal = true; await page.locator('#start').click(); await page.waitForFunction(() => document.getElementById('notice').textContent.includes('核对模型权限'));
   assert.equal(await page.locator('#start').isDisabled(), false);
-  signedIn = false; await page.reload(); await page.waitForFunction(() => document.getElementById('status').textContent === '请先登录'); assert.equal(await page.locator('#start').isDisabled(), true);
+  signedIn = false; refusal = false; await page.reload(); await page.waitForFunction(() => document.getElementById('status').textContent === '准备就绪'); assert.equal(await page.locator('#start').isDisabled(), false);
+  assert.match(await page.locator('#recording-help').textContent(), /此浏览器/);
+  await page.locator('#start').click(); await page.waitForFunction(() => document.getElementById('source').textContent.includes('本日'));
+  await page.locator('#stop').click(); await page.waitForFunction(() => !document.getElementById('start').disabled);
   signedIn = true; available = false; await page.reload(); await page.waitForFunction(() => document.getElementById('status').textContent === '服务尚未启用');
   assert.deepEqual(errors, []); console.log(JSON.stringify({ ok: true, actualAudioWorkletBytes: audioBytes, widths: [1366, 390], cases: ['start/stop', 'two directions', 'recording links', 'safe captions', 'provider failure', 'guest', 'unconfigured'] }));
 } finally { await browser.close(); stream?.end(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }

@@ -99,3 +99,21 @@ Chat 从 `chat-teacher-grading-20261013-v1` 复制，只叠加后台语音配置
 
 **正式切换尚未执行。** 当前 Chat 仍为后台配置版，`chat-full-deploy.paused` 保留。正式切换使用新 `candidate-verified`，不要使用旧 `candidate`。
 剩余发布步骤：核对生产未漂移、准备仅含 OSS 六项配置的受保护文件、启用 `CHAT_SUBTITLES_ENABLED`、将 systemd 停止超时设为至少 50 秒、按既有发布约定确认后增量切换 Chat 和腾讯入口，验证 `/chat/subtitles` 的登录与麦克风权限。保留历史数据库与录音。
+
+## 正式发布完成（2026-10-14）
+
+用户 13:34 明确说“上线”，13:35 追加“先不用登陆哈”。已按该要求切换正式入口，无需再次确认发布权限。
+
+- 入口：`https://omindos.cn/chat/subtitles`；Chat 功能区链接正确保留 `/chat` 前缀。
+- 阿里云 `chat-current` → `releases/chat-live-subtitles-20261014-v1`，原版本 `chat-subtitle-admin-20261014-v1` 保留可回滚。
+- 腾讯 `/opt/omindos-chat-entry/current` → `releases/20261014-live-subtitles-v1`，原 `20261013-exam-grading-v1` 保留。
+- 语音 Key 继续从 OA 后台加密配置读取。`/etc/originmind-chat/subtitles-storage.env` 仅复制实际所需的 5 个 OSS 字段（无 STS），0600 且归 Chat 服务账户；`subtitles.env` 只包含启用标记、存储配置路径和独立字幕库路径。
+- `/etc/systemd/system/originmind-chat.service.d/95-live-subtitles.conf` 加载独立配置并把停止超时设为 60 秒；`chat-full-deploy.paused` 保留。
+- 新 `subtitle-identity.mjs` 签发加密浏览器凭证，HttpOnly / Secure / SameSite=Strict，30 天滑动期限；游客不需登录，录音和会话按浏览器隔离。已有登录用户仍按账号隔离。
+- 24 项相关测试通过，包含游客创建、续期、篡改/过期拒绝及跨浏览器读写隔离。实际 Chromium AudioWorklet 使用虚拟麦克风，1366/390px，包括免登录开始/结束，通过。
+- 腾讯网关 12 项通过。首次网关切换因 release 文件所有者导致读取失败，已自动回滚；按既有服务账户设置所有者后重试成功，未放宽 systemd 安全限制。
+- 正式 HTTPS 验收：`signedIn=false, guestAccess=true, available=true, canRecord=true`；正常创建真实供应商会话、读取事件、正常结束；另一浏览器访问该会话 404，跨站写入 403；匿名录音列表为空且独立，未生成生产测试录音。
+- 字幕 HTML/JS/AudioWorklet、课程、竞技场、OA 后台均 HTTP 200；字幕页面允许同源麦克风。旧批改入口 410，历史数据未删。
+- 清除浏览器 Cookie 或换浏览器会失去匿名录音访问，页面已提示及时下载；没有伪装成跨设备账号同步。真实手机麦克风权限需用户首次点击允许，尚未代替用户实测手机硬件。
+
+回滚：恢复两个旧 release symlink，移除本次 `95-live-subtitles.conf` 并 daemon-reload / restart Chat，重启网关；保留字幕 SQLite、私有 OSS 录音、独立配置文件和后台已保存 Key。
