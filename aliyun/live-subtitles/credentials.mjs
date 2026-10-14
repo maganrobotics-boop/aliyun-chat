@@ -1,8 +1,8 @@
 // Return only fixed, safe messages: never include the supplied credential.
 export function speechCredentialError(apiKey) {
   if (typeof apiKey !== 'string' || !apiKey) return '实时语音密钥尚未配置，请联系管理员。';
-  if (apiKey.trim().startsWith('sk-sp-')) return '实时字幕需要百炼普通 API Key，不能使用 Token Plan 或 Coding Plan 套餐密钥。';
-  if (!/^sk-[A-Za-z0-9_-]{8,256}$/.test(apiKey)) return '实时语音密钥格式不正确，请检查是否完整、是否含空格。';
+  if (apiKey.trim().startsWith('sk-sp-')) return '实时字幕需要千问或百炼普通 API Key，不能使用 Token Plan 或 Coding Plan 套餐密钥。';
+  if (!/^sk-[A-Za-z0-9_.-]{8,256}$/.test(apiKey)) return '实时语音密钥格式不正确，请检查是否完整、是否含空格。';
   return null;
 }
 

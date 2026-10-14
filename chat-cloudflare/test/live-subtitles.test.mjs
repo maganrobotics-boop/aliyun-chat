@@ -21,7 +21,10 @@ const options = { direction: 'ja-zh', saveRecording: false };
 
 test('provider endpoint is constrained and directions produce target-only subtitles', () => {
   assert.match(realtimeUrl(config.baseUrl), /^wss:\/\/dashscope.aliyuncs.com\/api-ws\/v1\/realtime\?model=/);
-  for (const base of ['http://dashscope.aliyuncs.com', 'https://evil.example', 'https://u:p@dashscope.aliyuncs.com', 'https://dashscope.aliyuncs.com:8888']) assert.throws(() => realtimeUrl(base));
+  assert.equal(realtimeUrl('https://maas.qianwenaiapi.com/compatible-mode/v1'),
+    'wss://maas.qianwenaiapi.com/api-ws/v1/realtime?model=qwen3.8-livetranslate-flash-realtime');
+  for (const base of ['http://dashscope.aliyuncs.com', 'https://evil.example', 'https://u:p@dashscope.aliyuncs.com', 'https://dashscope.aliyuncs.com:8888',
+    'https://token-plan.maas.qianwenaiapi.com', 'https://maas.qianwenaiapi.com.evil.example', 'https://u:p@maas.qianwenaiapi.com']) assert.throws(() => realtimeUrl(base));
   assert.deepEqual(sessionConfig('zh-ja', 'qwen3.8-livetranslate-flash-realtime').session, { output_modalities: ['text'], translation: { language: 'ja' } });
   assert.throws(() => sessionConfig('en-zh', 'qwen3.8-livetranslate-flash-realtime'));
 });

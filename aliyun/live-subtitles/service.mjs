@@ -9,7 +9,8 @@ export function realtimeUrl(baseUrl, model = 'qwen3.8-livetranslate-flash-realti
   let url;
   try { url = new URL(baseUrl); } catch { fail('实时翻译服务地址尚未配置。', 503); }
   if (url.protocol !== 'https:' || url.username || url.password || url.port ||
-    !/^(?:ws-[a-z0-9]+\.(?:cn-beijing|ap-southeast-1)\.maas|dashscope(?:-intl)?)\.aliyuncs\.com$/.test(url.hostname)) fail('实时翻译服务地址尚未配置。', 503);
+    !(url.hostname === 'maas.qianwenaiapi.com' ||
+      /^(?:ws-[a-z0-9]+\.(?:cn-beijing|ap-southeast-1)\.maas|dashscope(?:-intl)?)\.aliyuncs\.com$/.test(url.hostname))) fail('实时翻译服务地址尚未配置。', 503);
   if (!/^qwen3\.(?:5|8)-livetranslate-flash-realtime$/.test(model)) fail('实时翻译模型配置不正确。', 503);
   url.protocol = 'wss:'; url.pathname = '/api-ws/v1/realtime'; url.search = ''; url.hash = '';
   url.searchParams.set('model', model); return url.href;

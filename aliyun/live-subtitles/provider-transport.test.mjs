@@ -36,6 +36,7 @@ for (const status of [401, 403, 429, 500]) {
 }
 
 test('real ws authenticates/configures both directions and acknowledges graceful finish', async t => {
+  const config = { baseUrl: 'https://maas.qianwenaiapi.com/compatible-mode/v1', apiKey: 'sk-ws-H.synthetic-transport' };
   const { server, LoopbackSocket } = await serverFor(t);
   const wss = new WebSocketServer({ server });
   const languages = [];
