@@ -77,3 +77,25 @@ Chat 从 `chat-teacher-grading-20261013-v1` 复制，只叠加后台语音配置
 - 首次发布因候选文件属于 root 导致服务无法读取，已自动回滚；按现有服务账户设置 release 所有者后重试成功。未更改 systemd 安全限制。
 - 下一步：用户在新卡片填写普通 Key 并验证。之后继续真实中日音频、录音完整性验收，单独决定完整字幕发布。
 - 全功能旧候选 `/opt/omindos-deploy/staging/live-subtitles-20261014` 未更新，后续必须基于本次后台 release 和 PR #9 最新代码重建，避免覆盖新配置入口。
+
+## 普通 Key 与真实音频已验收（13:28 北京时间）
+
+用户说“好了”后，服务器只读取配置存在性、地址、模型和验证时间，确认 `subtitles-provider` 已在 13:24:18 保存。密钥未打印、未复制到源码或测试报告。401 已解决。
+
+新增 `aliyun/live-subtitles/check-live-audio.mjs`，显式 `--run-real` 才发起付费接口验收，使用公开的官方试听 WAV 转换成 16 kHz 单声道 PCM。两段共约 34.2 秒，非用户麦克风录音。
+
+- 日→中：17.666125 秒，首译文 3449 ms，停止和保存 1106 ms，4 段。
+- 中→日：16.52 秒，首译文 3415 ms，停止和保存 1220 ms，4 段。
+- 原文、译文和 final 字段完整，正常 `session.finished`；实际录音下载合并逐字节匹配输入，包含不足分段阈值的末尾。
+- 全部 OSS 对象 private，跨账号下载拒绝，8 个临时对象全部删除；SQLite 使用内存库，不生成生产录音记录。
+- 中→日样本出现一个中文词“场景”，不能把接口成功描述成准确率保证；尚未验证长报告、噪声和用户手机实际麦克风。
+- 样本来自 `https://help.aliyun.com/zh/model-studio/qwen-tts-voice-list` 的 Cherry 与 Ono Anna 官方试听。
+- 样本 SHA-256、结果、原文/译文仅在服务器隔离目录 `audio-verification/`；报告 `result.json` 权限 0600，无凭据。
+
+基于 `/opt/omindos-deploy/releases/chat-subtitle-admin-20261014-v1` 新建 `candidate-verified/`，精确应用旧 overlay 的相关源码差异，并覆盖最新语音模块与后台配置解析代码。
+旧 overlay 对 package.json 的两个字符串替换不适用于现网，已跳过，现有 test 脚本不受影响。
+前端构建及一致性检查、23 项配置/签名/字幕/传输测试通过。运行依赖已实复制到候选，避免发布后依赖旧 staging。
+腾讯云候选 `/opt/omindos-chat-entry/staging/live-subtitles-20261014` 12 项测试再次通过，生产仍为 `releases/20261013-exam-grading-v1`。
+
+**正式切换尚未执行。** 当前 Chat 仍为后台配置版，`chat-full-deploy.paused` 保留。正式切换使用新 `candidate-verified`，不要使用旧 `candidate`。
+剩余发布步骤：核对生产未漂移、准备仅含 OSS 六项配置的受保护文件、启用 `CHAT_SUBTITLES_ENABLED`、将 systemd 停止超时设为至少 50 秒、按既有发布约定确认后增量切换 Chat 和腾讯入口，验证 `/chat/subtitles` 的登录与麦克风权限。保留历史数据库与录音。
