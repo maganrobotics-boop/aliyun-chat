@@ -1,4 +1,4 @@
-import { handleExamGrading } from './exam-grading.mjs';
+import { handleLiveSubtitles } from './live-subtitles.mjs';
 import { shouldUseStaticTaGuide } from "./ta-guide-intent.mjs";
 import { buildGeneralChatMessages, buildGroundedChatMessages, boundedUserMessages } from './grounded-prompt.mjs';
 import { handleOaChatBridge } from './oa-chat-bridge.mjs';
@@ -1827,9 +1827,9 @@ async function api(context) {
     if (method === "POST" || method === "PATCH") {
       if (!(publicApiPath && publicWriteAllowed(context))) sameOrigin(context);
     }
-    if (path.startsWith("grading/")) return await handleExamGrading(context, {
-      currentVisitor, ownerEmail, getModelConfig, modelProvider, json, limit,
-      readBytes, readJson, documentExtractionBudget, globalBudget, modelCall, workersAiCall,
+    if (path.startsWith("grading/")) return json({ error: "试卷批改已停用。" }, 410);
+    if (path.startsWith("subtitles/")) return await handleLiveSubtitles(context, {
+      currentVisitor, getModelConfig, json, limit, readBytes, readJson,
     });
     if (path === "shares" && method === "POST") {
       await limit(context, "share", 20, 3600);
@@ -2466,4 +2466,5 @@ export async function handleRequest(request, env, executionContext, runtime = ru
     return json({ error: "服务暂时不可用，请稍后重试。" }, 503);
   }
 }
+
 

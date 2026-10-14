@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>实时字幕 · AI 助教</title><link rel="stylesheet" href="./subtitles.css"><script type="module" src="./subtitles.js"></script></head>
+<body><main>
+  <header><a id="back" href="./?ta=1">返回 AI 助教</a><span>OriginMind</span></header>
+  <section class="intro"><p class="eyebrow">听懂每一段交流</p><h1>中日实时字幕</h1><p>持续收音，同步查看原文与译文。</p></section>
+  <section class="controls" aria-label="字幕控制">
+    <label>翻译方向<select id="direction"><option value="ja-zh">日语 → 中文</option><option value="zh-ja">中文 → 日语</option></select></label>
+    <label class="save"><input id="save" type="checkbox" checked>保存录音到阿里云</label>
+    <button id="start" class="primary" disabled>开始收音</button><button id="stop" disabled>暂停 / 结束</button>
+    <button id="export" disabled>导出字幕</button>
+  </section>
+  <div class="statusbar"><span id="status" role="status" aria-live="polite">正在检查服务…</span><span id="duration">00:00</span><meter id="level" min="0" max="1" value="0" aria-label="麦克风音量"></meter></div>
+  <p id="notice" class="notice">开始后，请保持页面在前台。录音仅自己可见；保存失败会明确提示。使用前请告知参与者正在录音。</p>
+  <section class="captions" aria-label="实时字幕"><div><h2 id="source-title">日语原文</h2><div id="source"><p class="empty">讲话后，原文会显示在这里。</p></div></div><div><h2 id="target-title">中文字幕</h2><div id="target"><p class="empty">译文会随讲话逐步出现。</p></div></div></section>
+  <section class="recordings"><div class="section-heading"><h2>我的录音</h2><button id="refresh">刷新</button></div><p class="small">录音分段保存，断线前已保存的片段仍可回听。这里显示最近 50 场。</p><div id="recordings">登录后查看录音。</div></section>
+</main></body></html>

@@ -762,7 +762,7 @@ function appShell() {
       <div class="nav-list">
         <a class="nav-item village-nav-item" href="/newbie-village">${icons.chart}<span>新手村</span></a>
         <button class="nav-item model-nav-item active" type="button" data-mode="text">${icons.text}<span>文本模型</span></button>
-        <button class="nav-item model-nav-item" type="button" data-mode="voice" disabled aria-disabled="true" title="当前版本未接通语音输入">${icons.voice}<span>语音（暂未启用）</span></button>
+        <a class="nav-item" href="/subtitles" title="中日实时字幕">${icons.voice}<span>实时字幕</span></a>
         <button class="nav-item model-nav-item" type="button" data-mode="vision" disabled aria-disabled="true" title="当前版本未接通图片理解">${icons.vision}<span>视觉（暂未启用）</span></button>
       </div>
       <div class="sidebar-label history-label">历史</div>
@@ -1546,7 +1546,9 @@ fileInput.addEventListener("change", () => {
   attachmentChip.classList.add("show");
   updateSendState();
 });
-voiceButton.addEventListener("click", () => showToast("语音输入将在正式服务中启用"));
+voiceButton.disabled = false;
+voiceButton.setAttribute('aria-label', '打开实时字幕');
+voiceButton.addEventListener("click", () => window.location.assign("/subtitles"));
 
 document.querySelectorAll(".model-nav-item").forEach((item) => item.addEventListener("click", () => {
   document.querySelectorAll(".model-nav-item").forEach((button) => button.classList.remove("active"));
@@ -1577,22 +1579,12 @@ accountPanel.hidden = true;
 accountPanel.setAttribute("role", "dialog");
 document.body.append(accountPanel);
 function closeAccountPanel() { accountPanel.hidden = true; document.querySelectorAll(".settings-trigger").forEach(b => b.setAttribute("aria-expanded", "false")); }
-let gradingMenuRevision = 0;
 async function accountMenu() {
   closeAuthDialog(); accountPanel.replaceChildren(); accountPanel.hidden = false;
   accountPanel.setAttribute("aria-label", "我的");
-  const revision = ++gradingMenuRevision;
-  for (const [label, action] of [["个性化", () => accountPreferences(true)], ["设置", () => accountPreferences(false)], ["退出登录", async () => {
+  for (const [label, action] of [["实时字幕", () => window.location.assign("/subtitles")], ["个性化", () => accountPreferences(true)], ["设置", () => accountPreferences(false)], ["退出登录", async () => {
     try { const response = await fetch(apiUrl("/api/visitor/logout"), { method: "POST", credentials: "same-origin" }); if (!response.ok) throw new Error("退出失败，请重试"); updateVisitorUi(null); closeAccountPanel(); showToast("已退出登录"); } catch (error) { showToast(error.message); }
   }]]) { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.addEventListener("click", action); accountPanel.append(button); }
-  try {
-    const response = await fetch(apiUrl("/api/grading/status"), { credentials: "same-origin", cache: "no-store" });
-    const access = await response.json();
-    if (response.ok && access.canGrade === true && revision === gradingMenuRevision && !accountPanel.hidden && accountPanel.getAttribute("aria-label") === "我的") {
-      const button = document.createElement("button"); button.type = "button"; button.className = "teacher-grading-entry"; button.textContent = "试卷批改";
-      button.addEventListener("click", () => window.location.assign("/grading")); accountPanel.prepend(button);
-    }
-  } catch { /* The teacher-only tool stays hidden if authorization cannot be checked. */ }
 }
 function applyAccountPreferences() { const p = accountPrefs(); document.documentElement.dataset.assistantTheme = p.theme || "light"; document.documentElement.classList.toggle("assistant-large-text", Boolean(p.largeText)); }
 function accountPreferences(personal) {
@@ -1626,5 +1618,6 @@ refreshSuggestions();
 refreshStatus();
 refreshVisitorStatus();
 updateSendState();
+
 
 void openIncomingSharedAnswer();
