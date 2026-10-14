@@ -54,17 +54,28 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/formula-browser" --no-save --ignore-scripts playwright@1.63.0
           node "$RUNNER_TEMP/formula-browser/node_modules/playwright/cli.js" install --with-deps chromium
-      - name: Verify rendered answers and screenshot formula regressions
+      - name: Verify Chat browser regressions
         env:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/formula-browser/node_modules/playwright/index.mjs
           BROWSER_REPORT_DIR: ${{ runner.temp }}/formula-browser-report
         run: |
-          node scripts/check-chat-subtitles-browser.mjs
-          node chat-cloudflare/scripts/check-answer-browser.mjs
-          node chat-cloudflare/scripts/check-message-actions-browser.mjs
-          node chat-cloudflare/scripts/check-newbie-village-browser.mjs
-          node chat-cloudflare/scripts/check-formula-runtime-browser.mjs
-          node chat-cloudflare/scripts/check-answer-layout-browser.mjs
+          failed=0
+          for script in \
+            scripts/check-chat-subtitles-browser.mjs \
+            chat-cloudflare/scripts/check-answer-browser.mjs \
+            chat-cloudflare/scripts/check-message-actions-browser.mjs \
+            chat-cloudflare/scripts/check-newbie-village-browser.mjs \
+            chat-cloudflare/scripts/check-formula-runtime-browser.mjs \
+            chat-cloudflare/scripts/check-answer-layout-browser.mjs
+          do
+            echo "::group::${script}"
+            if ! node "$script"; then
+              echo "::error file=${script}::Browser regression failed"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$failed"
       - name: Preserve browser verification evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
