@@ -59,6 +59,7 @@ jobs:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/formula-browser/node_modules/playwright/index.mjs
           BROWSER_REPORT_DIR: ${{ runner.temp }}/formula-browser-report
         run: |
+          node scripts/check-chat-subtitles-browser.mjs
           node chat-cloudflare/scripts/check-answer-browser.mjs
           node chat-cloudflare/scripts/check-message-actions-browser.mjs
           node chat-cloudflare/scripts/check-newbie-village-browser.mjs
