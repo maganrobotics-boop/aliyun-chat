@@ -45,18 +45,24 @@ const page = await context.newPage(), errors = []; page.on('pageerror', e => err
 try {
   const url = `http://127.0.0.1:${server.address().port}/chat/subtitles`;
   await page.goto(url); await page.waitForFunction(() => !document.getElementById('start').disabled);
+  assert.equal(await page.locator('main > section').count(), 2);
+  assert.equal(await page.locator('header,.intro').count(), 0);
   assert.equal(await page.locator('#direction').inputValue(), 'ja-zh'); assert.equal(await page.locator('#save').isChecked(), true);
   await page.locator('#start').click(); await page.waitForFunction(() => document.getElementById('source').textContent.includes('本日'));
   assert.equal(options.direction, 'ja-zh'); assert.equal(options.saveRecording, true); assert.ok(audioBytes >= 16000);
   assert.equal(await page.locator('#target img').count(), 0); assert.equal(await page.locator('#direction').isDisabled(), true);
   if (process.env.SCREENSHOT_DIR) { await mkdir(process.env.SCREENSHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'subtitles-desktop.png'), fullPage: true }); }
   await page.locator('#stop').click(); await page.waitForFunction(() => !document.getElementById('start').disabled);
+  await page.locator('.recordings > summary').click();
   await page.waitForSelector('.recording'); assert.equal(await page.locator('.recording audio').getAttribute('preload'), 'none');
   await page.locator('#direction').selectOption('zh-ja'); await page.locator('#save').uncheck(); await page.locator('#start').click();
   await page.waitForFunction(() => document.getElementById('source-title').textContent === '中文原文'); assert.equal(options.direction, 'zh-ja'); assert.equal(options.saveRecording, false);
   await page.locator('#stop').click(); await page.waitForFunction(() => !document.getElementById('start').disabled);
+  for (const width of [320, 390, 768, 1366]) {
+    await page.setViewportSize({ width, height: 844 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `overflow at ${width}`);
+  }
   await page.setViewportSize({ width: 390, height: 844 });
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   if (process.env.SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'subtitles-mobile.png'), fullPage: true });
   refusal = true; await page.locator('#start').click(); await page.waitForFunction(() => document.getElementById('notice').textContent.includes('核对模型权限'));
   assert.equal(await page.locator('#start').isDisabled(), false);
@@ -65,5 +71,5 @@ try {
   await page.locator('#start').click(); await page.waitForFunction(() => document.getElementById('source').textContent.includes('本日'));
   await page.locator('#stop').click(); await page.waitForFunction(() => !document.getElementById('start').disabled);
   signedIn = true; available = false; await page.reload(); await page.waitForFunction(() => document.getElementById('status').textContent === '服务尚未启用');
-  assert.deepEqual(errors, []); console.log(JSON.stringify({ ok: true, actualAudioWorkletBytes: audioBytes, widths: [1366, 390], cases: ['start/stop', 'two directions', 'recording links', 'safe captions', 'provider failure', 'guest', 'unconfigured'] }));
+  assert.deepEqual(errors, []); console.log(JSON.stringify({ ok: true, actualAudioWorkletBytes: audioBytes, widths: [320, 390, 768, 1366], cases: ['two panels', 'start/stop', 'two directions', 'recording links', 'safe captions', 'provider failure', 'guest', 'unconfigured'] }));
 } finally { await browser.close(); stream?.end(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }

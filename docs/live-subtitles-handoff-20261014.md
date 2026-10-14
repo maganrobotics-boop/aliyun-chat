@@ -117,3 +117,12 @@ Chat 从 `chat-teacher-grading-20261013-v1` 复制，只叠加后台语音配置
 - 清除浏览器 Cookie 或换浏览器会失去匿名录音访问，页面已提示及时下载；没有伪装成跨设备账号同步。真实手机麦克风权限需用户首次点击允许，尚未代替用户实测手机硬件。
 
 回滚：恢复两个旧 release symlink，移除本次 `95-live-subtitles.conf` 并 daemon-reload / restart Chat，重启网关；保留字幕 SQLite、私有 OSS 录音、独立配置文件和后台已保存 Key。
+
+## 双框界面发布准备（用户 16:46 北京时间批准合并上线）
+
+- 已按用户确认的预览精简为两个浅色框：操作区、双语字幕区；移除页眉、品牌和大标题。状态、时间、麦克风音量及必要提示收进操作区。
+- 录音列表折叠在字幕框底部，回听、下载、刷新及浏览器访问权限说明继续保留。返回助教入口收在同框底部。
+- 本次生产变更仅为 `chat-cloudflare/public/subtitles.html` 与 `subtitles.css`；收音 JS、AudioWorklet、语音凭据、数据库、OSS、网关均不修改。
+- `npm --prefix chat-cloudflare run check` 通过，249 项测试成功；实际 AudioWorklet 虚拟麦克风回归通过，覆盖双向开始/停止、录音入口、异常提示、免登录。320/390/768/1366px 无横向溢出；审计 0 error、119 条原有 warning，无字幕页新增告警。
+- 计划在现网 `chat-live-subtitles-20261014-v1` 上备份后原子替换这两份静态文件，不重启收音服务。备份及发布清单位于 `/opt/omindos-deploy/staging/subtitles-two-panels-20261014/`；保持 `chat-full-deploy.paused`。
+- 回滚本次 UI：从该目录 `backup/` 恢复两份静态文件即可，不改变服务配置或音频数据。是否发布成功以该目录 `published.json` 及正式 HTTPS 哈希核对结果为准。
