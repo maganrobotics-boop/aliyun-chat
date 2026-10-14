@@ -5,7 +5,9 @@ export async function handleLiveSubtitles(context, deps) {
   const visitor = await deps.currentVisitor(context);
   const owner = visitor?.email;
   const service = env.LIVE_SUBTITLES;
-  const configured = Boolean(env.CHAT_SUBTITLES_API_KEY && env.CHAT_SUBTITLES_BASE_URL);
+  const providerConfig = { apiKey: env.CHAT_SUBTITLES_API_KEY, baseUrl: env.CHAT_SUBTITLES_BASE_URL };
+  const configError = service?.configurationError?.(providerConfig);
+  const configured = Boolean(providerConfig.apiKey && providerConfig.baseUrl && !configError);
   if (url.pathname === '/api/subtitles/status' && request.method === 'GET') {
     return deps.json({ signedIn: Boolean(owner), available: Boolean(owner && service && configured), canRecord: Boolean(owner && service?.canRecord) });
   }
@@ -16,9 +18,8 @@ export async function handleLiveSubtitles(context, deps) {
     if (path === 'sessions' && request.method === 'POST') {
       await deps.limit(context, 'subtitle-start', 12, 3600);
       const input = await deps.readJson(request, 1024);
-      if (!configured) throw new PublicError('实时语音服务尚未配置，请联系管理员。', 503);
-      return deps.json(await service.start(owner, { baseUrl: env.CHAT_SUBTITLES_BASE_URL,
-        apiKey: env.CHAT_SUBTITLES_API_KEY }, input), 201);
+      if (!configured) throw new PublicError(configError || '实时语音服务尚未配置，请联系管理员。', 503);
+      return deps.json(await service.start(owner, providerConfig, input), 201);
     }
     if (path === 'recordings' && request.method === 'GET') return deps.json({ recordings: await service.list(owner) });
     const recording = path.match(/^recordings\/([a-f0-9-]{36})\/(\d{1,4}|transcript)$/);

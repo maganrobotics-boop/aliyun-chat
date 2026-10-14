@@ -16,7 +16,7 @@ class Socket extends EventEmitter {
   event(e) { this.emit('message', JSON.stringify(e)); }
   close() { this.readyState = 3; this.emit('close'); }
 }
-const config = { baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: 'test-only' };
+const config = { baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: 'sk-test-only' };
 const options = { direction: 'ja-zh', saveRecording: false };
 
 test('provider endpoint is constrained and directions produce target-only subtitles', () => {
@@ -64,6 +64,54 @@ test('provider refusal is safe, bounded and allows a new attempt', async t => {
   const svc = createSubtitleService({ WebSocket: Refused }); t.after(() => svc.close());
   await assert.rejects(svc.start('a', config, options), e => e.status === 502 && !e.message.includes('secret'));
   await assert.rejects(svc.start('a', config, options), { status: 502 });
+});
+
+test('subscription and malformed keys fail before opening a socket or creating a recording', async t => {
+  let recordingStarts = 0;
+  const recordings = { start: async () => { recordingStarts++; } };
+  const svc = createSubtitleService({ WebSocket: Socket, recordings }); t.after(() => svc.close());
+  const before = Socket.sockets.length;
+  for (const apiKey of ['', 'sk-sp-test-subscription', ' sk-test-only', 'sk-test-only\n', 'not-a-key']) {
+    await assert.rejects(svc.start('a', { ...config, apiKey }, { ...options, saveRecording: true }), e =>
+      e.status === 503 && !e.message.includes('test-subscription') && !e.message.includes('sk-test-only'));
+  }
+  await assert.rejects(svc.start('a', { ...config, baseUrl: 'not-a-url' }, options), { status: 503 });
+  assert.equal(Socket.sockets.length, before); assert.equal(recordingStarts, 0);
+  // A configuration error must not reserve the user's one-session slot.
+  assert.ok((await svc.start('a', config, options)).id);
+});
+
+test('upstream authentication errors are classified and never become visitor login errors', async t => {
+  for (const code of [401, 403, 429, 500]) {
+    let requestDestroyed = false, responseDestroyed = false;
+    class HandshakeSocket extends EventEmitter {
+      constructor() { super(); this.readyState = 0; queueMicrotask(() => this.emit('unexpected-response',
+        { destroy: () => { requestDestroyed = true; } },
+        { statusCode: code, destroy: () => { responseDestroyed = true; } })); }
+      close() { this.readyState = 3; this.emit('error', new Error('private upstream diagnostic')); this.emit('close'); }
+    }
+    const svc = createSubtitleService({ WebSocket: HandshakeSocket }); t.after(() => svc.close());
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await assert.rejects(svc.start('a', config, options), e =>
+        e.status === (code === 500 ? 502 : 503) && !e.message.includes('private') &&
+        (code === 500 || e.message.includes(String(code))));
+    }
+    assert.equal(requestDestroyed, true); assert.equal(responseDestroyed, true);
+  }
+});
+
+test('status rejects invalid speech setup while saved recordings stay accessible', async t => {
+  const svc = createSubtitleService({ WebSocket: Socket }); t.after(() => svc.close());
+  const env = { LIVE_SUBTITLES: svc, CHAT_SUBTITLES_API_KEY: 'sk-sp-test-subscription', CHAT_SUBTITLES_BASE_URL: config.baseUrl };
+  const deps = { currentVisitor: async () => ({ email: 'a' }), json: (v, status = 200) => Response.json(v, { status }),
+    limit: async () => {}, readJson: r => r.json() };
+  const call = (path, init) => handleLiveSubtitles({ request: new Request('https://chat.omindos.cn/api/subtitles/' + path, init), env }, deps);
+  assert.equal((await (await call('status')).json()).available, false);
+  await assert.rejects(call('sessions', { method: 'POST', body: JSON.stringify(options) }), e =>
+    e.status === 503 && e.message.includes('Token Plan'));
+  assert.deepEqual((await (await call('recordings')).json()).recordings, []);
+  env.CHAT_SUBTITLES_API_KEY = config.apiKey;
+  assert.equal((await (await call('status')).json()).available, true);
 });
 
 function memoryOSS() {

@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto';
+import { speechCredentialError, handshakeFailure } from './credentials.mjs';
 
 export class SubtitleError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
 }
 const fail = (text, status) => { throw new SubtitleError(text, status); };
 export function realtimeUrl(baseUrl, model = 'qwen3.8-livetranslate-flash-realtime') {
-  const url = new URL(baseUrl);
+  let url;
+  try { url = new URL(baseUrl); } catch { fail('实时翻译服务地址尚未配置。', 503); }
   if (url.protocol !== 'https:' || url.username || url.password || url.port ||
     !/^(?:ws-[a-z0-9]+\.(?:cn-beijing|ap-southeast-1)\.maas|dashscope(?:-intl)?)\.aliyuncs\.com$/.test(url.hostname)) fail('实时翻译服务地址尚未配置。', 503);
   if (!/^qwen3\.(?:5|8)-livetranslate-flash-realtime$/.test(model)) fail('实时翻译模型配置不正确。', 503);
@@ -28,6 +30,12 @@ export function createSubtitleService({ WebSocket, recordings = null, model = 'q
   now = Date.now, maxSessions = 4, maxDurationMs = 60 * 60 * 1000, connectTimeoutMs = 15000 } = {}) {
   const sessions = new Map();
   const encoder = new TextEncoder();
+  function configurationError(config) {
+    const credentialError = speechCredentialError(config?.apiKey);
+    if (credentialError) return credentialError;
+    try { realtimeUrl(config?.baseUrl, model); } catch (error) { return error.message; }
+    return null;
+  }
   function publish(s, event) {
     const item = { ...event, seq: ++s.eventSeq, at: now() };
     s.events.push(item); if (s.events.length > 500) s.events.shift();
@@ -52,7 +60,7 @@ export function createSubtitleService({ WebSocket, recordings = null, model = 'q
     s.retainUntil = now() + 60000;
     })(); return s.completing;
   }
-  function abort(s, message) { if (s.ended) return; publish(s, { type: 'error', message }); s.rejectReady?.(new SubtitleError(message, 502)); void complete(s, 'interrupted'); }
+  function abort(s, message, status = 502) { if (s.ended) return; publish(s, { type: 'error', message }); s.rejectReady?.(new SubtitleError(message, status)); void complete(s, 'interrupted'); }
   function emitText(s, e) {
     const source = e.type.startsWith('conversation.item.input_audio_transcription.');
     const id = String(e.item_id || e.response_id || 'current').slice(0, 150);
@@ -69,6 +77,8 @@ export function createSubtitleService({ WebSocket, recordings = null, model = 'q
       preview: String(e.stash || '').slice(0, 4000), sourceId: source ? id : (s.links.get(id) || '') });
   }
   async function start(owner, config, options) {
+    const configError = configurationError(config);
+    if (configError) fail(configError, 503);
     sessionConfig(options.direction, model);
     if (typeof options.saveRecording !== 'boolean') fail('请确认是否保存录音。');
     const live = [...sessions.values()].filter(s => !s.ended);
@@ -86,6 +96,12 @@ export function createSubtitleService({ WebSocket, recordings = null, model = 'q
         s.connectTimer = setTimeout(() => abort(s, '实时翻译连接超时，请稍后重试。'), connectTimeoutMs);
         const socket = s.socket = new WebSocket(url, { headers: { Authorization: `Bearer ${config.apiKey}` }, maxPayload: 256 * 1024, followRedirects: false, handshakeTimeout: connectTimeoutMs });
         socket.on('open', () => socket.send(JSON.stringify(sessionConfig(s.direction, model))));
+        socket.on('unexpected-response', (request, response) => {
+          const error = handshakeFailure(response.statusCode);
+          // No response body, headers or provider error text enters logs/UI.
+          abort(s, error.message, error.status);
+          response.destroy(); request.destroy();
+        });
         socket.on('error', () => abort(s, '实时翻译服务连接失败，请联系管理员核对模型权限。'));
         socket.on('close', () => { if (!s.ended) abort(s, '翻译连接已中断，已显示的字幕保留，请重新开始。'); });
         socket.on('message', raw => {
@@ -152,7 +168,7 @@ export function createSubtitleService({ WebSocket, recordings = null, model = 'q
       else if (!s.ended && s.ready && !s.finishing && (now() - s.touchedAt > 20000 || now() - s.createdAt > maxDurationMs)) finish(s.owner, s.id);
     }
   }, 5000); sweep.unref?.();
-  return { start, audio, events, finish, canRecord: Boolean(recordings),
+  return { start, audio, events, finish, configurationError, canRecord: Boolean(recordings),
     list: owner => recordings?.list(owner) || [],
     download: (owner, id, part) => recordings ? recordings.download(owner, id, part) : fail('录音存储尚未连接。', 503),
     async close() { clearInterval(sweep); await Promise.all([...sessions.values()].map(s => complete(s, 'server_shutdown'))); sessions.clear(); } };
