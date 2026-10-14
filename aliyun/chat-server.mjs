@@ -84,11 +84,21 @@ const oaService = {
   },
 };
 
+let liveSubtitles = null;
+if (process.env.CHAT_SUBTITLES_ENABLED === 'true') {
+  try { const { liveSubtitleRuntime } = await import('./live-subtitles/runtime.mjs'); liveSubtitles = await liveSubtitleRuntime(process.env); }
+  catch { console.error('Live subtitles unavailable; existing Chat routes remain available'); }
+}
 const env = new Proxy({
   ...process.env,
   APP_ORIGIN: appOrigin,
   DB: database,
   DOCUMENT_AI: localDocumentAi,
+  LIVE_SUBTITLES: liveSubtitles,
+  SUBTITLE_PROVIDER_TEST: async config => {
+    const { verifySubtitleConnection } = await import('./live-subtitles/preflight.mjs');
+    return verifySubtitleConnection(config);
+  },
   ASSETS: assets,
   OA_SERVICE: oaService,
 }, {
@@ -181,14 +191,18 @@ server.listen(listenPort, listenHost, () => {
   console.log(`OriginMind Chat listening on http://${listenHost}:${listenPort}`);
 });
 
+let shuttingDown = false;
 function shutdown() {
-  server.close(() => {
+  if (shuttingDown) return; shuttingDown = true;
+  const stopped = new Promise(resolve => server.close(resolve));
+  Promise.all([stopped, liveSubtitles?.close()]).then(() => {
     try { aiMembers?.store.close(); } catch { console.error("AI store close failed"); }
     database.close();
     process.exit(0);
-  });
-  setTimeout(() => process.exit(1), 10_000).unref();
+  }).catch(() => { console.error('Chat shutdown incomplete'); process.exit(1); });
+  setTimeout(() => process.exit(1), 45_000).unref();
 }
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
+
 

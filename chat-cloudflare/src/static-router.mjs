@@ -33,9 +33,10 @@ const TOPIC_TRAILING_REDIRECTS = new Map(
 );
 const DIRECT_ASSET_PATHS = new Set([
   "/7cdc950be159a53da5ee4b8584de9d71.txt",
-  "/grading.html",
-  "/grading.js",
-  "/grading.css",
+  "/subtitles.html",
+  "/subtitles.js",
+  "/subtitles.css",
+  "/subtitles-audio.js",
   "/orientation.html",
   "/robotics-course.html",
   "/newbie-village.html",
@@ -107,7 +108,7 @@ function assetRequest(request, pathname) {
 }
 
 function assetCacheControl(pathname) {
-  if (pathname.startsWith("/grading.")) return "no-store";
+  if (pathname.startsWith("/subtitles")) return "no-store";
   if (pathname === "/service-worker.js") {
     return "no-cache, no-store, must-revalidate";
   }
@@ -141,9 +142,15 @@ export async function routeStaticRequest(request, env) {
     return fetchAsset(request, env, "/newbie-village.html", "no-store");
   }
 
-  if (url.pathname === "/grading" || url.pathname === "/grading/") {
+  if (/^\/grading(?:\.(?:html|js|css)|\/)?$/.test(url.pathname)) {
+    return hardenResponse(new Response("试卷批改已停用。", { status: 410, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }));
+  }
+  if (url.pathname === "/subtitles/") return redirect(request, "/subtitles");
+  if (url.pathname === "/subtitles" || url.pathname === "/subtitles.html") {
     if (!SAFE_METHODS.has(request.method)) return methodNotAllowed();
-    return fetchAsset(request, env, "/grading.html", "no-store");
+    const response = await fetchAsset(request, env, "/subtitles.html", "no-store");
+    response.headers.set('Permissions-Policy', 'camera=(), microphone=(self), geolocation=(), payment=(), usb=()');
+    return response;
   }
 
   if (kind === RouteKind.DYNAMIC) return null;
@@ -191,3 +198,4 @@ export async function routeStaticRequest(request, env) {
     }),
   );
 }
+
