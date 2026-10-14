@@ -75,12 +75,17 @@ export function validOaAdminPayload(value) {
   if (exactKeys(value, ['operation', 'password', 'actor']) && value.operation === 'set_password') {
     return text(value.password, 12, 256) && text(value.actor, 1, 200);
   }
-  if (exactKeys(value, ['operation', 'sessionToken']) && ['logout', 'config_get', 'test'].includes(value.operation)) {
+  if (exactKeys(value, ['operation', 'sessionToken']) && ['logout', 'config_get', 'test', 'subtitle_config_test'].includes(value.operation)) {
     return session(value.sessionToken);
   }
   if (exactKeys(value, ['operation', 'sessionToken', 'baseUrl', 'model'], ['apiKey']) && value.operation === 'config_save') {
     return session(value.sessionToken) && text(value.baseUrl, 0, 300)
       && /^qwen[a-zA-Z0-9_.-]{1,100}$/u.test(value.model)
+      && (value.apiKey === undefined || text(value.apiKey, 0, 400));
+  }
+  if (exactKeys(value, ['operation', 'sessionToken', 'baseUrl', 'model'], ['apiKey']) && value.operation === 'subtitle_config_save') {
+    return session(value.sessionToken) && text(value.baseUrl, 1, 300)
+      && /^qwen3\.(?:5|8)-livetranslate-flash-realtime$/u.test(value.model)
       && (value.apiKey === undefined || text(value.apiKey, 0, 400));
   }
   return false;

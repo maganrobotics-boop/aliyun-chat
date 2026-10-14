@@ -1,4 +1,17 @@
 // Return only fixed, safe messages: never include the supplied credential.
+export const DEFAULT_SPEECH_BASE_URL = 'https://maas.qianwenaiapi.com/compatible-mode/v1';
+export const DEFAULT_SPEECH_MODEL = 'qwen3.8-livetranslate-flash-realtime';
+
+export function speechEndpointError(baseUrl, model = DEFAULT_SPEECH_MODEL) {
+  let url;
+  try { url = new URL(baseUrl); } catch { return '实时翻译服务地址尚未配置。'; }
+  if (url.protocol !== 'https:' || url.username || url.password || url.port ||
+    !(url.hostname === 'maas.qianwenaiapi.com' ||
+      /^(?:ws-[a-z0-9]+\.(?:cn-beijing|ap-southeast-1)\.maas|dashscope(?:-intl)?)\.aliyuncs\.com$/.test(url.hostname))) return '请填写千问或百炼普通语音服务地址，不能使用套餐地址。';
+  if (!/^qwen3\.(?:5|8)-livetranslate-flash-realtime$/.test(model)) return '实时翻译模型配置不正确。';
+  return null;
+}
+
 export function speechCredentialError(apiKey) {
   if (typeof apiKey !== 'string' || !apiKey) return '实时语音密钥尚未配置，请联系管理员。';
   if (apiKey.trim().startsWith('sk-sp-')) return '实时字幕需要千问或百炼普通 API Key，不能使用 Token Plan 或 Coding Plan 套餐密钥。';

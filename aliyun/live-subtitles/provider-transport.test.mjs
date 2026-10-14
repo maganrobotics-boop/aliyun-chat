@@ -4,6 +4,7 @@ import http from 'node:http';
 import { once } from 'node:events';
 import WebSocket, { WebSocketServer } from 'ws';
 import { createSubtitleService } from './service.mjs';
+import { verifySubtitleConnection } from './preflight.mjs';
 
 const config = { baseUrl: 'https://dashscope.aliyuncs.com', apiKey: 'sk-synthetic-transport' };
 async function serverFor(t, upgrade) {
@@ -51,14 +52,8 @@ test('real ws authenticates/configures both directions and acknowledges graceful
       else assert.fail('Authentication check must not send audio');
     });
   });
-  const service = createSubtitleService({ WebSocket: LoopbackSocket, connectTimeoutMs: 1500 });
   try {
-    for (const direction of ['ja-zh', 'zh-ja']) {
-      const session = await service.start('test', config, { direction, saveRecording: false });
-      service.finish('test', session.id);
-      const events = (await service.events('test', session.id, 0).text()).trim().split('\n').map(JSON.parse);
-      assert.equal(events.at(-1).reason, 'finished');
-    }
+    assert.deepEqual(await verifySubtitleConnection(config, LoopbackSocket), { connected: true, audioTranslationTested: false });
     assert.deepEqual(languages, ['zh', 'ja']);
-  } finally { await service.close(); for (const client of wss.clients) client.terminate(); await new Promise(resolve => wss.close(resolve)); }
+  } finally { for (const client of wss.clients) client.terminate(); await new Promise(resolve => wss.close(resolve)); }
 });

@@ -1,17 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { speechCredentialError, handshakeFailure } from './credentials.mjs';
+import { speechCredentialError, speechEndpointError, handshakeFailure } from './credentials.mjs';
 
 export class SubtitleError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
 }
 const fail = (text, status) => { throw new SubtitleError(text, status); };
 export function realtimeUrl(baseUrl, model = 'qwen3.8-livetranslate-flash-realtime') {
-  let url;
-  try { url = new URL(baseUrl); } catch { fail('实时翻译服务地址尚未配置。', 503); }
-  if (url.protocol !== 'https:' || url.username || url.password || url.port ||
-    !(url.hostname === 'maas.qianwenaiapi.com' ||
-      /^(?:ws-[a-z0-9]+\.(?:cn-beijing|ap-southeast-1)\.maas|dashscope(?:-intl)?)\.aliyuncs\.com$/.test(url.hostname))) fail('实时翻译服务地址尚未配置。', 503);
-  if (!/^qwen3\.(?:5|8)-livetranslate-flash-realtime$/.test(model)) fail('实时翻译模型配置不正确。', 503);
+  const error = speechEndpointError(baseUrl, model);
+  if (error) fail(error, 503);
+  const url = new URL(baseUrl);
   url.protocol = 'wss:'; url.pathname = '/api-ws/v1/realtime'; url.search = ''; url.hash = '';
   url.searchParams.set('model', model); return url.href;
 }
@@ -34,7 +31,7 @@ export function createSubtitleService({ WebSocket, recordings = null, model = 'q
   function configurationError(config) {
     const credentialError = speechCredentialError(config?.apiKey);
     if (credentialError) return credentialError;
-    try { realtimeUrl(config?.baseUrl, model); } catch (error) { return error.message; }
+    try { realtimeUrl(config?.baseUrl, config?.model || model); } catch (error) { return error.message; }
     return null;
   }
   function publish(s, event) {
@@ -80,13 +77,14 @@ export function createSubtitleService({ WebSocket, recordings = null, model = 'q
   async function start(owner, config, options) {
     const configError = configurationError(config);
     if (configError) fail(configError, 503);
-    sessionConfig(options.direction, model);
+    const sessionModel = config.model || model;
+    sessionConfig(options.direction, sessionModel);
     if (typeof options.saveRecording !== 'boolean') fail('请确认是否保存录音。');
     const live = [...sessions.values()].filter(s => !s.ended);
     if (live.some(s => s.owner === owner)) fail('你已有一场字幕会话，请先结束。', 409);
     if (live.length >= maxSessions) fail('实时字幕使用人数已满，请稍后重试。', 429);
     if (options.saveRecording && !recordings) fail('录音存储尚未连接，暂不能开始保存录音。', 503);
-    const url = realtimeUrl(config.baseUrl, model);
+    const url = realtimeUrl(config.baseUrl, sessionModel);
     const s = { id: randomUUID(), owner, direction: options.direction, createdAt: now(), touchedAt: now(), bytes: 0,
       audioSeq: 0, eventSeq: 0, events: [], captions: new Map(), links: new Map(), listeners: new Set(), ended: false, finishing: false };
     sessions.set(s.id, s);
@@ -96,7 +94,7 @@ export function createSubtitleService({ WebSocket, recordings = null, model = 'q
         s.rejectReady = reject;
         s.connectTimer = setTimeout(() => abort(s, '实时翻译连接超时，请稍后重试。'), connectTimeoutMs);
         const socket = s.socket = new WebSocket(url, { headers: { Authorization: `Bearer ${config.apiKey}` }, maxPayload: 256 * 1024, followRedirects: false, handshakeTimeout: connectTimeoutMs });
-        socket.on('open', () => socket.send(JSON.stringify(sessionConfig(s.direction, model))));
+        socket.on('open', () => socket.send(JSON.stringify(sessionConfig(s.direction, sessionModel))));
         socket.on('unexpected-response', (request, response) => {
           const error = handshakeFailure(response.statusCode);
           // No response body, headers or provider error text enters logs/UI.

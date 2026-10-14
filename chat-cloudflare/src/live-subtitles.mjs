@@ -1,14 +1,17 @@
 import { PublicError } from './errors.mjs';
+import { resolveSubtitleProvider } from './subtitle-provider-config.mjs';
 
 export async function handleLiveSubtitles(context, deps) {
   const { request, env } = context, url = new URL(request.url);
   const visitor = await deps.currentVisitor(context);
   const owner = visitor?.email;
   const service = env.LIVE_SUBTITLES;
-  const providerConfig = { apiKey: env.CHAT_SUBTITLES_API_KEY, baseUrl: env.CHAT_SUBTITLES_BASE_URL };
-  const configError = service?.configurationError?.(providerConfig);
-  const configured = Boolean(providerConfig.apiKey && providerConfig.baseUrl && !configError);
   if (url.pathname === '/api/subtitles/status' && request.method === 'GET') {
+    let configured = false;
+    if (owner && service) {
+      try { const config = await resolveSubtitleProvider(env); configured = Boolean(config.apiKey && config.baseUrl && !service.configurationError?.(config)); }
+      catch { /* Saved recordings must remain readable if speech credentials fail. */ }
+    }
     return deps.json({ signedIn: Boolean(owner), available: Boolean(owner && service && configured), canRecord: Boolean(owner && service?.canRecord) });
   }
   if (!owner) throw new PublicError('请先在 AI 助教登录，再使用实时字幕。', 401);
@@ -18,6 +21,9 @@ export async function handleLiveSubtitles(context, deps) {
     if (path === 'sessions' && request.method === 'POST') {
       await deps.limit(context, 'subtitle-start', 12, 3600);
       const input = await deps.readJson(request, 1024);
+      const providerConfig = await resolveSubtitleProvider(env);
+      const configError = service.configurationError?.(providerConfig);
+      const configured = Boolean(providerConfig.apiKey && providerConfig.baseUrl && !configError);
       if (!configured) throw new PublicError(configError || '实时语音服务尚未配置，请联系管理员。', 503);
       return deps.json(await service.start(owner, providerConfig, input), 201);
     }

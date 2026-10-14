@@ -1,4 +1,5 @@
 import { handleLiveSubtitles } from './live-subtitles.mjs';
+import { subtitleProviderView, saveSubtitleProvider, testSubtitleProvider } from './subtitle-provider-config.mjs';
 import { shouldUseStaticTaGuide } from "./ta-guide-intent.mjs";
 import { buildGeneralChatMessages, buildGroundedChatMessages, boundedUserMessages } from './grounded-prompt.mjs';
 import { handleOaChatBridge } from './oa-chat-bridge.mjs';
@@ -1667,12 +1668,13 @@ async function requireAdminSession(context, token) {
 }
 
 async function handleOaAdminOperation(context, payload) {
+  const configView = async () => ({ ...modelConfigView(context, await getModelConfig(context)), subtitleProvider: await subtitleProviderView(context.env) });
   if (payload.operation === "status") {
     const account = await database(context).prepare("SELECT 1 AS present FROM admin_account WHERE id=1").first();
     const signedIn = payload.sessionToken ? await hasAdminSession(context, payload.sessionToken) : false;
     return {
       initialized: Boolean(account), signedIn,
-      ...(signedIn ? modelConfigView(context, await getModelConfig(context)) : {}),
+      ...(signedIn ? await configView() : {}),
     };
   }
   if (payload.operation === "set_password") {
@@ -1687,7 +1689,7 @@ async function handleOaAdminOperation(context, payload) {
         .bind(await sha256Hex(token), now + SESSION_SECONDS * 1_000),
     ]);
     console.info("OA_ADMIN_PASSWORD_UPDATED", { actorHash: (await sha256Hex(payload.actor)).slice(0, 16) });
-    return { initialized: true, signedIn: true, sessionToken: token, ...modelConfigView(context, await getModelConfig(context)) };
+    return { initialized: true, signedIn: true, sessionToken: token, ...await configView() };
   }
   if (payload.operation === "login") {
     const now = Date.now();
@@ -1696,14 +1698,18 @@ async function handleOaAdminOperation(context, payload) {
     if (!account) throw new PublicError("管理员密码尚未设置。", 409);
     if (!await verifyPassword(payload.password, account)) throw new PublicError("密码不正确。", 401);
     const token = await createAdminSession(context);
-    return { initialized: true, signedIn: true, sessionToken: token, ...modelConfigView(context, await getModelConfig(context)) };
+    return { initialized: true, signedIn: true, sessionToken: token, ...await configView() };
   }
   if (payload.operation === "logout") {
     await database(context).prepare("DELETE FROM sessions WHERE hash=?").bind(await sha256Hex(payload.sessionToken)).run();
     return { initialized: true, signedIn: false };
   }
   await requireAdminSession(context, payload.sessionToken);
-  if (payload.operation === "config_get") return modelConfigView(context, await getModelConfig(context));
+  if (payload.operation === "config_get") return configView();
+  if (payload.operation === 'subtitle_config_save' || payload.operation === 'subtitle_config_test') {
+    await consumeCounter(context, 'oa-admin-speech-config', 12, Math.floor(Date.now() / 1000) + 3600);
+    return payload.operation === 'subtitle_config_save' ? saveSubtitleProvider(context.env, payload) : testSubtitleProvider(context.env);
+  }
   if (payload.operation === "config_save") {
     await consumeCounter(context, "oa-admin-config", 20, Math.floor(Date.now() / 1000) + 3600);
     return { ...await saveModelConfig(context, { baseUrl: payload.baseUrl, model: payload.model, ...(payload.apiKey === undefined ? {} : { apiKey: payload.apiKey }) }), ...modelConfigView(context, await getModelConfig(context)) };

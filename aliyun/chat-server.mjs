@@ -95,6 +95,10 @@ const env = new Proxy({
   DB: database,
   DOCUMENT_AI: localDocumentAi,
   LIVE_SUBTITLES: liveSubtitles,
+  SUBTITLE_PROVIDER_TEST: async config => {
+    const { verifySubtitleConnection } = await import('./live-subtitles/preflight.mjs');
+    return verifySubtitleConnection(config);
+  },
   ASSETS: assets,
   OA_SERVICE: oaService,
 }, {

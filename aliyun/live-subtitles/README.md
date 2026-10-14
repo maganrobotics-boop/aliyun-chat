@@ -33,6 +33,13 @@ CHAT_SUBTITLES_DB=/var/lib/originmind-chat/subtitles.sqlite
 
 ### 认证排查与安全录入（本轮新增）
 
+OA `/admin` 新增独立“实时字幕”连接区：预填千问标准地址，可填写普通 Key、验证保存及检测已保存连接。
+沿用 OA 管理员权限和独立管理密码；通过带防重放的服务签名调用 Chat 管理桥。
+双向 WebSocket 会话验证成功后，Key 使用现有 AES-GCM 加密，写入 Chat `settings` 的 `subtitles-provider` 项；
+独立于聊天的 `model` 项，页面只返回是否已配置和验证时间，失败保留旧值，留空保留原语音 Key。
+字幕创建会话时优先读取该配置；没有后台配置时才回退到独立环境变量。保存配置不会启用字幕或自动开始录音。
+后台仅验证连接与会话，不代表真实中日音频测试通过，也不承诺 Harness ASR 额度覆盖 LiveTranslate。
+
 2026-10-14 续接时只在服务器内存中核对密钥类型和非敏感域名：Chat 数据库的密钥为 `sk-sp-` 套餐类型，
 配置地址为 `token-plan.cn-beijing.maas.aliyuncs.com`，实际属于 **Token Plan**，纠正上一轮所写的 Coding Plan。
 该凭据与普通百炼实时接口不匹配；仅换 endpoint 不能解决 401。本轮未再次拿不匹配的密钥请求百炼。
@@ -41,7 +48,7 @@ Chat 环境未设置独立 `CHAT_SUBTITLES_API_KEY`；检查过的 Chat/OA 环�
 截图仅含掩码，无法用于认证；当前 Chat 环境及该目录的 env 备份均未找到普通 Key，数据库当前仍为套餐 Key。
 需要从用户已保存的完整普通 Key 安全录入独立字幕配置。不要将“服务器未配置”误写成“账户没有 Key/套餐”。
 
-在阿里云服务器交互终端执行（不能把 Key 当作参数、发到聊天或提交仓库）：
+也可在阿里云服务器交互终端配置环境变量回退项（不能把 Key 当作参数、发到聊天或提交仓库）：
 
 ```sh
 sudo python3 /opt/omindos-deploy/staging/live-subtitles-20261014/runtime/configure-provider.py
