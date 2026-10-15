@@ -1,0 +1,41 @@
+name: Check iLAB 2026 integration
+
+on:
+  pull_request:
+    paths:
+      - 'aliyun/ilab/**'
+      - 'aliyun/chat-server.mjs'
+      - 'scripts/install-ilab-overlay.mjs'
+      - 'docs/ilab-2026-integration.md'
+      - '.github/workflows/check-ilab.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'aliyun/ilab/**'
+      - 'aliyun/chat-server.mjs'
+      - 'scripts/install-ilab-overlay.mjs'
+      - 'docs/ilab-2026-integration.md'
+      - '.github/workflows/check-ilab.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Check offline integration and evidence isolation
+        run: |
+          node --check aliyun/chat-server.mjs
+          node --check scripts/install-ilab-overlay.mjs
+          node --test aliyun/ilab/*.test.mjs
