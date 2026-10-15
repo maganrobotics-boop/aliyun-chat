@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { NodeD1Database } from "./chat-d1-adapter.mjs";
 import worker from "../chat-cloudflare/src/index.mjs";
 import { createIntegration, isAiMemberPath, incomingAiRequest, sendAiResponse, requestCancellation } from "./ai-members/integration.mjs";
+import { createIlabIntegration } from './ilab/integration.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const publicRoot = path.join(root, "chat-cloudflare", "public");
@@ -115,6 +116,10 @@ try {
   });
 } catch { console.error('AI member integration unavailable; existing Chat routes remain available'); }
 
+let ilab = null;
+try { ilab = createIlabIntegration({ env, databasePath: process.env.ILAB_SQLITE_PATH || '/var/lib/originmind-chat/ilab.sqlite' }); }
+catch { console.error('iLAB integration unavailable; existing Chat routes remain available'); }
+
 async function requestBody(incoming) {
   if (['GET', 'HEAD'].includes(incoming.method || 'GET')) return undefined;
   const pieces = [];
@@ -169,6 +174,11 @@ const server = http.createServer(async (incoming, outgoing) => {
       return;
     }
     const request = await webRequest(incoming, lifecycle.signal);
+    if (new URL(request.url).pathname === '/api/internal/ilab/events' || /^\/learning\/ilab(?:\/|$)/u.test(new URL(request.url).pathname)) {
+      const response = ilab ? await ilab.handle(request) : Response.json({ error: '国家实验空间接入暂不可用。' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+      await sendResponse(outgoing, response);
+      return;
+    }
     const response = await worker.fetch(request, env, {
       waitUntil(promise) { background.push(Promise.resolve(promise)); },
       passThroughOnException() {},
@@ -197,6 +207,7 @@ function shutdown() {
   const stopped = new Promise(resolve => server.close(resolve));
   Promise.all([stopped, liveSubtitles?.close()]).then(() => {
     try { aiMembers?.store.close(); } catch { console.error("AI store close failed"); }
+    try { ilab?.close(); } catch { console.error('iLAB store close failed'); }
     database.close();
     process.exit(0);
   }).catch(() => { console.error('Chat shutdown incomplete'); process.exit(1); });
