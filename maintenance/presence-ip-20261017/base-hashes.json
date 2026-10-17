@@ -1,0 +1,19 @@
+{
+  "algorithm": "sha256",
+  "base": {
+    "aliyun/platform-presence-network.mjs": "6ecb37a93458a084c7afab425c7c71ccd8c2027084314005fb29c2ca914d7522",
+    "aliyun/platform-presence-ip.mjs": null,
+    "aliyun/platform-directory.mjs": "a5e1c43bd67c2a7db33c874401d71b0103732e065ba87c30009abf6955af6196",
+    "chat-cloudflare/src/future-stars-bridge.mjs": "e287644f93e4c62c242cab5b7d730ef64d0624c63915087414c4103ef68d8aee",
+    "tests/platform-presence-ip.test.mjs": null,
+    "tests/platform-presence-ip-bridge.test.mjs": null
+  },
+  "result": {
+    "aliyun/platform-presence-network.mjs": "4a8f63e5e83304e171abab0d61d2e1e75af4cbdada300ea73577ef5831123c77",
+    "aliyun/platform-presence-ip.mjs": "bd2270591691281d5c84e55a5b251b87d6f1df003df7cb616113b090075ea810",
+    "aliyun/platform-directory.mjs": "8eca9a68ecea58219c35bd78461b96edc9561ab8663f4073af75169b8f9f98c4",
+    "chat-cloudflare/src/future-stars-bridge.mjs": "c29dcaa6315450ed0e95d46cd30ac5fe2cc590fcbbf403fd33416413b79abc22",
+    "tests/platform-presence-ip.test.mjs": "b2b45b616fab03a3fd815005866813ff8defb401a4045311d55951cb808bbeb7",
+    "tests/platform-presence-ip-bridge.test.mjs": "e466253672b25510f2d386807bc84271e778af8fcb2493e5d643ac20982def2e"
+  }
+}

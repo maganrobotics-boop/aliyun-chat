@@ -1,0 +1,497 @@
+diff --git a/aliyun/platform-presence-network.mjs b/aliyun/platform-presence-network.mjs
+--- a/aliyun/platform-presence-network.mjs
++++ b/aliyun/platform-presence-network.mjs
+@@ -1,5 +1,6 @@
+ import { isIP } from 'node:net';
+ import IP2RegionModule from './vendor/ip2region/dist/lib/index.js';
++import { unionOnlineMilliseconds } from './platform-presence-ip.mjs';
+ 
+ const IP2Region = IP2RegionModule.default;
+ let lookup;
+@@ -30,6 +31,12 @@
+ export function ensureNetworkSchema(db) {
+   db.exec('CREATE TABLE IF NOT EXISTS platform_presence_online(subject TEXT NOT NULL,ip TEXT NOT NULL,started_at INTEGER NOT NULL,ended_at INTEGER NOT NULL,closed INTEGER NOT NULL DEFAULT 0); CREATE INDEX IF NOT EXISTS platform_presence_online_owner_ip ON platform_presence_online(subject,ip,ended_at)');
+   db.exec('CREATE TABLE IF NOT EXISTS platform_presence_network(subject TEXT PRIMARY KEY,ip TEXT NOT NULL,country TEXT,province TEXT,status TEXT NOT NULL,collected_at INTEGER NOT NULL)');
++  db.exec(`CREATE TABLE IF NOT EXISTS platform_presence_ip_seen(subject TEXT NOT NULL,ip TEXT NOT NULL,last_seen_at INTEGER NOT NULL,PRIMARY KEY(subject,ip));
++    CREATE INDEX IF NOT EXISTS platform_presence_ip_seen_recent ON platform_presence_ip_seen(last_seen_at,ip);
++    CREATE INDEX IF NOT EXISTS platform_presence_online_recent ON platform_presence_online(ended_at,started_at,ip);
++    INSERT INTO platform_presence_ip_seen(subject,ip,last_seen_at)
++      SELECT subject,ip,collected_at FROM platform_presence_network WHERE 1
++      ON CONFLICT(subject,ip) DO UPDATE SET last_seen_at=MAX(platform_presence_ip_seen.last_seen_at,excluded.last_seen_at);`);
+ }
+ export function recordNetwork(db, subject, rawIp, timestamp) {
+   const ip = normalizeClientIp(rawIp);
+@@ -37,6 +44,7 @@
+   const geo = locateIp(ip);
+   db.prepare('INSERT INTO platform_presence_network(subject,ip,country,province,status,collected_at) VALUES(?,?,?,?,?,?) ON CONFLICT(subject) DO UPDATE SET ip=excluded.ip,country=excluded.country,province=excluded.province,status=excluded.status,collected_at=excluded.collected_at WHERE excluded.collected_at>=platform_presence_network.collected_at')
+     .run(subject, ip, geo.country, geo.province, geo.status, timestamp);
++  db.prepare('INSERT INTO platform_presence_ip_seen(subject,ip,last_seen_at) VALUES(?,?,?) ON CONFLICT(subject,ip) DO UPDATE SET last_seen_at=MAX(platform_presence_ip_seen.last_seen_at,excluded.last_seen_at)').run(subject,ip,timestamp);
+   return true;
+ }
+ export function readNetwork(db, subject) {
+@@ -46,7 +54,7 @@
+ 
+ export function recordOnline(db, subject, rawIp, timestamp, active = true) {
+   const ip = normalizeClientIp(rawIp);
+-  if (!ip) return false;
++  if (!ip || !Number.isSafeInteger(timestamp) || timestamp < 0 || typeof active !== 'boolean') return false;
+   const last = db.prepare('SELECT rowid,ended_at,closed FROM platform_presence_online WHERE subject=? AND ip=? ORDER BY ended_at DESC,rowid DESC LIMIT 1').get(subject, ip);
+   if (last && !last.closed && timestamp >= last.ended_at && timestamp - last.ended_at <= 90000) {
+     db.prepare('UPDATE platform_presence_online SET ended_at=?,closed=? WHERE rowid=?').run(timestamp, active ? 0 : 1, last.rowid);
+@@ -56,6 +64,6 @@
+   return true;
+ }
+ export function readOnlineSeconds(db, subject, ip, cutoff, timestamp) {
+-  const row = db.prepare('SELECT COUNT(*) AS samples,COALESCE(SUM(MAX(0,MIN(ended_at,?)-MAX(started_at,?))),0) AS elapsed FROM platform_presence_online WHERE subject=? AND ip=? AND ended_at>=? AND started_at<=?').get(timestamp, cutoff, subject, ip, cutoff, timestamp);
+-  return row.samples ? Math.floor(row.elapsed / 1000) : null;
++  const rows = db.prepare('SELECT MAX(started_at,?) AS started_at,MIN(ended_at,?) AS ended_at FROM platform_presence_online WHERE subject=? AND ip=? AND ended_at>=? AND started_at<=?').all(cutoff,timestamp,subject,ip,cutoff,timestamp);
++  return rows.length ? Math.floor(unionOnlineMilliseconds(rows) / 1000) : null;
+ }
+diff --git a/aliyun/platform-presence-ip.mjs b/aliyun/platform-presence-ip.mjs
+new file mode 100644
+--- /dev/null
++++ b/aliyun/platform-presence-ip.mjs
+@@ -0,0 +1,78 @@
++import { createHash } from 'node:crypto';
++
++/** Elapsed milliseconds in the union of observed intervals, never their sum. */
++export function unionOnlineMilliseconds(rows) {
++  const intervals = rows
++    .filter(row => Number.isSafeInteger(row.started_at) && Number.isSafeInteger(row.ended_at) && row.ended_at >= row.started_at)
++    .map(row => [row.started_at, row.ended_at])
++    .sort((left, right) => left[0] - right[0] || left[1] - right[1]);
++  let total = 0, end = -1;
++  for (const [start, finish] of intervals) {
++    total += Math.max(0, finish - Math.max(start, end));
++    end = Math.max(end, finish);
++  }
++  return total;
++}
++
++/**
++ * Administrator-only IP projection of the same account scope as the directory.
++ * Sightings prove an IP was observed; heartbeat intervals alone prove duration.
++ * Never join another account merely because it shares an IP with this scope.
++ */
++export function readIpPresence({ db, cutoff, timestamp, page = 1, pageSize = 20, subject, kind, geoForIp = () => ({ country: null, province: null, status: 'unknown' }) }) {
++  const accountConditions = [], accountBindings = [];
++  if (subject) { accountConditions.push('id = ?'); accountBindings.push(subject); }
++  if (kind) { accountConditions.push('kind = ?'); accountBindings.push(kind); }
++  const accountsWhere = accountConditions.length ? 'WHERE ' + accountConditions.join(' AND ') : '';
++  const rows = db.prepare(`WITH eligible AS (
++      SELECT id FROM platform_accounts ${accountsWhere}
++    ), evidence AS (
++      SELECT s.subject,s.ip,s.last_seen_at FROM platform_presence_ip_seen s JOIN eligible a ON a.id=s.subject
++      WHERE s.last_seen_at>=? AND s.last_seen_at<=?
++      UNION ALL
++      SELECT o.subject,o.ip,MIN(o.ended_at,?) AS last_seen_at
++      FROM platform_presence_online o JOIN eligible a ON a.id=o.subject
++      WHERE o.ended_at>=? AND o.started_at<=?
++    ), ips AS (
++      SELECT ip,MAX(last_seen_at) AS last_seen_at,COUNT(DISTINCT subject) AS subject_count FROM evidence GROUP BY ip
++    ), clipped AS (
++      SELECT o.ip,MAX(o.started_at,?) AS started_at,MIN(o.ended_at,?) AS ended_at
++      FROM platform_presence_online o JOIN eligible a ON a.id=o.subject
++      WHERE o.ended_at>=? AND o.started_at<=? AND o.ended_at>=o.started_at
++    ), ordered AS (
++      SELECT ip,started_at,ended_at,
++        MAX(ended_at) OVER (PARTITION BY ip ORDER BY started_at,ended_at ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prior_end
++      FROM clipped
++    ), durations AS (
++      SELECT ip,COUNT(*) AS samples,
++        SUM(MAX(0,ended_at-MAX(started_at,COALESCE(prior_end,started_at)))) AS elapsed
++      FROM ordered GROUP BY ip
++    ), networks AS (
++      SELECT n.*,ROW_NUMBER() OVER (PARTITION BY n.ip ORDER BY n.collected_at DESC,n.subject) AS position
++      FROM platform_presence_network n JOIN eligible a ON a.id=n.subject
++      WHERE n.collected_at<=?
++    )
++    SELECT ips.ip,ips.last_seen_at,ips.subject_count,d.samples,d.elapsed,
++      n.country,n.province,n.status,n.collected_at
++    FROM ips LEFT JOIN durations d ON d.ip=ips.ip
++      LEFT JOIN networks n ON n.ip=ips.ip AND n.position=1
++    ORDER BY ips.last_seen_at DESC,ips.ip`).all(...accountBindings,
++      cutoff,timestamp,timestamp,cutoff,timestamp,cutoff,timestamp,cutoff,timestamp,timestamp);
++  const summary = { total: rows.length, onlineSeconds: 0, unrecorded: 0 };
++  for (const row of rows) {
++    if (row.samples == null) summary.unrecorded++;
++    else summary.onlineSeconds += Math.floor(row.elapsed / 1000);
++  }
++  const offset = (page - 1) * pageSize;
++  return {
++    summary,
++    records: rows.slice(offset, offset + pageSize).map(row => {
++      const geo = row.status ? row : geoForIp(row.ip);
++      return { id: 'ip_' + createHash('sha256').update(row.ip).digest('hex'), ip: row.ip,
++        country: geo.country ?? null, province: geo.province ?? null, status: geo.status || 'unknown',
++        collectedAt: row.collected_at ?? row.last_seen_at, lastSeenAt: row.last_seen_at,
++        subjectCount: row.subject_count, onlineSeconds: row.samples == null ? null : Math.floor(row.elapsed / 1000) };
++    }),
++    pagination: { page, hasMore: rows.length > offset + pageSize },
++  };
++}
+diff --git a/aliyun/platform-directory.mjs b/aliyun/platform-directory.mjs
+--- a/aliyun/platform-directory.mjs
++++ b/aliyun/platform-directory.mjs
+@@ -1,5 +1,6 @@
+ import { createHash } from 'node:crypto';
+-import { ensureNetworkSchema, recordNetwork, readNetwork, normalizeClientIp, recordOnline, readOnlineSeconds } from './platform-presence-network.mjs';
++import { ensureNetworkSchema, recordNetwork, readNetwork, normalizeClientIp, recordOnline, readOnlineSeconds, locateIp } from './platform-presence-network.mjs';
++import { readIpPresence } from './platform-presence-ip.mjs';
+ export const oaSubjectId = subject => 'oa_' + createHash('sha256').update(subject).digest('hex');
+ const PAGE_SIZE = 20;
+ const WINDOWS = { '24h': 86_400_000, '3d': 3 * 86_400_000, '7d': 7 * 86_400_000 };
+@@ -37,8 +38,10 @@
+   const subject = string(params.subject, 'subject', 512, { optional: true });
+   const detail = string(params.detail, 'detail', 200, { optional: true });
+   if (detail && params.operation !== 'activity') throw new TypeError('detail is available only for activity');
++  const groupBy = string(params.groupBy, 'groupBy', 16, { optional: true });
++  if (groupBy && (params.operation !== 'presence' || !['account','ip'].includes(groupBy))) throw new TypeError('groupBy is available only for presence and must be account or ip');
+   return { operation: params.operation, window: params.window, page, ...(q ? { q } : {}),
+-    ...(subject ? { subject } : {}), ...(detail ? { detail } : {}) };
++    ...(subject ? { subject } : {}), ...(detail ? { detail } : {}), ...(groupBy ? { groupBy } : {}) };
+ }
+ 
+ function searchIntent(q) {
+@@ -82,15 +85,19 @@
+   ensureNetworkSchema(db);
+   db.prepare(`INSERT INTO platform_metadata(key,value) VALUES ('tracking_started_at',?)
+     ON CONFLICT(key) DO NOTHING`).run(String(now()));
++  db.prepare(`INSERT INTO platform_metadata(key,value) VALUES ('ip_tracking_started_at',?)
++    ON CONFLICT(key) DO NOTHING`).run(String(now()));
+   const audit = db.prepare(`INSERT INTO platform_admin_audit(actor_email,actor_subject,operation,params_json,created_at)
+     VALUES (?,?,?,?,?)`);
+ 
+-  function trackingStartedAt() {
+-    const metadata = db.prepare(`SELECT value FROM platform_metadata WHERE key = 'tracking_started_at'`).get();
++  function trackingStartedAt(key = 'tracking_started_at') {
++    const metadata = db.prepare('SELECT value FROM platform_metadata WHERE key = ?').get(key);
+     const recorded = Number(metadata?.value);
+     if (metadata && /^\d+$/u.test(metadata.value) && Number.isSafeInteger(recorded) && recorded >= 0) return recorded;
+-    const first = db.prepare('SELECT MIN(created_at) AS earliest FROM platform_accounts').get()?.earliest;
+-    if (Number.isSafeInteger(first) && first >= 0) return first;
++    if (key === 'tracking_started_at') {
++      const first = db.prepare('SELECT MIN(created_at) AS earliest FROM platform_accounts').get()?.earliest;
++      if (Number.isSafeInteger(first) && first >= 0) return first;
++    }
+     throw new Error('platform tracking start is unavailable');
+   }
+ 
+@@ -134,7 +141,7 @@
+     }
+     const normalized = queryParams(params);
+     const timestamp = now();
+-    const started = trackingStartedAt();
++    const started = trackingStartedAt(normalized.operation === 'presence' && normalized.groupBy === 'ip' ? 'ip_tracking_started_at' : 'tracking_started_at');
+     const cutoff = timestamp - WINDOWS[normalized.window];
+     audit.run(identity.email, identity.subject, normalized.operation, JSON.stringify(normalized), timestamp);
+     const common = { source: 'platform_directory', operation: normalized.operation, scope: 'admin',
+@@ -151,6 +158,12 @@
+     const searchText = intent.mode === 'text' && !resolvedSubject ? intent.value : undefined;
+ 
+     if (normalized.operation === 'presence') {
++      if (normalized.groupBy === 'ip') {
++        const result = unknownIdentity || searchText
++          ? { summary: { total: 0, onlineSeconds: 0, unrecorded: 0 }, records: [], pagination: { page: normalized.page, hasMore: false } }
++          : readIpPresence({ db,cutoff,timestamp,page:normalized.page,pageSize:PAGE_SIZE,subject:resolvedSubject,kind:intent.kind,geoForIp:locateIp });
++        return { ...common,groupBy:'ip',...result };
++      }
+       const conditions = ['p.last_seen_at >= ?', 'p.last_seen_at <= ?'];
+       const bindings = [cutoff, timestamp];
+       if (resolvedSubject) { conditions.push('a.id = ?'); bindings.push(resolvedSubject); }
+diff --git a/chat-cloudflare/src/future-stars-bridge.mjs b/chat-cloudflare/src/future-stars-bridge.mjs
+--- a/chat-cloudflare/src/future-stars-bridge.mjs
++++ b/chat-cloudflare/src/future-stars-bridge.mjs
+@@ -91,7 +91,8 @@
+     if (!p || typeof p!=='object' || Array.isArray(p)) return false;
+     if(payload.operation==='platform_presence')return Object.keys(p).every(key=>['app','name','seenAt','clientIp','onlineActive'].includes(key))&&(p.onlineActive===undefined||typeof p.onlineActive==='boolean')&&(p.clientIp===undefined||(typeof p.clientIp==='string'&&p.clientIp.length<=64&&/^[a-fA-F0-9:.]+$/u.test(p.clientIp)))&&['oa','ros','arena','goldrush','cloud','course','chat'].includes(p.app)&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=160&&(p.seenAt===undefined||(Number.isSafeInteger(p.seenAt)&&p.seenAt>=Math.max(0,Date.now()-30*86400000)&&p.seenAt<=Date.now()+300000));
+     if(Object.values(p).some(value=>typeof value!=='string'||value.length>254))return false;
+-    return Object.keys(p).every(key=>['operation','window','q','subject','detail','page','section'].includes(key))&&['presence','activity','legacy_arena'].includes(p.operation)&&['24h','3d','7d'].includes(p.window)&&
++    return Object.keys(p).every(key=>['operation','window','q','subject','detail','page','section','groupBy'].includes(key))&&['presence','activity','legacy_arena'].includes(p.operation)&&['24h','3d','7d'].includes(p.window)&&
++      (p.groupBy===undefined||(p.operation==='presence'&&['ip','account'].includes(p.groupBy)))&&
+       (p.operation==='legacy_arena'?(typeof p.subject==='string'&&/^(?:[a-f0-9-]{36}|oa_[a-f0-9]{64})$/u.test(p.subject)&&p.q===undefined&&(p.section===undefined||['versions','attempts','enrollments','activity'].includes(p.section))):p.section===undefined)&&(p.page===undefined||/^[1-9]\d{0,4}$/u.test(p.page))&&(p.q===undefined||p.q.length<=100);
+   }
+   if (payload && typeof payload === 'object' && !Array.isArray(payload) &&
+diff --git a/tests/platform-presence-ip.test.mjs b/tests/platform-presence-ip.test.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/platform-presence-ip.test.mjs
+@@ -0,0 +1,171 @@
++import assert from 'node:assert/strict';
++import { test } from 'node:test';
++import { DatabaseSync } from 'node:sqlite';
++import { registerHooks } from 'node:module';
++
++// The production geo database is not part of this isolated change. Stub only
++// that external lookup dependency; exercise the real directory/network modules.
++const geoModule = 'data:text/javascript,' + encodeURIComponent("export default {default:class {search(){return {country:'中国',province:'广东省'};}}};");
++const hooks = registerHooks({ resolve(specifier, context, nextResolve) {
++  if (specifier === './vendor/ip2region/dist/lib/index.js') return { url:geoModule,shortCircuit:true };
++  return nextResolve(specifier,context);
++} });
++const { createPlatformDirectory } = await import('../aliyun/platform-directory.mjs');
++const { ensureNetworkSchema, recordNetwork, recordOnline, readOnlineSeconds, requestClientIp } = await import('../aliyun/platform-presence-network.mjs');
++const { unionOnlineMilliseconds } = await import('../aliyun/platform-presence-ip.mjs');
++hooks.deregister();
++
++const NOW = Date.UTC(2026,9,17,8,25), DAY = 86_400_000;
++const ADMIN = { email:'admin@example.com',subject:'verified-admin' };
++function fixture(t) {
++  const db = new DatabaseSync(':memory:');
++  t.after(() => db.close());
++  db.exec(`CREATE TABLE platform_accounts(id TEXT PRIMARY KEY,kind TEXT NOT NULL,display_name TEXT,username TEXT,created_at INTEGER,last_seen_at INTEGER);
++    CREATE TABLE platform_presence(subject TEXT NOT NULL,app TEXT NOT NULL,last_seen_at INTEGER NOT NULL,PRIMARY KEY(subject,app));`);
++  const directory = createPlatformDirectory({db,clock:() => NOW});
++  function account(id,kind='guest',name=id) {
++    db.prepare('INSERT INTO platform_accounts VALUES(?,?,?,?,?,?)').run(id,kind,name,null,NOW-8*DAY,NOW);
++    db.prepare('INSERT INTO platform_presence VALUES(?,?,?)').run(id,'course',NOW);
++  }
++  function interval(subject,ip,start,end) {
++    db.prepare('INSERT INTO platform_presence_online VALUES(?,?,?,?,1)').run(subject,ip,start,end);
++  }
++  const query = (extra={}) => directory.query({operation:'presence',window:'24h',groupBy:'ip',...extra},ADMIN);
++  return {db,directory,account,interval,query};
++}
++
++test('1000 requests from one IP produce one visit without inventing heartbeat time',t => {
++  const {db,account,query} = fixture(t); account('guest-a');
++  for(let n=0;n<1000;n++) recordNetwork(db,'guest-a','203.0.113.7',NOW-60_000+n);
++  const result = query();
++  assert.deepEqual(result.summary,{total:1,onlineSeconds:0,unrecorded:1});
++  assert.equal(result.records[0].onlineSeconds,null);
++  assert.equal(result.records[0].subjectCount,1);
++  assert.match(result.records[0].id,/^ip_[a-f0-9]{64}$/);
++  assert.equal(result.records[0].country,'中国');
++});
++
++test('distinct IPs count independently and overlapping accounts share an interval union',t => {
++  const {db,account,interval,query} = fixture(t); account('a');account('b','registered');account('c');
++  for(const subject of ['a','b']) recordNetwork(db,subject,'203.0.113.7',NOW);
++  recordNetwork(db,'c','1.2.3.4',NOW);
++  interval('a','203.0.113.7',NOW-600_000,NOW-300_000);
++  interval('b','203.0.113.7',NOW-480_000,NOW-180_000);
++  interval('c','1.2.3.4',NOW-60_000,NOW);
++  const result = query();
++  assert.deepEqual(result.summary,{total:2,onlineSeconds:480,unrecorded:0});
++  assert.equal(result.records.find(row=>row.ip==='203.0.113.7').onlineSeconds,420);
++  assert.equal(result.records.find(row=>row.ip==='203.0.113.7').subjectCount,2);
++});
++
++test('account duration also unions nested and repeated intervals',t => {
++  const {db,account,interval} = fixture(t); account('a');
++  interval('a','1.2.3.4',NOW-600_000,NOW);
++  interval('a','1.2.3.4',NOW-540_000,NOW-480_000);
++  interval('a','1.2.3.4',NOW-420_000,NOW-300_000);
++  assert.equal(readOnlineSeconds(db,'a','1.2.3.4',NOW-DAY,NOW),600);
++  assert.equal(unionOnlineMilliseconds([{started_at:30,ended_at:50},{started_at:0,ended_at:100},{started_at:0,ended_at:100}]),100);
++});
++
++test('a gap above 90 seconds starts a separate observed interval',t => {
++  const {db,account,query} = fixture(t); account('a');recordNetwork(db,'a','1.2.3.4',NOW);
++  for(const stamp of [NOW-600_000,NOW-540_000,NOW-300_000,NOW-240_000]) assert.equal(recordOnline(db,'a','1.2.3.4',stamp),true);
++  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM platform_presence_online').get().n,2);
++  assert.equal(query().records[0].onlineSeconds,120);
++});
++
++test('all 24h/3d/7d windows clip intervals and exclude evidence outside the window',t => {
++  for(const [window,days] of [['24h',1],['3d',3],['7d',7]]) {
++    const {db,account,interval,query} = fixture(t);account('a');account('old');
++    const cutoff=NOW-days*DAY;
++    interval('a','1.2.3.4',cutoff-60_000,cutoff+60_000);
++    interval('a','1.2.3.4',NOW-60_000,NOW+60_000);
++    recordNetwork(db,'old','9.8.7.6',cutoff-1);
++    const result=query({window});
++    assert.equal(result.summary.total,1);
++    assert.equal(result.records[0].onlineSeconds,120);
++    assert.equal(result.records[0].lastSeenAt,NOW);
++  }
++});
++
++test('IP changes retain sightings while the account network remains its latest IP',t => {
++  const {db,account,interval,query} = fixture(t);account('a');
++  recordNetwork(db,'a','1.2.3.4',NOW-600_000);
++  recordNetwork(db,'a','5.6.7.8',NOW);
++  interval('a','1.2.3.4',NOW-600_000,NOW-540_000);
++  ensureNetworkSchema(db); // Repeated initialization is idempotent.
++  assert.equal(db.prepare('SELECT ip FROM platform_presence_network WHERE subject=?').get('a').ip,'5.6.7.8');
++  assert.deepEqual(query().summary,{total:2,onlineSeconds:60,unrecorded:1});
++  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM platform_presence_ip_seen').get().n,2);
++});
++
++test('schema backfill preserves only known latest IP and historical heartbeat evidence',t => {
++  const {db,account,interval,query} = fixture(t);account('a');
++  db.prepare('INSERT INTO platform_presence_network VALUES(?,?,?,?,?,?)').run('a','5.6.7.8',null,null,'unknown',NOW);
++  interval('a','1.2.3.4',NOW-600_000,NOW-540_000);
++  ensureNetworkSchema(db);
++  assert.deepEqual(query().summary,{total:2,onlineSeconds:60,unrecorded:1});
++  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM platform_presence_ip_seen').get().n,1);
++});
++
++test('no heartbeat is null while an observed single heartbeat is zero seconds',t => {
++  const {db,account,query} = fixture(t);account('a');account('b');
++  recordNetwork(db,'a','1.2.3.4',NOW);recordNetwork(db,'b','5.6.7.8',NOW);
++  recordOnline(db,'b','5.6.7.8',NOW);
++  const result=query();
++  assert.equal(result.records.find(row=>row.ip==='1.2.3.4').onlineSeconds,null);
++  assert.equal(result.records.find(row=>row.ip==='5.6.7.8').onlineSeconds,0);
++  assert.equal(result.summary.unrecorded,1);
++});
++
++test('subject and guest filters never expand to another account sharing its IP',t => {
++  const {db,account,interval,query} = fixture(t);account('a','guest','GuestA');account('b','registered','MemberB');
++  for(const subject of ['a','b'])recordNetwork(db,subject,'1.2.3.4',NOW);
++  interval('a','1.2.3.4',NOW-60_000,NOW);
++  interval('b','1.2.3.4',NOW-600_000,NOW);
++  for(const extra of [{subject:'a'},{q:'GuestA'},{q:'全部游客活动'}]) {
++    const result=query(extra);assert.equal(result.summary.total,1);assert.equal(result.records[0].subjectCount,1);assert.equal(result.records[0].onlineSeconds,60);
++  }
++  for(const q of ['Nobody的记录','unmatched text'])assert.equal(query({q}).summary.total,0);
++});
++
++test('account view remains default and grouping validation rejects activity IP mode',t => {
++  const {db,directory,account} = fixture(t);account('a');account('b','registered');
++  for(const subject of ['a','b'])recordNetwork(db,subject,'1.2.3.4',NOW);
++  const result=directory.query({operation:'presence',window:'24h'},ADMIN);
++  assert.equal(result.summary.total,2);assert.equal(result.summary.guests,1);assert.equal(result.summary.registered,1);
++  assert.equal(result.groupBy,undefined);
++  assert.throws(()=>directory.query({operation:'activity',window:'24h',groupBy:'ip'},ADMIN),/groupBy/);
++  assert.throws(()=>directory.query({operation:'presence',window:'24h',groupBy:'invalid'},ADMIN),/groupBy/);
++});
++
++test('pagination operates on IPs and has deterministic ordering',t => {
++  const {db,account,query}=fixture(t);
++  for(let n=1;n<=21;n++){account('a'+n);recordNetwork(db,'a'+n,'1.2.3.'+n,NOW);}
++  const first=query(),second=query({page:2});
++  assert.equal(first.summary.total,21);assert.equal(first.records.length,20);assert.equal(first.pagination.hasMore,true);
++  assert.equal(second.records.length,1);assert.equal(second.pagination.hasMore,false);
++  assert.equal(new Set([...first.records,...second.records].map(row=>row.id)).size,21);
++});
++
++test('IP tracking completeness has its own persistent collection era',t => {
++  const {db,directory,account,query}=fixture(t);account('a');
++  db.prepare("UPDATE platform_metadata SET value=? WHERE key='tracking_started_at'").run(String(NOW-8*DAY));
++  recordNetwork(db,'a','1.2.3.4',NOW-2*DAY); // Known backfill is visible, not a claim of full old coverage.
++  const grouped=query({window:'3d'}),accountView=directory.query({operation:'presence',window:'3d'},ADMIN);
++  assert.equal(grouped.trackingStartedAt,NOW);assert.equal(grouped.complete,false);assert.equal(grouped.summary.total,1);
++  assert.equal(accountView.trackingStartedAt,NOW-8*DAY);assert.equal(accountView.complete,true);
++  const later=createPlatformDirectory({db,clock:()=>NOW+4*DAY});
++  const complete=later.query({operation:'presence',window:'3d',groupBy:'ip'},ADMIN);
++  assert.equal(complete.trackingStartedAt,NOW);assert.equal(complete.complete,true);
++});
++
++test('timestamps are validated and untrusted forwarded IP headers are ignored',t => {
++  const {db,account}=fixture(t);account('a');
++  for(const stamp of [NaN,Infinity,-1,1.1,'1000',Number.MAX_SAFE_INTEGER+1])assert.equal(recordOnline(db,'a','1.2.3.4',stamp),false);
++  assert.equal(recordOnline(db,'a','invalid-ip',NOW),false);
++  assert.equal(recordOnline(db,'a','1.2.3.4',NOW,'true'),false);
++  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM platform_presence_online').get().n,0);
++  assert.equal(requestClientIp(new Request('https://omindos.cn',{headers:{'x-forwarded-for':'1.2.3.4'}})),null);
++  assert.equal(requestClientIp(new Request('https://omindos.cn',{headers:{'x-real-ip':'::ffff:1.2.3.4','x-forwarded-for':'5.6.7.8'}})),'1.2.3.4');
++});
+diff --git a/tests/platform-presence-ip-bridge.test.mjs b/tests/platform-presence-ip-bridge.test.mjs
+new file mode 100644
+--- /dev/null
++++ b/tests/platform-presence-ip-bridge.test.mjs
+@@ -0,0 +1,102 @@
++import assert from 'node:assert/strict';
++import { test } from 'node:test';
++import { registerHooks } from 'node:module';
++
++// Isolate the two unchanged shared dependencies. All payload checks and the
++// HMAC request handler below are the actual candidate bridge implementation.
++const errorModule = 'data:text/javascript,' + encodeURIComponent("export class PublicError extends Error { constructor(message,status=400){super(message);this.name='PublicError';this.status=status;} }");
++const windowsModule = 'data:text/javascript,' + encodeURIComponent("export const ACTIVITY_WINDOWS=Object.freeze({'24h':86400000,'3d':259200000,'7d':604800000});");
++const hooks = registerHooks({ resolve(specifier, context, nextResolve) {
++  if (specifier === './errors.mjs') return {url:errorModule,shortCircuit:true};
++  if (specifier === './activity-windows.mjs') return {url:windowsModule,shortCircuit:true};
++  return nextResolve(specifier,context);
++} });
++const { validStarsPayload, handleFutureStarsBridge, signFutureStarsRequest, FUTURE_STARS_PATH } = await import('../chat-cloudflare/src/future-stars-bridge.mjs');
++hooks.deregister();
++
++const actor = {email:'admin@example.com',subject:'verified-admin'};
++const directory = params => ({actor,operation:'platform_directory',params:{operation:'presence',window:'24h',...params}});
++
++test('directory presence accepts explicit IP, account and legacy default grouping', () => {
++  for (const window of ['24h','3d','7d']) {
++    for (const group of [{},{groupBy:'ip'},{groupBy:'account'}]) {
++      assert.equal(validStarsPayload(directory({window,page:'1',...group})),true);
++    }
++  }
++});
++
++test('directory grouping remains limited to presence and exact string values', () => {
++  const subject='12345678-1234-1234-1234-123456789abc';
++  for (const operation of ['activity','legacy_arena']) {
++    assert.equal(validStarsPayload(directory({operation,subject})),true);
++    for (const groupBy of ['ip','account']) assert.equal(validStarsPayload(directory({operation,subject,groupBy})),false);
++  }
++  for (const groupBy of ['','IP','accounts','all',null,true,1,{},[]]) assert.equal(validStarsPayload(directory({groupBy})),false);
++});
++
++test('directory grouping cannot bypass actor, outer-key or parameter validation', () => {
++  for (const forgedActor of [null,'admin',{}, {...actor,isAdmin:true}, {...actor,role:'admin'}, {...actor,email:'invalid'}, {...actor,subject:''}]) {
++    assert.equal(validStarsPayload({...directory({groupBy:'ip'}),actor:forgedActor}),false);
++  }
++  assert.equal(validStarsPayload({...directory({groupBy:'ip'}),isAdmin:true}),false);
++  assert.equal(validStarsPayload({...directory({groupBy:'ip'}),body:{}}),false);
++  for (const params of [{isAdmin:'1'}, {scope:'all'}, {window:'30d'}, {page:'0'}, {page:1}, {q:'x'.repeat(101)}, {section:'versions'}]) {
++    assert.equal(validStarsPayload(directory({groupBy:'ip',...params})),false);
++  }
++});
++
++test('existing people, arena, honors and write payload cases retain their validation', () => {
++  const cases = [
++    [{operation:'recipients',params:{q:'Alice'}},true],
++    [{operation:'people',params:{window:'24h',page:'1',sort:'recent'}},true],
++    [{operation:'people',params:{window:'7d',includeActivity:'1'}},true],
++    [{operation:'people',params:{includeActivity:'0'}},false],
++    [{operation:'people',params:{groupBy:'ip'}},false],
++    [{operation:'arena',params:{window:'3d',sort:'best',mapId:'mine-1',mode:'full'}},true],
++    [{operation:'arena',params:{sort:'fastest'}},false],
++    [{operation:'arena',params:{mapId:'../escape'}},false],
++    [{operation:'honors',params:{category:'course',status:'approved',page:'1'}},true],
++    [{operation:'records',params:{email:'member@example.com',courseId:'intro',page:'1'}},true],
++    [{operation:'events',params:{id:'event-1'}},true],
++    [{operation:'grant',params:{},body:{courseId:'intro'}},true],
++    [{operation:'grant',params:{}},false],
++    [{operation:'honor_action',params:{id:'honor-1'},body:{action:'approve'}},true],
++    [{operation:'honors',params:{},body:{}},false],
++    [{operation:'unknown',params:{}},false],
++  ];
++  for (const [payload,expected] of cases) assert.equal(validStarsPayload({actor,...payload}),expected,JSON.stringify(payload));
++  const presence={actor,operation:'platform_presence',params:{app:'course',name:'Member',onlineActive:true,clientIp:'203.0.113.5'}};
++  assert.equal(validStarsPayload(presence),true);
++  assert.equal(validStarsPayload({...presence,params:{...presence.params,groupBy:'ip'}}),false);
++  assert.equal(validStarsPayload({...presence,params:{...presence.params,onlineActive:'true'}}),false);
++});
++
++test('legacy arena constraints still reject actor-scoped widening and unknown fields', () => {
++  const subject='12345678-1234-1234-1234-123456789abc';
++  assert.equal(validStarsPayload(directory({operation:'legacy_arena',subject,section:'versions'})),true);
++  for (const params of [{subject:'not-a-resolved-id'}, {q:'someone'}, {section:'all'}, {unknown:'1'}]) {
++    assert.equal(validStarsPayload(directory({operation:'legacy_arena',subject,...params})),false);
++  }
++});
++
++test('HMAC authentication is still required and invalid grouping never reaches the engine', async () => {
++  const secret='bridge-unit-test-secret-not-production-123456789';
++  const now=Date.now(),url='https://chat.omindos.cn'+FUTURE_STARS_PATH;
++  let handled=0,claimed=0;
++  const engine={claimRequest:async()=>{claimed++;},handle:async payload=>{handled++;return Response.json({groupBy:payload.params.groupBy??'account'});}};
++  const invoke=async(payload,alterHeaders=()=>{})=>{
++    const raw=JSON.stringify(payload),headers=new Headers(await signFutureStarsRequest(raw,secret,{now}));
++    alterHeaders(headers);
++    return handleFutureStarsBridge({request:new Request(url,{method:'POST',headers,body:raw}),env:{PUBLIC_LAB_AI_SERVICE_TOKEN:secret}},engine,now);
++  };
++  assert.equal((await invoke(directory({groupBy:'ip'}))).status,200);
++  assert.equal((await invoke(directory({groupBy:'account'}))).status,200);
++  assert.equal((await invoke(directory({}))).status,200);
++  assert.equal(handled,3);assert.equal(claimed,3);
++  assert.equal((await invoke(directory({groupBy:'ip'}),headers=>headers.delete('authorization'))).status,401);
++  assert.equal((await invoke(directory({groupBy:'ip'}),headers=>headers.set('origin','https://omindos.cn'))).status,401);
++  assert.equal((await invoke(directory({groupBy:'ip'}),headers=>headers.set('cookie','fake=1'))).status,401);
++  assert.equal((await invoke(directory({operation:'activity',groupBy:'ip'}))).status,400);
++  assert.equal((await invoke({...directory({groupBy:'ip'}),actor:{...actor,isAdmin:true}})).status,400);
++  assert.equal(handled,3);assert.equal(claimed,3);
++});
